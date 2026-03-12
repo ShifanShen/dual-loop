@@ -1,3 +1,4 @@
+import ast
 import json
 import re
 from dataclasses import asdict, dataclass, field
@@ -24,6 +25,70 @@ def _extract_json_block(text: str) -> dict[str, Any] | None:
         except json.JSONDecodeError:
             continue
     return None
+
+
+def _extract_int_field(text: str, field: str) -> int:
+    pattern = rf'["\']?{re.escape(field)}["\']?\s*[:=]\s*(-?\d+)'
+    match = re.search(pattern, text, flags=re.IGNORECASE)
+    if match:
+        return int(match.group(1))
+    pattern = rf"{re.escape(field)}\s*(?:score)?\s*[:=]\s*(-?\d+)"
+    match = re.search(pattern, text, flags=re.IGNORECASE)
+    if match:
+        return int(match.group(1))
+    return 0
+
+
+def _parse_list_candidate(candidate: str) -> list[str]:
+    for parser in (json.loads, ast.literal_eval):
+        try:
+            value = parser(candidate)
+            return _ensure_list(value)
+        except (json.JSONDecodeError, SyntaxError, ValueError):
+            continue
+    return []
+
+
+def _extract_list_field(text: str, field: str) -> list[str]:
+    bracket_pattern = rf'["\']?{re.escape(field)}["\']?\s*[:=]\s*(\[[\s\S]*?\])'
+    match = re.search(bracket_pattern, text, flags=re.IGNORECASE)
+    if match:
+        parsed = _parse_list_candidate(match.group(1))
+        if parsed:
+            return parsed
+
+    line_pattern = rf'["\']?{re.escape(field)}["\']?\s*[:=]\s*(.+)'
+    match = re.search(line_pattern, text, flags=re.IGNORECASE)
+    if not match:
+        return []
+
+    value = match.group(1).strip().splitlines()[0].strip()
+    if not value or value.lower() in {"[]", "none", "null", "n/a"}:
+        return []
+    if value.startswith("[") and value.endswith("]"):
+        parsed = _parse_list_candidate(value)
+        if parsed:
+            return parsed
+    return [item.strip(" -\"'") for item in value.split(",") if item.strip(" -\"'")]
+
+
+def _extract_string_field(text: str, field: str) -> str:
+    quoted_pattern = rf'["\']?{re.escape(field)}["\']?\s*[:=]\s*"([^"]*)"'
+    match = re.search(quoted_pattern, text, flags=re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+
+    single_quoted_pattern = rf'["\']?{re.escape(field)}["\']?\s*[:=]\s*\'([^\']*)\''
+    match = re.search(single_quoted_pattern, text, flags=re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+
+    line_pattern = rf'["\']?{re.escape(field)}["\']?\s*[:=]\s*(.+)'
+    match = re.search(line_pattern, text, flags=re.IGNORECASE)
+    if not match:
+        return ""
+    value = match.group(1).strip().splitlines()[0].strip()
+    return value.strip(" -\"'")
 
 
 @dataclass
@@ -101,6 +166,21 @@ class SpecScore:
     @classmethod
     def from_llm_output(cls, text: str) -> "SpecScore":
         payload = _extract_json_block(text) or {}
+        if not payload:
+            payload = {
+                "coverage": _extract_int_field(text, "coverage"),
+                "faithfulness": _extract_int_field(text, "faithfulness"),
+                "precision": _extract_int_field(text, "precision"),
+                "overall": _extract_int_field(text, "overall"),
+                "missing_constraints": _extract_list_field(
+                    text, "missing_constraints"
+                ),
+                "unsupported_constraints": _extract_list_field(
+                    text, "unsupported_constraints"
+                ),
+                "ambiguities": _extract_list_field(text, "ambiguities"),
+                "action": _extract_string_field(text, "action"),
+            }
         return cls(
             coverage=int(payload.get("coverage", 0) or 0),
             faithfulness=int(payload.get("faithfulness", 0) or 0),

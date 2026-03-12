@@ -56,6 +56,12 @@ Return JSON only with the following schema:
   "action": "one short revision instruction"
 }}
 
+Output rules:
+- Return a single raw JSON object.
+- Do not use markdown, code fences, headings, or explanatory text.
+- Every score must be an integer from 0 to 100.
+- If a list is empty, return [].
+
 Scoring rules:
 - coverage: whether the spec covers the problem requirements
 - faithfulness: whether the spec avoids unsupported assumptions

@@ -135,6 +135,27 @@ class SpecParsingTests(unittest.TestCase):
         self.assertIn("missing edge case", score.missing_constraints)
         self.assertEqual(score.action, "revise the spec")
 
+    def test_spec_score_parses_freeform_fields(self):
+        text = """
+        Here is the evaluation.
+        coverage: 84
+        faithfulness: 91
+        precision: 76
+        overall: 85
+        missing_constraints: ["edge case: empty array"]
+        unsupported_constraints: []
+        ambiguities: ['tie-break not specified']
+        action: revise output rule and add edge cases
+        """
+        score = SpecScore.from_llm_output(text)
+        self.assertEqual(score.coverage, 84)
+        self.assertEqual(score.faithfulness, 91)
+        self.assertEqual(score.precision, 76)
+        self.assertEqual(score.overall, 85)
+        self.assertIn("edge case: empty array", score.missing_constraints)
+        self.assertIn("tie-break not specified", score.ambiguities)
+        self.assertEqual(score.action, "revise output rule and add edge cases")
+
     def test_reliability_guard_restores_process_state(self):
         import os
         import shutil
