@@ -13,11 +13,40 @@ if "datasets" not in sys.modules:
     datasets_stub.load_from_disk = lambda *args, **kwargs: []
     sys.modules["datasets"] = datasets_stub
 
+if "numpy" not in sys.modules:
+    numpy_stub = types.ModuleType("numpy")
+    numpy_stub.ndarray = list
+    numpy_stub.bool_ = bool
+    numpy_stub.all = all
+    numpy_stub.array = lambda x: x
+    numpy_stub.mean = lambda values: sum(values) / len(values) if values else 0
+    sys.modules["numpy"] = numpy_stub
+
+if "tqdm" not in sys.modules:
+    tqdm_stub = types.ModuleType("tqdm")
+
+    class _DummyTqdm:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def update(self, *args, **kwargs):
+            return None
+
+    tqdm_stub.tqdm = _DummyTqdm
+    sys.modules["tqdm"] = tqdm_stub
+
 from lcb_runner.dual_loop.main import get_args
 from lcb_runner.dual_loop.model_download import infer_output_dir
 from lcb_runner.lm_styles import resolve_language_model
 from lcb_runner.dual_loop.pipeline import DualLoopPipeline, ProblemTrace
 from lcb_runner.dual_loop.spec import SpecScore, StructuredSpec, VerifierFeedback
+from lcb_runner.evaluation.testing_util import reliability_guard, restore_reliability_guard
 
 
 def make_problem(question_id: str = "q1"):
@@ -105,6 +134,26 @@ class SpecParsingTests(unittest.TestCase):
         self.assertEqual(score.overall, 82)
         self.assertIn("missing edge case", score.missing_constraints)
         self.assertEqual(score.action, "revise the spec")
+
+    def test_reliability_guard_restores_process_state(self):
+        import os
+        import shutil
+
+        original_putenv = os.putenv
+        original_kill = os.kill
+        original_rmtree = shutil.rmtree
+
+        state = reliability_guard()
+        try:
+            self.assertIsNone(os.putenv)
+            self.assertIsNone(os.kill)
+            self.assertIsNone(shutil.rmtree)
+        finally:
+            restore_reliability_guard(state)
+
+        self.assertIs(os.putenv, original_putenv)
+        self.assertIs(os.kill, original_kill)
+        self.assertIs(shutil.rmtree, original_rmtree)
 
 
 class DualLoopPipelineTests(unittest.TestCase):
