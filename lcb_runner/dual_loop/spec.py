@@ -5,6 +5,41 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 
+_SPEC_SCORE_FIELD_ALIASES = {
+    "coverage": ["coverage", "覆盖率", "覆盖", "完整性"],
+    "faithfulness": ["faithfulness", "忠实度", "忠实性", "faithful"],
+    "precision": ["precision", "精确度", "精确性", "明确性"],
+    "overall": ["overall", "总分", "综合得分", "overall_score"],
+    "missing_constraints": [
+        "missing_constraints",
+        "missing constraints",
+        "缺失约束",
+        "遗漏约束",
+    ],
+    "unsupported_constraints": [
+        "unsupported_constraints",
+        "unsupported constraints",
+        "不支持的约束",
+        "臆造约束",
+    ],
+    "ambiguities": ["ambiguities", "ambiguity", "歧义", "模糊点"],
+    "action": ["action", "建议", "修订建议", "revision", "next_action"],
+}
+
+
+def _normalize_text(text: str) -> str:
+    return (
+        text.replace("：", ":")
+        .replace("，", ",")
+        .replace("（", "(")
+        .replace("）", ")")
+        .replace("“", '"')
+        .replace("”", '"')
+        .replace("‘", "'")
+        .replace("’", "'")
+    )
+
+
 def _ensure_list(value: Any) -> list[str]:
     if value is None:
         return []
@@ -17,6 +52,7 @@ def _ensure_list(value: Any) -> list[str]:
 
 
 def _extract_json_block(text: str) -> dict[str, Any] | None:
+    text = _normalize_text(text)
     fenced = re.findall(r"```(?:json)?\s*(\{.*?\})\s*```", text, flags=re.DOTALL)
     candidates = fenced or re.findall(r"(\{.*\})", text, flags=re.DOTALL)
     for candidate in candidates:
@@ -27,15 +63,21 @@ def _extract_json_block(text: str) -> dict[str, Any] | None:
     return None
 
 
+def _field_aliases(field: str) -> list[str]:
+    return _SPEC_SCORE_FIELD_ALIASES.get(field, [field])
+
+
 def _extract_int_field(text: str, field: str) -> int:
-    pattern = rf'["\']?{re.escape(field)}["\']?\s*[:=]\s*(-?\d+)'
-    match = re.search(pattern, text, flags=re.IGNORECASE)
-    if match:
-        return int(match.group(1))
-    pattern = rf"{re.escape(field)}\s*(?:score)?\s*[:=]\s*(-?\d+)"
-    match = re.search(pattern, text, flags=re.IGNORECASE)
-    if match:
-        return int(match.group(1))
+    text = _normalize_text(text)
+    for alias in _field_aliases(field):
+        pattern = rf'["\']?{re.escape(alias)}["\']?\s*[:=]\s*(-?\d+)(?:\s*/\s*100|%)?'
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+        pattern = rf"{re.escape(alias)}\s*(?:score)?\s*[:=]\s*(-?\d+)(?:\s*/\s*100|%)?"
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            return int(match.group(1))
     return 0
 
 
@@ -50,45 +92,77 @@ def _parse_list_candidate(candidate: str) -> list[str]:
 
 
 def _extract_list_field(text: str, field: str) -> list[str]:
-    bracket_pattern = rf'["\']?{re.escape(field)}["\']?\s*[:=]\s*(\[[\s\S]*?\])'
-    match = re.search(bracket_pattern, text, flags=re.IGNORECASE)
-    if match:
-        parsed = _parse_list_candidate(match.group(1))
-        if parsed:
-            return parsed
+    text = _normalize_text(text)
+    for alias in _field_aliases(field):
+        bracket_pattern = rf'["\']?{re.escape(alias)}["\']?\s*[:=]\s*(\[[\s\S]*?\])'
+        match = re.search(bracket_pattern, text, flags=re.IGNORECASE)
+        if match:
+            parsed = _parse_list_candidate(match.group(1))
+            if parsed:
+                return parsed
 
-    line_pattern = rf'["\']?{re.escape(field)}["\']?\s*[:=]\s*(.+)'
-    match = re.search(line_pattern, text, flags=re.IGNORECASE)
-    if not match:
-        return []
+        line_pattern = rf'["\']?{re.escape(alias)}["\']?\s*[:=]\s*(.+)'
+        match = re.search(line_pattern, text, flags=re.IGNORECASE)
+        if not match:
+            continue
 
-    value = match.group(1).strip().splitlines()[0].strip()
-    if not value or value.lower() in {"[]", "none", "null", "n/a"}:
-        return []
-    if value.startswith("[") and value.endswith("]"):
-        parsed = _parse_list_candidate(value)
-        if parsed:
-            return parsed
-    return [item.strip(" -\"'") for item in value.split(",") if item.strip(" -\"'")]
+        value = match.group(1).strip().splitlines()[0].strip()
+        if not value or value.lower() in {"[]", "none", "null", "n/a"}:
+            return []
+        if value.startswith("[") and value.endswith("]"):
+            parsed = _parse_list_candidate(value)
+            if parsed:
+                return parsed
+        return [item.strip(" -\"'") for item in value.split(",") if item.strip(" -\"'")]
+    return []
 
 
 def _extract_string_field(text: str, field: str) -> str:
-    quoted_pattern = rf'["\']?{re.escape(field)}["\']?\s*[:=]\s*"([^"]*)"'
-    match = re.search(quoted_pattern, text, flags=re.IGNORECASE)
-    if match:
-        return match.group(1).strip()
+    text = _normalize_text(text)
+    for alias in _field_aliases(field):
+        quoted_pattern = rf'["\']?{re.escape(alias)}["\']?\s*[:=]\s*"([^"]*)"'
+        match = re.search(quoted_pattern, text, flags=re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
 
-    single_quoted_pattern = rf'["\']?{re.escape(field)}["\']?\s*[:=]\s*\'([^\']*)\''
-    match = re.search(single_quoted_pattern, text, flags=re.IGNORECASE)
-    if match:
-        return match.group(1).strip()
+        single_quoted_pattern = rf'["\']?{re.escape(alias)}["\']?\s*[:=]\s*\'([^\']*)\''
+        match = re.search(single_quoted_pattern, text, flags=re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
 
-    line_pattern = rf'["\']?{re.escape(field)}["\']?\s*[:=]\s*(.+)'
-    match = re.search(line_pattern, text, flags=re.IGNORECASE)
-    if not match:
-        return ""
-    value = match.group(1).strip().splitlines()[0].strip()
-    return value.strip(" -\"'")
+        line_pattern = rf'["\']?{re.escape(alias)}["\']?\s*[:=]\s*(.+)'
+        match = re.search(line_pattern, text, flags=re.IGNORECASE)
+        if not match:
+            continue
+        value = match.group(1).strip().splitlines()[0].strip()
+        return value.strip(" -\"'")
+    return ""
+
+
+def _coerce_score_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    normalized = {}
+    nested_scores = payload.get("scores")
+    if isinstance(nested_scores, dict):
+        payload = {**nested_scores, **payload}
+
+    for canonical, aliases in _SPEC_SCORE_FIELD_ALIASES.items():
+        for alias in aliases:
+            if alias in payload:
+                normalized[canonical] = payload[alias]
+                break
+    return normalized or payload
+
+
+def _to_int_score(value: Any) -> int:
+    if value is None:
+        return 0
+    if isinstance(value, (int, float)):
+        return int(value)
+    text = _normalize_text(str(value)).strip()
+    match = re.search(r"(-?\d+)(?:\s*/\s*100|%)?", text)
+    if match:
+        return int(match.group(1))
+    return 0
 
 
 @dataclass
@@ -162,11 +236,17 @@ class SpecScore:
     unsupported_constraints: list[str] = field(default_factory=list)
     ambiguities: list[str] = field(default_factory=list)
     action: str = ""
+    parse_ok: bool = False
+    parse_source: str = "default"
 
     @classmethod
     def from_llm_output(cls, text: str) -> "SpecScore":
         payload = _extract_json_block(text) or {}
+        parse_source = "json"
+        if payload:
+            payload = _coerce_score_payload(payload)
         if not payload:
+            parse_source = "fallback"
             payload = {
                 "coverage": _extract_int_field(text, "coverage"),
                 "faithfulness": _extract_int_field(text, "faithfulness"),
@@ -181,17 +261,31 @@ class SpecScore:
                 "ambiguities": _extract_list_field(text, "ambiguities"),
                 "action": _extract_string_field(text, "action"),
             }
+        parse_ok = any(
+            [
+                _to_int_score(payload.get("coverage", 0)),
+                _to_int_score(payload.get("faithfulness", 0)),
+                _to_int_score(payload.get("precision", 0)),
+                _to_int_score(payload.get("overall", 0)),
+                bool(_ensure_list(payload.get("missing_constraints"))),
+                bool(_ensure_list(payload.get("unsupported_constraints"))),
+                bool(_ensure_list(payload.get("ambiguities"))),
+                bool(str(payload.get("action", "")).strip()),
+            ]
+        )
         return cls(
-            coverage=int(payload.get("coverage", 0) or 0),
-            faithfulness=int(payload.get("faithfulness", 0) or 0),
-            precision=int(payload.get("precision", 0) or 0),
-            overall=int(payload.get("overall", 0) or 0),
+            coverage=_to_int_score(payload.get("coverage", 0)),
+            faithfulness=_to_int_score(payload.get("faithfulness", 0)),
+            precision=_to_int_score(payload.get("precision", 0)),
+            overall=_to_int_score(payload.get("overall", 0)),
             missing_constraints=_ensure_list(payload.get("missing_constraints")),
             unsupported_constraints=_ensure_list(
                 payload.get("unsupported_constraints")
             ),
             ambiguities=_ensure_list(payload.get("ambiguities")),
             action=str(payload.get("action", "")).strip(),
+            parse_ok=parse_ok,
+            parse_source=parse_source if parse_ok else "default",
         )
 
     def to_json(self) -> str:

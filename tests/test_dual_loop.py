@@ -155,6 +155,33 @@ class SpecParsingTests(unittest.TestCase):
         self.assertIn("edge case: empty array", score.missing_constraints)
         self.assertIn("tie-break not specified", score.ambiguities)
         self.assertEqual(score.action, "revise output rule and add edge cases")
+        self.assertTrue(score.parse_ok)
+        self.assertEqual(score.parse_source, "fallback")
+
+    def test_spec_score_parses_chinese_and_nested_scores(self):
+        text = json.dumps(
+            {
+                "scores": {
+                    "覆盖率": "88/100",
+                    "忠实度": 93,
+                    "精确度": 79,
+                    "总分": 88,
+                },
+                "缺失约束": ["边界情况未覆盖"],
+                "歧义": [],
+                "建议": "补充边界情况",
+            },
+            ensure_ascii=False,
+        )
+        score = SpecScore.from_llm_output(text)
+        self.assertEqual(score.coverage, 88)
+        self.assertEqual(score.faithfulness, 93)
+        self.assertEqual(score.precision, 79)
+        self.assertEqual(score.overall, 88)
+        self.assertIn("边界情况未覆盖", score.missing_constraints)
+        self.assertEqual(score.action, "补充边界情况")
+        self.assertTrue(score.parse_ok)
+        self.assertEqual(score.parse_source, "json")
 
     def test_reliability_guard_restores_process_state(self):
         import os
