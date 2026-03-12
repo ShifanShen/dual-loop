@@ -99,6 +99,45 @@ Requirements:
 """
 
 
+def build_spec_json_repair_prompt(raw_output: str) -> str:
+    return f"""Convert the following response into one valid JSON object using this schema exactly:
+{SPEC_JSON_SCHEMA}
+
+Rules:
+- Return JSON only.
+- Do not add markdown, code fences, or commentary.
+- If a field is missing, return [] for list fields and "validator_only" for reference_strategy.
+- Preserve the original meaning when possible.
+
+Response to normalize:
+{raw_output}
+"""
+
+
+def build_spec_score_json_repair_prompt(raw_output: str) -> str:
+    return f"""Convert the following response into one valid JSON object with this schema exactly:
+{{
+  "coverage": 0,
+  "faithfulness": 0,
+  "precision": 0,
+  "overall": 0,
+  "missing_constraints": ["..."],
+  "unsupported_constraints": ["..."],
+  "ambiguities": ["..."],
+  "action": "one short revision instruction"
+}}
+
+Rules:
+- Return JSON only.
+- Do not add markdown, code fences, or commentary.
+- Every score must be an integer from 0 to 100.
+- Preserve the original judgment when possible.
+
+Response to normalize:
+{raw_output}
+"""
+
+
 def build_code_from_spec_prompt(
     problem: "CodeGenerationProblem", spec: StructuredSpec
 ) -> str:

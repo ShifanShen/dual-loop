@@ -10,8 +10,10 @@ from lcb_runner.dual_loop.prompts import (
     build_code_from_spec_prompt,
     build_repair_prompt,
     build_spec_draft_prompt,
+    build_spec_json_repair_prompt,
     build_spec_refine_prompt,
     build_spec_score_prompt,
+    build_spec_score_json_repair_prompt,
 )
 from lcb_runner.dual_loop.spec import SpecScore, StructuredSpec, VerifierFeedback
 from lcb_runner.lm_styles import resolve_language_model
@@ -157,15 +159,27 @@ class DualLoopPipeline:
 
         spec = self._draft_spec(problem)
         trace.spec_initial = asdict(spec)
-        trace.raw_spec_outputs.append(getattr(spec, "_raw_output", ""))
+        trace.raw_spec_outputs.extend(
+            getattr(spec, "_raw_attempt_outputs", [getattr(spec, "_raw_output", "")])
+        )
         self._record_usage(trace, getattr(spec, "_usage", None), "spec")
+        for extra_usage in getattr(spec, "_extra_usages", []):
+            self._record_usage(trace, extra_usage, "spec")
         self._record_stage_time(trace, "spec_draft", getattr(spec, "_stage_time", 0.0))
         initial_score = self._score_spec(problem, spec)
         trace.initial_spec_score = asdict(initial_score)
         trace.spec_scores.append(asdict(initial_score))
-        trace.raw_score_outputs.append(getattr(initial_score, "_raw_output", ""))
+        trace.raw_score_outputs.extend(
+            getattr(
+                initial_score,
+                "_raw_attempt_outputs",
+                [getattr(initial_score, "_raw_output", "")],
+            )
+        )
         trace.spec_issue_types.extend(self._extract_spec_issue_types(initial_score))
         self._record_usage(trace, getattr(initial_score, "_usage", None), "judge")
+        for extra_usage in getattr(initial_score, "_extra_usages", []):
+            self._record_usage(trace, extra_usage, "judge")
         self._record_stage_time(
             trace, "spec_score_initial", getattr(initial_score, "_stage_time", 0.0)
         )
@@ -184,9 +198,17 @@ class DualLoopPipeline:
         trace.spec_final = asdict(spec)
         final_score = self._score_spec(problem, spec)
         trace.final_spec_score = asdict(final_score)
-        trace.raw_score_outputs.append(getattr(final_score, "_raw_output", ""))
+        trace.raw_score_outputs.extend(
+            getattr(
+                final_score,
+                "_raw_attempt_outputs",
+                [getattr(final_score, "_raw_output", "")],
+            )
+        )
         trace.spec_issue_types.extend(self._extract_spec_issue_types(final_score))
         self._record_usage(trace, getattr(final_score, "_usage", None), "judge")
+        for extra_usage in getattr(final_score, "_extra_usages", []):
+            self._record_usage(trace, extra_usage, "judge")
         self._record_stage_time(
             trace, "spec_score_final", getattr(final_score, "_stage_time", 0.0)
         )
@@ -229,9 +251,28 @@ class DualLoopPipeline:
             temperature=self.args.spec_temperature,
             max_tokens=self.args.spec_max_tokens,
         )
+        raw_attempt_outputs = [output]
+        extra_usages = []
         spec = StructuredSpec.from_llm_output(output, fallback_task=problem.question_title)
+        if not spec.parse_ok:
+            repair_output, repair_usage = self.llm.generate(
+                build_spec_json_repair_prompt(output),
+                role="spec_json_repair",
+                temperature=0.0,
+                max_tokens=self.args.spec_max_tokens,
+            )
+            raw_attempt_outputs.append(repair_output)
+            extra_usages.append(repair_usage)
+            repaired_spec = StructuredSpec.from_llm_output(
+                repair_output, fallback_task=problem.question_title
+            )
+            if repaired_spec.parse_ok:
+                output = repair_output
+                spec = repaired_spec
         spec._raw_output = output
+        spec._raw_attempt_outputs = raw_attempt_outputs
         spec._usage = usage
+        spec._extra_usages = extra_usages
         spec._stage_time = time.perf_counter() - started_at
         return spec
 
@@ -243,9 +284,26 @@ class DualLoopPipeline:
             temperature=self.args.judge_temperature,
             max_tokens=self.args.judge_max_tokens,
         )
+        raw_attempt_outputs = [output]
+        extra_usages = []
         score = SpecScore.from_llm_output(output)
+        if not score.parse_ok:
+            repair_output, repair_usage = self.llm.generate(
+                build_spec_score_json_repair_prompt(output),
+                role="judge_json_repair",
+                temperature=0.0,
+                max_tokens=self.args.judge_max_tokens,
+            )
+            raw_attempt_outputs.append(repair_output)
+            extra_usages.append(repair_usage)
+            repaired_score = SpecScore.from_llm_output(repair_output)
+            if repaired_score.parse_ok:
+                output = repair_output
+                score = repaired_score
         score._raw_output = output
+        score._raw_attempt_outputs = raw_attempt_outputs
         score._usage = usage
+        score._extra_usages = extra_usages
         score._stage_time = time.perf_counter() - started_at
         return score
 
@@ -264,8 +322,11 @@ class DualLoopPipeline:
         for _ in range(self.args.spec_max_iters):
             score = self._score_spec(problem, current)
             score_trace.append(asdict(score))
-            refine_meta["raw_score_outputs"].append(getattr(score, "_raw_output", ""))
+            refine_meta["raw_score_outputs"].extend(
+                getattr(score, "_raw_attempt_outputs", [getattr(score, "_raw_output", "")])
+            )
             refine_meta["judge_usages"].append(getattr(score, "_usage", None))
+            refine_meta["judge_usages"].extend(getattr(score, "_extra_usages", []))
             refine_meta["stage_times"]["spec_score_refine"] = (
                 refine_meta["stage_times"].get("spec_score_refine", 0.0)
                 + float(getattr(score, "_stage_time", 0.0))

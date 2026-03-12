@@ -178,10 +178,13 @@ class StructuredSpec:
     reference_strategy: str = "validator_only"
     algorithmic_notes: list[str] = field(default_factory=list)
     non_checkable_notes: list[str] = field(default_factory=list)
+    parse_ok: bool = False
+    parse_source: str = "default"
 
     @classmethod
     def from_llm_output(cls, text: str, fallback_task: str = "") -> "StructuredSpec":
         payload = _extract_json_block(text) or {}
+        parse_ok = bool(payload)
         return cls(
             task=str(payload.get("task", fallback_task)).strip(),
             inputs=_ensure_list(payload.get("inputs")),
@@ -197,6 +200,8 @@ class StructuredSpec:
             or "validator_only",
             algorithmic_notes=_ensure_list(payload.get("algorithmic_notes")),
             non_checkable_notes=_ensure_list(payload.get("non_checkable_notes")),
+            parse_ok=parse_ok,
+            parse_source="json" if parse_ok else "default",
         )
 
     def to_json(self) -> str:
