@@ -10,6 +10,7 @@ from unittest.mock import patch
 if "datasets" not in sys.modules:
     datasets_stub = types.ModuleType("datasets")
     datasets_stub.load_dataset = lambda *args, **kwargs: []
+    datasets_stub.load_from_disk = lambda *args, **kwargs: []
     sys.modules["datasets"] = datasets_stub
 
 from lcb_runner.dual_loop.main import get_args

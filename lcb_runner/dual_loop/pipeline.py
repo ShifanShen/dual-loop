@@ -431,6 +431,7 @@ class DualLoopPipeline:
             self.args.release_version,
             start_date=self.args.start_date,
             end_date=self.args.end_date,
+            dataset_path=getattr(self.args, "dataset_path", None),
         )
         benchmark = sorted(benchmark, key=lambda problem: problem.question_id)
         if self.args.question_ids:

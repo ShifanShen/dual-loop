@@ -47,6 +47,12 @@ def get_args():
     )
     parser.add_argument("--start_date", type=str, default=None)
     parser.add_argument("--end_date", type=str, default=None)
+    parser.add_argument(
+        "--dataset_path",
+        type=str,
+        default=None,
+        help="Optional local LiveCodeBench dataset directory created by save_to_disk or a local dataset path",
+    )
     parser.add_argument("--question_ids", type=str, default=None)
     parser.add_argument("--max_problems", type=int, default=10)
     parser.add_argument("--output_root", type=str, default="output/dual_loop")
