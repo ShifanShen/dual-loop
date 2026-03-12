@@ -14,7 +14,7 @@ from lcb_runner.dual_loop.prompts import (
     build_spec_score_prompt,
 )
 from lcb_runner.dual_loop.spec import SpecScore, StructuredSpec, VerifierFeedback
-from lcb_runner.lm_styles import LanguageModelStore
+from lcb_runner.lm_styles import resolve_language_model
 from lcb_runner.runner.runner_utils import build_runner
 from lcb_runner.utils.extraction_utils import extract_code
 
@@ -60,7 +60,12 @@ class ProblemTrace:
 class LLMAdapter:
     def __init__(self, args):
         self.args = args
-        self.model = LanguageModelStore[args.model]
+        self.model = resolve_language_model(
+            args.model,
+            local_model_path=args.local_model_path,
+            model_style_override=getattr(args, "model_style", None),
+            model_repr_override=getattr(args, "model_repr", None),
+        )
         self.runner = build_runner(args, self.model)
         self.total_call_count = 0
 

@@ -12,6 +12,9 @@ if "datasets" not in sys.modules:
     datasets_stub.load_dataset = lambda *args, **kwargs: []
     sys.modules["datasets"] = datasets_stub
 
+from lcb_runner.dual_loop.main import get_args
+from lcb_runner.dual_loop.model_download import infer_output_dir
+from lcb_runner.lm_styles import resolve_language_model
 from lcb_runner.dual_loop.pipeline import DualLoopPipeline, ProblemTrace
 from lcb_runner.dual_loop.spec import SpecScore, StructuredSpec, VerifierFeedback
 
@@ -35,6 +38,36 @@ def make_problem(question_id: str = "q1"):
 
 
 class SpecParsingTests(unittest.TestCase):
+    def test_infer_output_dir(self):
+        path = infer_output_dir("Qwen/Qwen2.5-Coder-7B-Instruct", "/models")
+        self.assertTrue(path.endswith("Qwen2.5-Coder-7B-Instruct"))
+
+    def test_main_infers_model_name_from_local_path(self):
+        with patch.object(
+            sys,
+            "argv",
+            [
+                "main.py",
+                "--local_model_path",
+                "/models/Qwen2.5-Coder-7B-Instruct",
+                "--model_style",
+                "CodeQwenInstruct",
+            ],
+        ):
+            args = get_args()
+        self.assertEqual(args.model, "Qwen2.5-Coder-7B-Instruct")
+        self.assertEqual(args.model_repr, "Qwen2.5-Coder-7B-Instruct")
+
+    def test_resolve_arbitrary_local_model(self):
+        model = resolve_language_model(
+            "Local-Qwen",
+            local_model_path="/models/Qwen2.5-Coder-7B-Instruct",
+            model_style_override="CodeQwenInstruct",
+            model_repr_override="Qwen2.5-Coder-7B-Local",
+        )
+        self.assertEqual(model.model_name, "Local-Qwen")
+        self.assertEqual(model.model_repr, "Qwen2.5-Coder-7B-Local")
+
     def test_structured_spec_parses_json_block(self):
         text = """```json
         {
@@ -78,6 +111,8 @@ class DualLoopPipelineTests(unittest.TestCase):
         return Namespace(
             model="Qwen/Qwen2.5-Coder-7B-Instruct",
             local_model_path=None,
+            model_style=None,
+            model_repr=None,
             pipeline_mode="full",
             release_version="release_v6",
             start_date=None,

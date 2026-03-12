@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+from pathlib import Path
 
 
 def get_args():
@@ -10,14 +11,26 @@ def get_args():
     parser.add_argument(
         "--model",
         type=str,
-        default="Qwen/Qwen2.5-Coder-7B-Instruct",
-        help="Model name registered in lcb_runner/lm_styles.py",
+        default=None,
+        help="Model name registered in lcb_runner/lm_styles.py; if omitted with --local_model_path, infer from the local directory name",
     )
     parser.add_argument(
         "--local_model_path",
         type=str,
         default=None,
         help="Optional local model path for vLLM-backed runs",
+    )
+    parser.add_argument(
+        "--model_style",
+        type=str,
+        default=None,
+        help="Override LMStyle for arbitrary local models, e.g. CodeQwenInstruct or LLaMa3",
+    )
+    parser.add_argument(
+        "--model_repr",
+        type=str,
+        default=None,
+        help="Optional short name used in output folders for arbitrary local models",
     )
     parser.add_argument(
         "--pipeline_mode",
@@ -65,6 +78,15 @@ def get_args():
 
     args = parser.parse_args()
     args.stop = args.stop.split(",")
+    if args.local_model_path:
+        inferred_name = Path(args.local_model_path).name or "LocalModel"
+        if args.model is None:
+            args.model = inferred_name
+        if args.model_repr is None:
+            args.model_repr = inferred_name
+    elif args.model is None:
+        args.model = "Qwen/Qwen2.5-Coder-7B-Instruct"
+
     if args.tensor_parallel_size == -1:
         import torch
 

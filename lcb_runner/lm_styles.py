@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from pathlib import Path
 
 
 class LMStyle(Enum):
@@ -866,6 +867,36 @@ LanguageModelList: list[LanguageModel] = [
 LanguageModelStore: dict[str, LanguageModel] = {
     lm.model_name: lm for lm in LanguageModelList
 }
+
+
+def resolve_language_model(
+    model_name: str,
+    *,
+    local_model_path: str | None = None,
+    model_style_override: str | None = None,
+    model_repr_override: str | None = None,
+) -> LanguageModel:
+    if model_name in LanguageModelStore:
+        return LanguageModelStore[model_name]
+
+    if model_style_override is None:
+        raise KeyError(
+            f"Unknown model `{model_name}`. Pass --model_style for arbitrary local models."
+        )
+
+    model_style = LMStyle(model_style_override)
+    model_repr = model_repr_override
+    if not model_repr:
+        base = local_model_path or model_name
+        model_repr = Path(base).name or "LocalModel"
+
+    return LanguageModel(
+        model_name=model_name,
+        model_repr=model_repr,
+        model_style=model_style,
+        release_date=datetime(1970, 1, 1),
+        link=local_model_path,
+    )
 
 if __name__ == "__main__":
     print(list(LanguageModelStore.keys()))
