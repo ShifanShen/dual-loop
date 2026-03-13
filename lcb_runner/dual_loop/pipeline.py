@@ -11,6 +11,7 @@ from lcb_runner.dual_loop.prompts import (
     build_code_from_spec_prompt,
     build_counterexample_repair_prompt,
     build_repair_prompt,
+    build_rewrite_from_counterexample_prompt,
     build_spec_draft_prompt,
     build_spec_json_repair_prompt,
     build_spec_refine_prompt,
@@ -451,8 +452,14 @@ class DualLoopPipeline:
             if feedback.passed:
                 return current_code, feedback_trace
             started_at = time.perf_counter()
+            counterexample = self._build_counterexample_summary(feedback)
+            use_rewrite_fallback = (
+                feedback.error_type == "wrong_answer" and (stagnant_attempts > 1 or attempt_idx >= 2)
+            )
             use_counterexample_fallback = (
-                feedback.error_type == "wrong_answer" and (stagnant_attempts > 0 or attempt_idx > 0)
+                feedback.error_type == "wrong_answer"
+                and not use_rewrite_fallback
+                and (stagnant_attempts > 0 or attempt_idx > 0)
             )
             prompt = build_repair_prompt(
                 problem,
@@ -461,17 +468,27 @@ class DualLoopPipeline:
                 feedback,
                 require_change=stagnant_attempts > 0,
             )
-            if use_counterexample_fallback:
+            role = "repair"
+            if use_rewrite_fallback:
+                prompt = build_rewrite_from_counterexample_prompt(
+                    problem,
+                    spec,
+                    feedback,
+                    counterexample,
+                )
+                role = "repair_rewrite"
+            elif use_counterexample_fallback:
                 prompt = build_counterexample_repair_prompt(
                     problem,
                     spec,
                     current_code,
                     feedback,
-                    self._build_counterexample_summary(feedback),
+                    counterexample,
                 )
+                role = "repair_counterexample"
             repair_output, usage = self.llm.generate(
                 prompt,
-                role="repair_counterexample" if use_counterexample_fallback else "repair",
+                role=role,
                 temperature=min(0.8, self.args.repair_temperature + 0.2 * stagnant_attempts),
                 max_tokens=self.args.codegen_max_tokens,
             )

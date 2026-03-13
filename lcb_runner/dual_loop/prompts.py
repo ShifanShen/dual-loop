@@ -252,3 +252,35 @@ Counterexample:
 Verifier feedback:
 {feedback.to_json()}
 """
+
+
+def build_rewrite_from_counterexample_prompt(
+    problem: "CodeGenerationProblem",
+    spec: StructuredSpec,
+    feedback: VerifierFeedback,
+    counterexample: str,
+) -> str:
+    starter = ""
+    if problem.starter_code:
+        starter = f"\nStarter code:\n```python\n{problem.starter_code}\n```\n"
+    return f"""You are rewriting a Python solution for a competitive programming problem after multiple failed repair attempts.
+Return exactly one complete Python code block and nothing else.
+
+Original problem:
+{problem.question_content}
+
+Structured spec:
+{spec.to_text()}
+{starter}
+Requirements:
+- Ignore the previous implementation and write a fresh solution from scratch.
+- Follow the exact input/output protocol.
+- Fix the wrong-answer behavior shown in the counterexample.
+- Prefer the simplest correct contest-style solution.
+
+Counterexample:
+{counterexample}
+
+Verifier feedback:
+{feedback.to_json()}
+"""
