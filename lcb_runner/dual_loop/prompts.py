@@ -215,3 +215,40 @@ Repair target:
 - Satisfy the checkable subset of the structured spec.
 {change_requirement}
 """
+
+
+def build_counterexample_repair_prompt(
+    problem: "CodeGenerationProblem",
+    spec: StructuredSpec,
+    code: str,
+    feedback: VerifierFeedback,
+    counterexample: str,
+) -> str:
+    starter = ""
+    if problem.starter_code:
+        starter = f"\nStarter code:\n```python\n{problem.starter_code}\n```\n"
+    return f"""You are fixing a wrong-answer bug in a Python program.
+Return exactly one complete Python code block and nothing else.
+
+Original problem:
+{problem.question_content}
+
+Structured spec:
+{spec.to_text()}
+{starter}
+Current code:
+```python
+{code}
+```
+
+Bug summary:
+- The current program fails on this concrete counterexample.
+- Fix the logic that causes this mismatch.
+- Do not return the same program again.
+
+Counterexample:
+{counterexample}
+
+Verifier feedback:
+{feedback.to_json()}
+"""

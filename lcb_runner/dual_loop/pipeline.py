@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 from lcb_runner.dual_loop.prompts import (
     build_code_block_repair_prompt,
     build_code_from_spec_prompt,
+    build_counterexample_repair_prompt,
     build_repair_prompt,
     build_spec_draft_prompt,
     build_spec_json_repair_prompt,
@@ -450,15 +451,27 @@ class DualLoopPipeline:
             if feedback.passed:
                 return current_code, feedback_trace
             started_at = time.perf_counter()
-            repair_output, usage = self.llm.generate(
-                build_repair_prompt(
+            use_counterexample_fallback = (
+                feedback.error_type == "wrong_answer" and (stagnant_attempts > 0 or attempt_idx > 0)
+            )
+            prompt = build_repair_prompt(
+                problem,
+                spec,
+                current_code,
+                feedback,
+                require_change=stagnant_attempts > 0,
+            )
+            if use_counterexample_fallback:
+                prompt = build_counterexample_repair_prompt(
                     problem,
                     spec,
                     current_code,
                     feedback,
-                    require_change=stagnant_attempts > 0,
-                ),
-                role="repair",
+                    self._build_counterexample_summary(feedback),
+                )
+            repair_output, usage = self.llm.generate(
+                prompt,
+                role="repair_counterexample" if use_counterexample_fallback else "repair",
                 temperature=min(0.8, self.args.repair_temperature + 0.2 * stagnant_attempts),
                 max_tokens=self.args.codegen_max_tokens,
             )
@@ -486,6 +499,27 @@ class DualLoopPipeline:
         final_feedback = self._verify(problem, current_code)
         feedback_trace.append(asdict(final_feedback))
         return current_code, feedback_trace
+
+    @staticmethod
+    def _build_counterexample_summary(feedback: VerifierFeedback) -> str:
+        input_text = (feedback.input or "").strip()
+        output_text = (feedback.output or "").strip()
+        expected_text = (feedback.expected or "").strip()
+        message = (feedback.message or "").strip()
+
+        lines = []
+        if input_text:
+            lines.append("Input:")
+            lines.append(input_text)
+        if output_text:
+            lines.append("Current output:")
+            lines.append(output_text)
+        if expected_text:
+            lines.append("Expected output:")
+            lines.append(expected_text)
+        if message:
+            lines.append(f"Mismatch: {message}")
+        return "\n".join(lines).strip()
 
     def _parse_spec_output(
         self, output: str, *, fallback_task: str

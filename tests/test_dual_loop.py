@@ -491,6 +491,64 @@ class DualLoopPipelineTests(unittest.TestCase):
             self.assertEqual(final_code, "print('fixed')")
             self.assertEqual(len(feedback_trace), 3)
 
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_repair_code_uses_counterexample_prompt_after_repeated_wrong_answers(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            mock_adapter = mock_adapter_cls.return_value
+            mock_adapter.model.model_repr = "fake-model"
+            mock_adapter.generate.side_effect = [
+                ("```python\nprint('same')\n```", {"prompt_chars": 1, "completion_chars": 1}),
+                ("```python\nprint('fixed')\n```", {"prompt_chars": 1, "completion_chars": 1}),
+            ]
+            mock_adapter.extract_code.side_effect = (
+                lambda output: output.replace("```python", "").replace("```", "").strip()
+            )
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+            spec = StructuredSpec(task="solve")
+            feedbacks = [
+                VerifierFeedback(
+                    passed=False,
+                    error_type="wrong_answer",
+                    field="Rules",
+                    message="Wrong answer at output_line_idx=0: 1 != 2",
+                    input="1\n",
+                    output="1\n",
+                    expected="2\n",
+                ),
+                VerifierFeedback(
+                    passed=False,
+                    error_type="wrong_answer",
+                    field="Rules",
+                    message="Wrong answer at output_line_idx=0: 1 != 2",
+                    input="1\n",
+                    output="1\n",
+                    expected="2\n",
+                ),
+                VerifierFeedback(
+                    passed=True,
+                    error_type="accepted",
+                    field="checkable_subset",
+                    message="ok",
+                ),
+            ]
+
+            with patch.object(pipeline, "_verify", side_effect=feedbacks):
+                final_code, feedback_trace = pipeline._repair_code(problem, spec, "print('same')")
+
+            self.assertEqual(final_code, "print('fixed')")
+            self.assertEqual(len(feedback_trace), 3)
+            first_prompt = mock_adapter.generate.call_args_list[0].kwargs.get("prompt")
+            second_prompt = mock_adapter.generate.call_args_list[1].kwargs.get("prompt")
+            self.assertIsNone(first_prompt)
+            self.assertIsNone(second_prompt)
+            first_prompt = mock_adapter.generate.call_args_list[0].args[0]
+            second_prompt = mock_adapter.generate.call_args_list[1].args[0]
+            self.assertIn("Verifier feedback", first_prompt)
+            self.assertIn("Counterexample:", second_prompt)
+            self.assertIn("Expected output:", second_prompt)
+
 
 if __name__ == "__main__":
     unittest.main()
