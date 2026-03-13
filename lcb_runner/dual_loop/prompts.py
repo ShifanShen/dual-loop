@@ -138,6 +138,20 @@ Response to normalize:
 """
 
 
+def build_code_block_repair_prompt(raw_output: str) -> str:
+    return f"""Extract Python code from the following response.
+
+Rules:
+- Return exactly one fenced Python code block and nothing else.
+- Preserve the original code when possible.
+- If there is no recoverable Python code in the response, return an empty Python code block.
+- Do not invent new logic that is not already present.
+
+Response to normalize:
+{raw_output}
+"""
+
+
 def build_code_from_spec_prompt(
     problem: "CodeGenerationProblem", spec: StructuredSpec
 ) -> str:

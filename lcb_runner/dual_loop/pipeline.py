@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from lcb_runner.dual_loop.prompts import (
+    build_code_block_repair_prompt,
     build_code_from_spec_prompt,
     build_repair_prompt,
     build_spec_draft_prompt,
@@ -16,6 +17,7 @@ from lcb_runner.dual_loop.prompts import (
     build_spec_score_json_repair_prompt,
 )
 from lcb_runner.dual_loop.spec import SpecScore, StructuredSpec, VerifierFeedback
+from lcb_runner.lm_styles import LMStyle
 from lcb_runner.lm_styles import resolve_language_model
 from lcb_runner.runner.runner_utils import build_runner
 from lcb_runner.utils.extraction_utils import extract_code
@@ -81,7 +83,8 @@ class LLMAdapter:
     ) -> tuple[str, dict[str, int | str]]:
         self._apply_sampling_overrides(temperature=temperature, max_tokens=max_tokens)
         self.total_call_count += 1
-        output = self.runner.run_batch([prompt])[0][0]
+        formatted_prompt = self._format_prompt(prompt)
+        output = self.runner.run_batch([formatted_prompt])[0][0]
         usage = {
             "role": role,
             "prompt_chars": len(prompt),
@@ -93,6 +96,54 @@ class LLMAdapter:
     def extract_code(self, output: str) -> str:
         code = extract_code(output, self.model.model_style).strip()
         return code or output.strip()
+
+    def _format_prompt(self, prompt: str) -> str | list[dict[str, str]] | tuple[str, list[dict[str, str]]]:
+        style = self.model.model_style
+
+        if style in {
+            LMStyle.OpenAIChat,
+            LMStyle.DeepSeekAPI,
+            LMStyle.MistralWeb,
+            LMStyle.TogetherAI,
+            LMStyle.CohereCommand,
+        }:
+            return [{"role": "user", "content": prompt}]
+
+        if style in {LMStyle.OpenAIReasonPreview, LMStyle.OpenAIReason, LMStyle.Grok}:
+            return [{"role": "user", "content": prompt}]
+
+        if style in {LMStyle.Claude3, LMStyle.Claude3Thinking}:
+            return ("You are a helpful assistant.", [{"role": "user", "content": prompt}])
+
+        if style == LMStyle.CodeQwenInstruct:
+            return (
+                "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n"
+                f"<|im_start|>user\n{prompt.rstrip()}\n<|im_end|>\n"
+                "<|im_start|>assistant\n"
+            )
+
+        if style == LMStyle.QwQ:
+            return (
+                "<|im_start|>system\n"
+                "You are a helpful and harmless assistant. You are Qwen developed by Alibaba. "
+                "You should think step-by-step.<|im_end|>\n"
+                f"<|im_start|>user\n{prompt.rstrip()}\n<|im_end|>\n"
+                "<|im_start|>assistant\n"
+            )
+
+        if style == LMStyle.LLaMa3:
+            return (
+                "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n"
+                "You are a helpful assistant.<|eot_id|>"
+                "<|start_header_id|>user<|end_header_id|>\n\n"
+                f"{prompt.rstrip()}<|eot_id|>"
+                "<|start_header_id|>assistant<|end_header_id|>\n\n"
+            )
+
+        if style == LMStyle.DeepSeekCodeInstruct:
+            return f"### Instruction:\n{prompt.rstrip()}\n\n### Response:\n"
+
+        return prompt
 
     def _apply_sampling_overrides(
         self,
@@ -146,6 +197,8 @@ class DualLoopPipeline:
             trace.final_code = initial_code
             trace.raw_codegen_output = getattr(self, "_last_baseline_codegen_output", "")
             self._record_usage(trace, getattr(self, "_last_baseline_codegen_usage", None), "codegen")
+            for extra_usage in getattr(self, "_last_baseline_codegen_extra_usages", []):
+                self._record_usage(trace, extra_usage, "codegen")
             self._record_stage_time(
                 trace,
                 "codegen",
@@ -217,6 +270,8 @@ class DualLoopPipeline:
         trace.code_initial = code
         trace.raw_codegen_output = getattr(spec, "_last_codegen_output", "")
         self._record_usage(trace, getattr(spec, "_last_codegen_usage", None), "codegen")
+        for extra_usage in getattr(spec, "_last_codegen_extra_usages", []):
+            self._record_usage(trace, extra_usage, "codegen")
         self._record_stage_time(
             trace, "codegen", float(getattr(spec, "_last_codegen_stage_time", 0.0))
         )
@@ -251,24 +306,9 @@ class DualLoopPipeline:
             temperature=self.args.spec_temperature,
             max_tokens=self.args.spec_max_tokens,
         )
-        raw_attempt_outputs = [output]
-        extra_usages = []
-        spec = StructuredSpec.from_llm_output(output, fallback_task=problem.question_title)
-        if not spec.parse_ok:
-            repair_output, repair_usage = self.llm.generate(
-                build_spec_json_repair_prompt(output),
-                role="spec_json_repair",
-                temperature=0.0,
-                max_tokens=self.args.spec_max_tokens,
-            )
-            raw_attempt_outputs.append(repair_output)
-            extra_usages.append(repair_usage)
-            repaired_spec = StructuredSpec.from_llm_output(
-                repair_output, fallback_task=problem.question_title
-            )
-            if repaired_spec.parse_ok:
-                output = repair_output
-                spec = repaired_spec
+        spec, raw_attempt_outputs, extra_usages = self._parse_spec_output(
+            output, fallback_task=problem.question_title
+        )
         spec._raw_output = output
         spec._raw_attempt_outputs = raw_attempt_outputs
         spec._usage = usage
@@ -340,13 +380,17 @@ class DualLoopPipeline:
                 temperature=self.args.spec_temperature,
                 max_tokens=self.args.spec_max_tokens,
             )
-            current = StructuredSpec.from_llm_output(
-                refine_output, fallback_task=problem.question_title
+            next_spec, raw_attempt_outputs, extra_usages = self._parse_spec_output(
+                refine_output,
+                fallback_task=problem.question_title,
             )
+            if next_spec.parse_ok:
+                current = next_spec
             current._raw_output = refine_output
             current._usage = usage
-            refine_meta["raw_spec_outputs"].append(refine_output)
+            refine_meta["raw_spec_outputs"].extend(raw_attempt_outputs)
             refine_meta["spec_usages"].append(usage)
+            refine_meta["spec_usages"].extend(extra_usages)
             refine_meta["stage_times"]["spec_refine"] = (
                 refine_meta["stage_times"].get("spec_refine", 0.0)
                 + (time.perf_counter() - started_at)
@@ -368,9 +412,11 @@ class DualLoopPipeline:
             temperature=self.args.codegen_temperature,
             max_tokens=self.args.codegen_max_tokens,
         )
-        code = self.llm.extract_code(output)
+        code, extra_outputs, extra_usages = self._extract_valid_code(output)
         self._last_baseline_codegen_output = output
         self._last_baseline_codegen_usage = usage
+        self._last_baseline_codegen_extra_outputs = extra_outputs
+        self._last_baseline_codegen_extra_usages = extra_usages
         self._last_baseline_codegen_stage_time = time.perf_counter() - started_at
         return code
 
@@ -387,7 +433,10 @@ class DualLoopPipeline:
         spec._last_codegen_output = output
         spec._last_codegen_usage = usage
         spec._last_codegen_stage_time = time.perf_counter() - started_at
-        return self.llm.extract_code(output)
+        code, extra_outputs, extra_usages = self._extract_valid_code(output)
+        spec._last_codegen_extra_outputs = extra_outputs
+        spec._last_codegen_extra_usages = extra_usages
+        return code
 
     def _repair_code(
         self, problem: "CodeGenerationProblem", spec: StructuredSpec, code: str
@@ -415,11 +464,90 @@ class DualLoopPipeline:
             spec._repair_outputs.append(repair_output)
             spec._repair_usages.append(usage)
             spec._repair_stage_times.append(time.perf_counter() - started_at)
-            next_code = self.llm.extract_code(repair_output)
+            next_code, extra_outputs, extra_usages = self._extract_valid_code(repair_output)
+            spec._repair_outputs.extend(extra_outputs)
+            spec._repair_usages.extend(extra_usages)
             if not next_code or next_code == current_code:
                 return current_code, feedback_trace
             current_code = next_code
         return current_code, feedback_trace
+
+    def _parse_spec_output(
+        self, output: str, *, fallback_task: str
+    ) -> tuple[StructuredSpec, list[str], list[dict[str, int | str]]]:
+        raw_attempt_outputs = [output]
+        extra_usages: list[dict[str, int | str]] = []
+        spec = StructuredSpec.from_llm_output(output, fallback_task=fallback_task)
+        if spec.parse_ok:
+            return spec, raw_attempt_outputs, extra_usages
+
+        repair_output, repair_usage = self.llm.generate(
+            build_spec_json_repair_prompt(output),
+            role="spec_json_repair",
+            temperature=0.0,
+            max_tokens=self.args.spec_max_tokens,
+        )
+        raw_attempt_outputs.append(repair_output)
+        extra_usages.append(repair_usage)
+        repaired_spec = StructuredSpec.from_llm_output(
+            repair_output,
+            fallback_task=fallback_task,
+        )
+        if repaired_spec.parse_ok:
+            return repaired_spec, raw_attempt_outputs, extra_usages
+        return spec, raw_attempt_outputs, extra_usages
+
+    def _extract_valid_code(
+        self, output: str
+    ) -> tuple[str, list[str], list[dict[str, int | str]]]:
+        candidate = self.llm.extract_code(output)
+        if self._looks_like_python(candidate):
+            return candidate, [], []
+
+        repair_output, repair_usage = self.llm.generate(
+            build_code_block_repair_prompt(output),
+            role="code_block_repair",
+            temperature=0.0,
+            max_tokens=self.args.codegen_max_tokens,
+        )
+        repaired_candidate = self.llm.extract_code(repair_output)
+        if self._looks_like_python(repaired_candidate):
+            return repaired_candidate, [repair_output], [repair_usage]
+        return "", [repair_output], [repair_usage]
+
+    @staticmethod
+    def _looks_like_python(code: str) -> bool:
+        stripped = code.strip()
+        if not stripped:
+            return False
+
+        signal_tokens = (
+            "def ",
+            "class ",
+            "import ",
+            "from ",
+            "for ",
+            "while ",
+            "if ",
+            "elif ",
+            "else:",
+            "try:",
+            "except ",
+            "with ",
+            "return ",
+            "print(",
+            "input(",
+            "sys.stdin",
+            "lambda ",
+            "=",
+        )
+        bullet_prefixes = ("- ", "* ", "1. ", "2. ", "3. ")
+        lines = [line.strip() for line in stripped.splitlines() if line.strip()]
+        if not lines:
+            return False
+        if sum(1 for line in lines[:5] if line.startswith(bullet_prefixes)) >= 2:
+            return False
+        return any(token in stripped for token in signal_tokens)
 
     def _verify(
         self, problem: "CodeGenerationProblem", code: str

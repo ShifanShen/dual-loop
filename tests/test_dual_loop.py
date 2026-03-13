@@ -43,8 +43,8 @@ if "tqdm" not in sys.modules:
 
 from lcb_runner.dual_loop.main import get_args
 from lcb_runner.dual_loop.model_download import infer_output_dir
-from lcb_runner.lm_styles import resolve_language_model
-from lcb_runner.dual_loop.pipeline import DualLoopPipeline, ProblemTrace
+from lcb_runner.lm_styles import LMStyle, resolve_language_model
+from lcb_runner.dual_loop.pipeline import DualLoopPipeline, LLMAdapter, ProblemTrace
 from lcb_runner.dual_loop.spec import SpecScore, StructuredSpec, VerifierFeedback
 from lcb_runner.evaluation.testing_util import reliability_guard, restore_reliability_guard
 
@@ -203,6 +203,34 @@ class SpecParsingTests(unittest.TestCase):
         self.assertIs(os.kill, original_kill)
         self.assertIs(shutil.rmtree, original_rmtree)
 
+    @patch("lcb_runner.dual_loop.pipeline.build_runner")
+    @patch("lcb_runner.dual_loop.pipeline.resolve_language_model")
+    def test_llm_adapter_formats_codeqwen_prompts(self, mock_resolve_model, mock_build_runner):
+        args = Namespace(
+            model="Local-Qwen",
+            local_model_path=None,
+            model_style=None,
+            model_repr=None,
+            temperature=0.2,
+            max_tokens=128,
+            top_p=0.95,
+            n=1,
+            stop=["###"],
+        )
+        mock_resolve_model.return_value = types.SimpleNamespace(
+            model_style=LMStyle.CodeQwenInstruct,
+            model_repr="fake-model",
+        )
+        mock_runner = mock_build_runner.return_value
+        mock_runner.run_batch.return_value = [["ok"]]
+
+        adapter = LLMAdapter(args)
+        adapter.generate("hello")
+
+        sent_prompt = mock_runner.run_batch.call_args.args[0][0]
+        self.assertIn("<|im_start|>user", sent_prompt)
+        self.assertIn("hello", sent_prompt)
+
 
 class DualLoopPipelineTests(unittest.TestCase):
     def make_args(self, output_root: str) -> Namespace:
@@ -346,6 +374,71 @@ class DualLoopPipelineTests(unittest.TestCase):
             self.assertIn("average_initial_sas", summary)
             self.assertTrue(os.path.exists(os.path.join(pipeline.output_dir, "summary.json")))
             self.assertTrue(os.path.exists(os.path.join(pipeline.output_dir, "traces.json")))
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_refine_spec_keeps_last_valid_spec_when_refine_parse_fails(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            mock_adapter = mock_adapter_cls.return_value
+            mock_adapter.model.model_repr = "fake-model"
+            mock_adapter.generate.side_effect = [
+                ("- malformed spec", {"prompt_chars": 1, "completion_chars": 1}),
+                ("still not json", {"prompt_chars": 1, "completion_chars": 1}),
+            ]
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+            spec = StructuredSpec(task="solve", rules=["valid output"])
+
+            with patch.object(
+                pipeline,
+                "_score_spec",
+                side_effect=[
+                    SpecScore(coverage=20, faithfulness=20, precision=20, overall=20),
+                    SpecScore(coverage=90, faithfulness=90, precision=90, overall=90),
+                ],
+            ):
+                refined, score_trace, refine_meta = pipeline._refine_spec(problem, spec)
+
+            self.assertEqual(refined.task, "solve")
+            self.assertEqual(refined.rules, ["valid output"])
+            self.assertEqual(len(score_trace), 2)
+            self.assertEqual(len(refine_meta["raw_spec_outputs"]), 2)
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_repair_code_keeps_current_code_when_model_returns_non_code(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            mock_adapter = mock_adapter_cls.return_value
+            mock_adapter.model.model_repr = "fake-model"
+            mock_adapter.generate.side_effect = [
+                ("- not code", {"prompt_chars": 1, "completion_chars": 1}),
+                ("```python\n\n```", {"prompt_chars": 1, "completion_chars": 1}),
+            ]
+            mock_adapter.extract_code.side_effect = lambda output: output
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+            spec = StructuredSpec(task="solve")
+            failed_feedback = VerifierFeedback(
+                passed=False,
+                error_type="wrong_answer",
+                field="Rules",
+                message="bad answer",
+            )
+
+            with patch.object(
+                pipeline,
+                "_verify",
+                return_value=failed_feedback,
+            ):
+                final_code, feedback_trace = pipeline._repair_code(
+                    problem,
+                    spec,
+                    "print('keep')",
+                )
+
+            self.assertEqual(final_code, "print('keep')")
+            self.assertEqual(len(feedback_trace), 1)
+            self.assertEqual(len(spec._repair_outputs), 2)
 
 
 if __name__ == "__main__":
