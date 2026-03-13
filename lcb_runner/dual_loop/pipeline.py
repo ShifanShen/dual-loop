@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import hashlib
 from collections import Counter
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -58,6 +59,7 @@ class ProblemTrace:
     raw_score_outputs: list[str] = field(default_factory=list)
     raw_codegen_output: str = ""
     raw_repair_outputs: list[str] = field(default_factory=list)
+    effectiveness: dict[str, Any] = field(default_factory=dict)
     passed: bool = False
     repair_iterations: int = 0
     elapsed_seconds: float = 0.0
@@ -198,6 +200,11 @@ class DualLoopPipeline:
             trace.code_initial = initial_code
             trace.final_code = initial_code
             trace.raw_codegen_output = getattr(self, "_last_baseline_codegen_output", "")
+            trace.effectiveness["codegen"] = self._build_codegen_effectiveness(
+                raw_output=trace.raw_codegen_output,
+                code=initial_code,
+                strategy="baseline_codegen",
+            )
             self._record_usage(trace, getattr(self, "_last_baseline_codegen_usage", None), "codegen")
             for extra_usage in getattr(self, "_last_baseline_codegen_extra_usages", []):
                 self._record_usage(trace, extra_usage, "codegen")
@@ -214,6 +221,7 @@ class DualLoopPipeline:
 
         spec = self._draft_spec(problem)
         trace.spec_initial = asdict(spec)
+        trace.effectiveness["spec_draft"] = self._build_spec_draft_effectiveness(spec)
         trace.raw_spec_outputs.extend(
             getattr(spec, "_raw_attempt_outputs", [getattr(spec, "_raw_output", "")])
         )
@@ -232,6 +240,9 @@ class DualLoopPipeline:
             )
         )
         trace.spec_issue_types.extend(self._extract_spec_issue_types(initial_score))
+        trace.effectiveness["spec_score_initial"] = self._build_spec_score_effectiveness(
+            initial_score
+        )
         self._record_usage(trace, getattr(initial_score, "_usage", None), "judge")
         for extra_usage in getattr(initial_score, "_extra_usages", []):
             self._record_usage(trace, extra_usage, "judge")
@@ -250,6 +261,7 @@ class DualLoopPipeline:
                 self._record_usage(trace, usage, "spec")
             for stage_name, duration in refine_meta["stage_times"].items():
                 self._record_stage_time(trace, stage_name, duration)
+            trace.effectiveness["spec_refine_steps"] = refine_meta.get("effectiveness_steps", [])
         trace.spec_final = asdict(spec)
         final_score = self._score_spec(problem, spec)
         trace.final_spec_score = asdict(final_score)
@@ -261,6 +273,10 @@ class DualLoopPipeline:
             )
         )
         trace.spec_issue_types.extend(self._extract_spec_issue_types(final_score))
+        trace.effectiveness["spec_score_final"] = self._build_spec_score_effectiveness(
+            final_score,
+            previous_score=initial_score,
+        )
         self._record_usage(trace, getattr(final_score, "_usage", None), "judge")
         for extra_usage in getattr(final_score, "_extra_usages", []):
             self._record_usage(trace, extra_usage, "judge")
@@ -271,6 +287,11 @@ class DualLoopPipeline:
         code = self._generate_code_from_spec(problem, spec)
         trace.code_initial = code
         trace.raw_codegen_output = getattr(spec, "_last_codegen_output", "")
+        trace.effectiveness["codegen"] = self._build_codegen_effectiveness(
+            raw_output=trace.raw_codegen_output,
+            code=code,
+            strategy="spec_codegen",
+        )
         self._record_usage(trace, getattr(spec, "_last_codegen_usage", None), "codegen")
         for extra_usage in getattr(spec, "_last_codegen_extra_usages", []):
             self._record_usage(trace, extra_usage, "codegen")
@@ -288,6 +309,9 @@ class DualLoopPipeline:
                 self._record_usage(trace, usage, "repair")
             for duration in getattr(spec, "_repair_stage_times", []):
                 self._record_stage_time(trace, "repair", float(duration))
+            trace.effectiveness["repair_steps"] = list(
+                getattr(spec, "_repair_effectiveness", [])
+            )
             trace.final_code = code
             trace.passed = bool(feedback_trace[-1]["passed"]) if feedback_trace else False
             self._finalize_trace(trace)
@@ -359,9 +383,10 @@ class DualLoopPipeline:
             "judge_usages": [],
             "spec_usages": [],
             "stage_times": {},
+            "effectiveness_steps": [],
         }
         current = spec
-        for _ in range(self.args.spec_max_iters):
+        for attempt_idx in range(self.args.spec_max_iters):
             score = self._score_spec(problem, current)
             score_trace.append(asdict(score))
             refine_meta["raw_score_outputs"].extend(
@@ -386,6 +411,7 @@ class DualLoopPipeline:
                 refine_output,
                 fallback_task=problem.question_title,
             )
+            previous_spec = current
             if next_spec.parse_ok:
                 current = next_spec
             current._raw_output = refine_output
@@ -393,6 +419,14 @@ class DualLoopPipeline:
             refine_meta["raw_spec_outputs"].extend(raw_attempt_outputs)
             refine_meta["spec_usages"].append(usage)
             refine_meta["spec_usages"].extend(extra_usages)
+            refine_meta["effectiveness_steps"].append(
+                self._build_spec_refine_effectiveness(
+                    previous_spec=previous_spec,
+                    next_spec=next_spec,
+                    score_before=score,
+                    attempt_index=attempt_idx + 1,
+                )
+            )
             refine_meta["stage_times"]["spec_refine"] = (
                 refine_meta["stage_times"].get("spec_refine", 0.0)
                 + (time.perf_counter() - started_at)
@@ -444,12 +478,23 @@ class DualLoopPipeline:
         self, problem: "CodeGenerationProblem", spec: StructuredSpec, code: str
     ) -> tuple[str, list[dict[str, Any]]]:
         feedback_trace: list[dict[str, Any]] = []
+        repair_effectiveness: list[dict[str, Any]] = []
         current_code = code
         stagnant_attempts = 0
+        pending_step: dict[str, Any] | None = None
         for attempt_idx in range(self.args.repair_max_iters):
             feedback = self._verify(problem, current_code)
             feedback_trace.append(asdict(feedback))
+            if pending_step is not None:
+                repair_effectiveness.append(
+                    self._finalize_repair_effectiveness(
+                        pending_step,
+                        after_feedback=feedback,
+                    )
+                )
+                pending_step = None
             if feedback.passed:
+                spec._repair_effectiveness = repair_effectiveness
                 return current_code, feedback_trace
             started_at = time.perf_counter()
             counterexample = self._build_counterexample_summary(feedback)
@@ -505,16 +550,55 @@ class DualLoopPipeline:
             spec._repair_outputs.extend(extra_outputs)
             spec._repair_usages.extend(extra_usages)
             if not next_code:
+                repair_effectiveness.append(
+                    self._build_repair_effectiveness(
+                        attempt_index=attempt_idx + 1,
+                        strategy=role,
+                        before_code=current_code,
+                        after_code="",
+                        before_feedback=feedback,
+                        effect="no_effect",
+                        reason="invalid_candidate",
+                    )
+                )
                 stagnant_attempts += 1
                 continue
             if next_code == current_code:
+                repair_effectiveness.append(
+                    self._build_repair_effectiveness(
+                        attempt_index=attempt_idx + 1,
+                        strategy=role,
+                        before_code=current_code,
+                        after_code=next_code,
+                        before_feedback=feedback,
+                        effect="no_effect",
+                        reason="unchanged_candidate",
+                    )
+                )
                 stagnant_attempts += 1
                 continue
+            pending_step = self._build_repair_effectiveness(
+                attempt_index=attempt_idx + 1,
+                strategy=role,
+                before_code=current_code,
+                after_code=next_code,
+                before_feedback=feedback,
+                effect="pending",
+                reason="awaiting_verifier",
+            )
             current_code = next_code
             stagnant_attempts = 0
 
         final_feedback = self._verify(problem, current_code)
         feedback_trace.append(asdict(final_feedback))
+        if pending_step is not None:
+            repair_effectiveness.append(
+                self._finalize_repair_effectiveness(
+                    pending_step,
+                    after_feedback=final_feedback,
+                )
+            )
+        spec._repair_effectiveness = repair_effectiveness
         return current_code, feedback_trace
 
     @staticmethod
@@ -580,6 +664,164 @@ class DualLoopPipeline:
         if self._looks_like_python(repaired_candidate):
             return repaired_candidate, [repair_output], [repair_usage]
         return "", [repair_output], [repair_usage]
+
+    @staticmethod
+    def _spec_core_payload(spec: StructuredSpec) -> dict[str, Any]:
+        payload = asdict(spec)
+        payload.pop("parse_ok", None)
+        payload.pop("parse_source", None)
+        return payload
+
+    def _build_spec_draft_effectiveness(self, spec: StructuredSpec) -> dict[str, Any]:
+        payload = self._spec_core_payload(spec)
+        nonempty_fields = sum(bool(value) for value in payload.values())
+        return {
+            "stage": "spec_draft",
+            "parse_ok": spec.parse_ok,
+            "nonempty_field_count": nonempty_fields,
+            "effect": "produced_parseable_spec" if spec.parse_ok else "no_effect",
+        }
+
+    @staticmethod
+    def _build_spec_score_effectiveness(
+        score: SpecScore,
+        previous_score: SpecScore | None = None,
+    ) -> dict[str, Any]:
+        delta_overall = None
+        effect = "signal_available" if score.parse_ok else "no_effect"
+        if previous_score is not None:
+            delta_overall = score.overall - previous_score.overall
+            if delta_overall > 0:
+                effect = "improved"
+            elif delta_overall < 0:
+                effect = "regressed"
+            else:
+                effect = "no_change"
+        return {
+            "parse_ok": score.parse_ok,
+            "overall": score.overall,
+            "delta_overall": delta_overall,
+            "effect": effect,
+        }
+
+    def _build_spec_refine_effectiveness(
+        self,
+        *,
+        previous_spec: StructuredSpec,
+        next_spec: StructuredSpec,
+        score_before: SpecScore,
+        attempt_index: int,
+    ) -> dict[str, Any]:
+        artifact_changed = self._spec_core_payload(previous_spec) != self._spec_core_payload(next_spec)
+        if not next_spec.parse_ok:
+            effect = "no_effect"
+            reason = "refine_parse_failed"
+        elif artifact_changed:
+            effect = "artifact_changed"
+            reason = "spec_updated"
+        else:
+            effect = "no_effect"
+            reason = "spec_unchanged"
+        return {
+            "stage": "spec_refine",
+            "attempt_index": attempt_index,
+            "score_before": score_before.overall,
+            "parse_ok": next_spec.parse_ok,
+            "artifact_changed": artifact_changed,
+            "effect": effect,
+            "reason": reason,
+        }
+
+    def _build_codegen_effectiveness(
+        self,
+        *,
+        raw_output: str,
+        code: str,
+        strategy: str,
+    ) -> dict[str, Any]:
+        code_valid = self._looks_like_python(code)
+        return {
+            "stage": "codegen",
+            "strategy": strategy,
+            "code_valid": code_valid,
+            "code_changed_from_raw": raw_output.strip() != code.strip(),
+            "code_hash": self._hash_text(code),
+            "effect": "produced_candidate" if code_valid else "no_effect",
+        }
+
+    def _build_repair_effectiveness(
+        self,
+        *,
+        attempt_index: int,
+        strategy: str,
+        before_code: str,
+        after_code: str,
+        before_feedback: VerifierFeedback,
+        effect: str,
+        reason: str,
+    ) -> dict[str, Any]:
+        return {
+            "stage": "repair",
+            "attempt_index": attempt_index,
+            "strategy": strategy,
+            "code_changed": before_code != after_code,
+            "before_code_hash": self._hash_text(before_code),
+            "after_code_hash": self._hash_text(after_code) if after_code else "",
+            "verifier_signature_before": self._verifier_signature(before_feedback),
+            "matching_lines_before": self._matching_line_count(before_feedback),
+            "effect": effect,
+            "reason": reason,
+        }
+
+    def _finalize_repair_effectiveness(
+        self,
+        step: dict[str, Any],
+        *,
+        after_feedback: VerifierFeedback,
+    ) -> dict[str, Any]:
+        matching_lines_after = self._matching_line_count(after_feedback)
+        before_matching_lines = int(step.get("matching_lines_before", 0))
+        before_signature = str(step.get("verifier_signature_before", ""))
+        after_signature = self._verifier_signature(after_feedback)
+        if after_feedback.passed:
+            effect = "solved"
+            reason = "passed_verifier"
+        elif matching_lines_after > before_matching_lines:
+            effect = "improved"
+            reason = "more_expected_lines_matched"
+        elif after_signature != before_signature:
+            effect = "changed_but_not_improved"
+            reason = "verifier_signature_changed"
+        else:
+            effect = "changed_but_not_improved"
+            reason = "code_changed_without_verifier_gain"
+        finalized = dict(step)
+        finalized["verifier_signature_after"] = after_signature
+        finalized["matching_lines_after"] = matching_lines_after
+        finalized["effect"] = effect
+        finalized["reason"] = reason
+        return finalized
+
+    @staticmethod
+    def _verifier_signature(feedback: VerifierFeedback) -> str:
+        if feedback.passed:
+            return "accepted"
+        message = " ".join((feedback.message or "").split())
+        return f"{feedback.error_type}:{message}"
+
+    @staticmethod
+    def _matching_line_count(feedback: VerifierFeedback) -> int:
+        output_lines = (feedback.output or "").splitlines()
+        expected_lines = (feedback.expected or "").splitlines()
+        return sum(
+            1 for output_line, expected_line in zip(output_lines, expected_lines) if output_line == expected_line
+        )
+
+    @staticmethod
+    def _hash_text(text: str) -> str:
+        if not text:
+            return ""
+        return hashlib.sha1(text.encode("utf-8")).hexdigest()[:12]
 
     @staticmethod
     def _looks_like_python(code: str) -> bool:
@@ -769,6 +1011,20 @@ class DualLoopPipeline:
                 )
             ),
             "verifier_error_counts": self._aggregate_verifier_error_counts(traces),
+            "repair_effect_counts": dict(
+                Counter(
+                    step.get("effect", "unknown")
+                    for trace in traces
+                    for step in trace.effectiveness.get("repair_steps", [])
+                )
+            ),
+            "spec_refine_effect_counts": dict(
+                Counter(
+                    step.get("effect", "unknown")
+                    for trace in traces
+                    for step in trace.effectiveness.get("spec_refine_steps", [])
+                )
+            ),
             "spec_issue_type_counts": dict(
                 Counter(issue for trace in traces for issue in trace.spec_issue_types)
             ),

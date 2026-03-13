@@ -335,6 +335,8 @@ class DualLoopPipelineTests(unittest.TestCase):
             self.assertEqual(trace.repair_iterations, 1)
             self.assertEqual(trace.spec_final["task"], "solve")
             self.assertEqual(trace.failure_attribution, "solved")
+            self.assertIn("spec_draft", trace.effectiveness)
+            self.assertIn("codegen", trace.effectiveness)
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
     def test_run_writes_summary_and_traces(self, mock_adapter_cls):
@@ -442,6 +444,10 @@ class DualLoopPipelineTests(unittest.TestCase):
             self.assertEqual(final_code, "print('keep')")
             self.assertEqual(len(feedback_trace), 3)
             self.assertEqual(len(spec._repair_outputs), 4)
+            self.assertEqual(
+                [step["effect"] for step in spec._repair_effectiveness],
+                ["no_effect", "no_effect"],
+            )
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
     def test_repair_code_retries_when_model_returns_unchanged_program(self, mock_adapter_cls):
@@ -491,6 +497,10 @@ class DualLoopPipelineTests(unittest.TestCase):
 
             self.assertEqual(final_code, "print('fixed')")
             self.assertEqual(len(feedback_trace), 3)
+            self.assertEqual(
+                [step["effect"] for step in spec._repair_effectiveness],
+                ["no_effect", "solved"],
+            )
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
     def test_repair_code_uses_counterexample_prompt_after_repeated_wrong_answers(self, mock_adapter_cls):
