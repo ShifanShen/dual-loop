@@ -111,6 +111,9 @@ def apply_run_config(base_args: Namespace, config: SuiteRunConfig) -> Namespace:
         args.repair_max_iters = config.repair_max_iters
     if config.spec_score_threshold is not None:
         args.spec_score_threshold = config.spec_score_threshold
+    suite_mirror_dir = getattr(base_args, "cwd_output_dir", None)
+    if suite_mirror_dir:
+        args.cwd_output_dir = str(Path(suite_mirror_dir) / config.run_name)
     return args
 
 

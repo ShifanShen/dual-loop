@@ -65,6 +65,12 @@ def get_args():
     parser.add_argument("--max_problems", type=int, default=10)
     parser.add_argument("--output_root", type=str, default="output/dual_loop")
     parser.add_argument(
+        "--cwd_output_dir",
+        type=str,
+        default=None,
+        help="Optional directory used for mirrored summary.json and traces.json outputs.",
+    )
+    parser.add_argument(
         "--run_tag",
         type=str,
         default=None,

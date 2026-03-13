@@ -68,6 +68,7 @@ def parse_args() -> argparse.Namespace:
     args.disable_counterexample_repair = False
     args.disable_rewrite_repair = False
     args.run_tag = None
+    args.cwd_output_dir = None
     if args.tensor_parallel_size == -1:
         import torch
 
@@ -83,41 +84,38 @@ def main() -> None:
     model_repr = (args.model_repr or args.model or "model").replace("/", "_").replace(" ", "_")
     suite_dir = Path(args.suite_output_root) / f"rq_suite_{model_repr}_{timestamp}"
     suite_dir.mkdir(parents=True, exist_ok=True)
-    original_cwd = Path.cwd()
-    try:
-        os.chdir(suite_dir)
-        run_results = run_rq_suite(
-            args,
-            include_repair_ablations=args.include_repair_ablations,
-            include_budget_ablations=args.include_budget_ablations,
-        )
-        rows = build_rq_csv_rows(run_results)
+    args.cwd_output_dir = str(suite_dir / "mirrored_outputs")
 
-        csv_path = suite_dir / "rq_results.csv"
-        manifest_path = suite_dir / "run_manifest.json"
-        metadata_path = suite_dir / "suite_metadata.json"
-        write_rq_csv(rows, csv_path)
-        write_suite_manifest(run_results, manifest_path)
+    run_results = run_rq_suite(
+        args,
+        include_repair_ablations=args.include_repair_ablations,
+        include_budget_ablations=args.include_budget_ablations,
+    )
+    rows = build_rq_csv_rows(run_results)
 
-        metadata = {
-            "model": args.model,
-            "model_repr": args.model_repr,
-            "release_version": args.release_version,
-            "max_problems": args.max_problems,
-            "include_repair_ablations": args.include_repair_ablations,
-            "include_budget_ablations": args.include_budget_ablations,
-            "suite_dir": str(suite_dir),
-            "csv_path": str(csv_path),
-            "manifest_path": str(manifest_path),
-            "num_runs": len(rows),
-        }
-        with open(metadata_path, "w", encoding="utf-8") as f:
-            json.dump(metadata, f, indent=2, ensure_ascii=True)
+    csv_path = suite_dir / "rq_results.csv"
+    manifest_path = suite_dir / "run_manifest.json"
+    metadata_path = suite_dir / "suite_metadata.json"
+    write_rq_csv(rows, csv_path)
+    write_suite_manifest(run_results, manifest_path)
 
-        write_rq_csv(rows, original_cwd / "rq_results.csv")
-        print(json.dumps(metadata, indent=2, ensure_ascii=True))
-    finally:
-        os.chdir(original_cwd)
+    metadata = {
+        "model": args.model,
+        "model_repr": args.model_repr,
+        "release_version": args.release_version,
+        "max_problems": args.max_problems,
+        "include_repair_ablations": args.include_repair_ablations,
+        "include_budget_ablations": args.include_budget_ablations,
+        "suite_dir": str(suite_dir),
+        "csv_path": str(csv_path),
+        "manifest_path": str(manifest_path),
+        "num_runs": len(rows),
+    }
+    with open(metadata_path, "w", encoding="utf-8") as f:
+        json.dump(metadata, f, indent=2, ensure_ascii=True)
+
+    write_rq_csv(rows, Path.cwd() / "rq_results.csv")
+    print(json.dumps(metadata, indent=2, ensure_ascii=True))
 
 
 if __name__ == "__main__":

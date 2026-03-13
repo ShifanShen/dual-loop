@@ -1201,13 +1201,15 @@ class DualLoopPipeline:
     def _write_outputs(self, summary: dict[str, Any], traces: list[ProblemTrace]) -> None:
         os.makedirs(self.output_dir, exist_ok=True)
         serialized_traces = [asdict(trace) for trace in traces]
+        mirror_dir = getattr(self.args, "cwd_output_dir", None) or os.getcwd()
+        os.makedirs(mirror_dir, exist_ok=True)
         output_targets = [
             os.path.join(self.output_dir, "summary.json"),
-            os.path.join(os.getcwd(), "summary.json"),
+            os.path.join(mirror_dir, "summary.json"),
         ]
         trace_targets = [
             os.path.join(self.output_dir, "traces.json"),
-            os.path.join(os.getcwd(), "traces.json"),
+            os.path.join(mirror_dir, "traces.json"),
         ]
         for path in output_targets:
             with open(path, "w", encoding="utf-8") as f:

@@ -255,6 +255,7 @@ class DualLoopPipelineTests(unittest.TestCase):
             question_ids=None,
             max_problems=1,
             output_root=output_root,
+            cwd_output_dir=None,
             trust_remote_code=False,
             dtype="bfloat16",
             tensor_parallel_size=1,
@@ -459,8 +460,8 @@ class DualLoopPipelineTests(unittest.TestCase):
             self.assertIn("repair_effect_counts", summary)
             self.assertTrue(os.path.exists(os.path.join(pipeline.output_dir, "summary.json")))
             self.assertTrue(os.path.exists(os.path.join(pipeline.output_dir, "traces.json")))
-            self.assertTrue(os.path.exists(os.path.join(os.getcwd(), "summary.json")))
-            self.assertTrue(os.path.exists(os.path.join(os.getcwd(), "traces.json")))
+            self.assertTrue(os.path.exists(os.path.join(tmpdir, "summary.json")))
+            self.assertTrue(os.path.exists(os.path.join(tmpdir, "traces.json")))
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
     def test_refine_spec_keeps_last_valid_spec_when_refine_parse_fails(self, mock_adapter_cls):
