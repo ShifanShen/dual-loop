@@ -443,16 +443,23 @@ class DualLoopPipeline:
     ) -> tuple[str, list[dict[str, Any]]]:
         feedback_trace: list[dict[str, Any]] = []
         current_code = code
-        for _ in range(self.args.repair_max_iters + 1):
+        stagnant_attempts = 0
+        for attempt_idx in range(self.args.repair_max_iters):
             feedback = self._verify(problem, current_code)
             feedback_trace.append(asdict(feedback))
             if feedback.passed:
                 return current_code, feedback_trace
             started_at = time.perf_counter()
             repair_output, usage = self.llm.generate(
-                build_repair_prompt(problem, spec, current_code, feedback),
+                build_repair_prompt(
+                    problem,
+                    spec,
+                    current_code,
+                    feedback,
+                    require_change=stagnant_attempts > 0,
+                ),
                 role="repair",
-                temperature=self.args.repair_temperature,
+                temperature=min(0.8, self.args.repair_temperature + 0.2 * stagnant_attempts),
                 max_tokens=self.args.codegen_max_tokens,
             )
             if not hasattr(spec, "_repair_outputs"):
@@ -467,9 +474,17 @@ class DualLoopPipeline:
             next_code, extra_outputs, extra_usages = self._extract_valid_code(repair_output)
             spec._repair_outputs.extend(extra_outputs)
             spec._repair_usages.extend(extra_usages)
-            if not next_code or next_code == current_code:
-                return current_code, feedback_trace
+            if not next_code:
+                stagnant_attempts += 1
+                continue
+            if next_code == current_code:
+                stagnant_attempts += 1
+                continue
             current_code = next_code
+            stagnant_attempts = 0
+
+        final_feedback = self._verify(problem, current_code)
+        feedback_trace.append(asdict(final_feedback))
         return current_code, feedback_trace
 
     def _parse_spec_output(

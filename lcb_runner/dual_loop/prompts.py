@@ -180,10 +180,19 @@ def build_repair_prompt(
     spec: StructuredSpec,
     code: str,
     feedback: VerifierFeedback,
+    *,
+    require_change: bool = False,
 ) -> str:
     starter = ""
     if problem.starter_code:
         starter = f"\nStarter code:\n```python\n{problem.starter_code}\n```\n"
+    change_requirement = ""
+    if require_change:
+        change_requirement = (
+            "\n- Your previous repair attempt did not change the failing behavior."
+            "\n- Do not return the same program again."
+            "\n- Change the logic that causes the reported mismatch."
+        )
     return f"""You are repairing a Python program for a competitive programming problem.
 First identify the issue briefly, then return a complete fixed program in exactly one Python code block.
 
@@ -204,4 +213,5 @@ Verifier feedback:
 Repair target:
 - Fix the failure without breaking the input/output contract.
 - Satisfy the checkable subset of the structured spec.
+{change_requirement}
 """

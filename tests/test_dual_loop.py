@@ -413,6 +413,8 @@ class DualLoopPipelineTests(unittest.TestCase):
             mock_adapter.generate.side_effect = [
                 ("- not code", {"prompt_chars": 1, "completion_chars": 1}),
                 ("```python\n\n```", {"prompt_chars": 1, "completion_chars": 1}),
+                ("- still not code", {"prompt_chars": 1, "completion_chars": 1}),
+                ("```python\n\n```", {"prompt_chars": 1, "completion_chars": 1}),
             ]
             mock_adapter.extract_code.side_effect = lambda output: output
             pipeline = DualLoopPipeline(args)
@@ -437,8 +439,57 @@ class DualLoopPipelineTests(unittest.TestCase):
                 )
 
             self.assertEqual(final_code, "print('keep')")
-            self.assertEqual(len(feedback_trace), 1)
-            self.assertEqual(len(spec._repair_outputs), 2)
+            self.assertEqual(len(feedback_trace), 3)
+            self.assertEqual(len(spec._repair_outputs), 4)
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_repair_code_retries_when_model_returns_unchanged_program(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            mock_adapter = mock_adapter_cls.return_value
+            mock_adapter.model.model_repr = "fake-model"
+            mock_adapter.generate.side_effect = [
+                ("```python\nprint('same')\n```", {"prompt_chars": 1, "completion_chars": 1}),
+                ("```python\nprint('fixed')\n```", {"prompt_chars": 1, "completion_chars": 1}),
+            ]
+            mock_adapter.extract_code.side_effect = lambda output: output.replace("```python", "").replace("```", "").strip()
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+            spec = StructuredSpec(task="solve")
+            feedbacks = [
+                VerifierFeedback(
+                    passed=False,
+                    error_type="wrong_answer",
+                    field="Rules",
+                    message="bad answer",
+                ),
+                VerifierFeedback(
+                    passed=False,
+                    error_type="wrong_answer",
+                    field="Rules",
+                    message="still bad",
+                ),
+                VerifierFeedback(
+                    passed=True,
+                    error_type="accepted",
+                    field="checkable_subset",
+                    message="ok",
+                ),
+            ]
+
+            with patch.object(
+                pipeline,
+                "_verify",
+                side_effect=feedbacks,
+            ):
+                final_code, feedback_trace = pipeline._repair_code(
+                    problem,
+                    spec,
+                    "print('same')",
+                )
+
+            self.assertEqual(final_code, "print('fixed')")
+            self.assertEqual(len(feedback_trace), 3)
 
 
 if __name__ == "__main__":
