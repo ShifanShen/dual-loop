@@ -42,6 +42,12 @@ if "tqdm" not in sys.modules:
     sys.modules["tqdm"] = tqdm_stub
 
 from lcb_runner.dual_loop.main import get_args
+from lcb_runner.dual_loop.diagnostics import build_diagnostic_report, render_diagnostic_markdown
+from lcb_runner.dual_loop.rq_suite import (
+    apply_run_config,
+    build_rq_csv_rows,
+    build_rq_suite_plan,
+)
 from lcb_runner.dual_loop.model_download import infer_output_dir
 from lcb_runner.lm_styles import LMStyle, resolve_language_model
 from lcb_runner.dual_loop.pipeline import DualLoopPipeline, LLMAdapter, ProblemTrace
@@ -82,11 +88,14 @@ class SpecParsingTests(unittest.TestCase):
                 "/models/Qwen2.5-Coder-7B-Instruct",
                 "--model_style",
                 "CodeQwenInstruct",
+                "--run_tag",
+                "smoke",
             ],
         ):
             args = get_args()
         self.assertEqual(args.model, "Qwen2.5-Coder-7B-Instruct")
         self.assertEqual(args.model_repr, "Qwen2.5-Coder-7B-Instruct")
+        self.assertEqual(args.run_tag, "smoke")
 
     def test_resolve_arbitrary_local_model(self):
         model = resolve_language_model(
@@ -263,6 +272,8 @@ class DualLoopPipelineTests(unittest.TestCase):
             spec_max_iters=2,
             repair_max_iters=2,
             spec_score_threshold=80,
+            disable_counterexample_repair=False,
+            disable_rewrite_repair=False,
             spec_temperature=0.0,
             judge_temperature=0.0,
             codegen_temperature=0.2,
@@ -339,6 +350,77 @@ class DualLoopPipelineTests(unittest.TestCase):
             self.assertIn("codegen", trace.effectiveness)
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_run_problem_self_refine_uses_direct_repair_branch(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            args.pipeline_mode = "self_refine"
+            mock_adapter_cls.return_value.model.model_repr = "fake-model"
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+
+            with patch.object(pipeline, "_generate_code_baseline", return_value="print('x')"), patch.object(
+                pipeline,
+                "_repair_direct_code",
+                return_value=(
+                    "print('fixed')",
+                    [
+                        {"passed": False, "error_type": "wrong_answer"},
+                        {"passed": True, "error_type": "accepted"},
+                    ],
+                    {
+                        "raw_repair_outputs": ["```python\nprint('fixed')\n```"],
+                        "repair_usages": [],
+                        "stage_times": [0.2],
+                        "effectiveness_steps": [
+                            {"strategy": "self_refine_repair", "effect": "solved"}
+                        ],
+                        "reflections": [],
+                    },
+                ),
+            ):
+                trace = pipeline._run_problem(problem)
+
+            self.assertEqual(trace.final_code, "print('fixed')")
+            self.assertTrue(trace.passed)
+            self.assertEqual(trace.failure_attribution, "solved")
+            self.assertEqual(trace.effectiveness["repair_steps"][0]["strategy"], "self_refine_repair")
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_run_problem_reflexion_records_reflections(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            args.pipeline_mode = "reflexion"
+            mock_adapter_cls.return_value.model.model_repr = "fake-model"
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+
+            with patch.object(pipeline, "_generate_code_baseline", return_value="print('x')"), patch.object(
+                pipeline,
+                "_repair_direct_code",
+                return_value=(
+                    "print('fixed')",
+                    [
+                        {"passed": False, "error_type": "wrong_answer"},
+                        {"passed": True, "error_type": "accepted"},
+                    ],
+                    {
+                        "raw_repair_outputs": ["reflection", "```python\nprint('fixed')\n```"],
+                        "repair_usages": [],
+                        "stage_times": [0.3],
+                        "effectiveness_steps": [
+                            {"strategy": "reflexion_repair", "effect": "solved"}
+                        ],
+                        "reflections": ["Need to fix the condition."],
+                    },
+                ),
+            ):
+                trace = pipeline._run_problem(problem)
+
+            self.assertEqual(trace.final_code, "print('fixed')")
+            self.assertIn("reflections", trace.effectiveness)
+            self.assertEqual(trace.effectiveness["repair_steps"][0]["strategy"], "reflexion_repair")
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
     def test_run_writes_summary_and_traces(self, mock_adapter_cls):
         with tempfile.TemporaryDirectory() as tmpdir:
             args = self.make_args(tmpdir)
@@ -368,12 +450,13 @@ class DualLoopPipelineTests(unittest.TestCase):
                 pipeline, "_run_problem", return_value=fake_trace
             ), patch.object(
                 pipeline, "_compute_metrics", return_value=[{"pass@1": 1.0}, {}, []]
-            ):
+            ), patch("lcb_runner.dual_loop.pipeline.os.getcwd", return_value=tmpdir):
                 summary = pipeline.run()
 
             self.assertEqual(summary["pass_at_1"], 1.0)
             self.assertIn("failure_attribution_counts", summary)
             self.assertIn("average_initial_sas", summary)
+            self.assertIn("repair_effect_counts", summary)
             self.assertTrue(os.path.exists(os.path.join(pipeline.output_dir, "summary.json")))
             self.assertTrue(os.path.exists(os.path.join(pipeline.output_dir, "traces.json")))
             self.assertTrue(os.path.exists(os.path.join(os.getcwd(), "summary.json")))
@@ -624,6 +707,441 @@ class DualLoopPipelineTests(unittest.TestCase):
             third_prompt = mock_adapter.generate.call_args_list[2].args[0]
             self.assertIn("write a fresh solution from scratch", third_prompt)
             self.assertIn("Counterexample:", third_prompt)
+
+    def test_diagnostic_report_aggregates_repair_effectiveness(self):
+        summary = {
+            "model": "fake-model",
+            "pipeline_mode": "full",
+            "num_problems": 1,
+            "pass_at_1": 1.0,
+            "average_initial_sas": 80.0,
+            "average_final_sas": 82.0,
+            "average_repairs": 2.0,
+            "output_dir": "output/test",
+            "failure_attribution_counts": {"solved": 1},
+            "verifier_error_counts": {"wrong_answer": 1, "accepted": 1},
+            "repair_effect_counts": {"no_effect": 1, "solved": 1},
+            "spec_refine_effect_counts": {},
+        }
+        traces = [
+            {
+                "question_id": "q1",
+                "effectiveness": {
+                    "spec_draft": {"effect": "produced_parseable_spec"},
+                    "spec_score_initial": {"effect": "signal_available"},
+                    "spec_score_final": {"effect": "improved"},
+                    "codegen": {"effect": "produced_candidate"},
+                    "repair_steps": [
+                        {
+                            "attempt_index": 1,
+                            "strategy": "repair",
+                            "effect": "no_effect",
+                            "reason": "unchanged_candidate",
+                            "matching_lines_before": 1,
+                            "matching_lines_after": None,
+                            "verifier_signature_before": "wrong_answer:a",
+                            "verifier_signature_after": "",
+                        },
+                        {
+                            "attempt_index": 2,
+                            "strategy": "repair_rewrite",
+                            "effect": "solved",
+                            "reason": "passed_verifier",
+                            "matching_lines_before": 1,
+                            "matching_lines_after": 2,
+                            "verifier_signature_before": "wrong_answer:a",
+                            "verifier_signature_after": "accepted",
+                        },
+                    ],
+                },
+            }
+        ]
+
+        report = build_diagnostic_report(summary, traces)
+        markdown = render_diagnostic_markdown(report)
+
+        self.assertEqual(report["repair_strategy_counts"]["repair"], 1)
+        self.assertEqual(report["repair_strategy_counts"]["repair_rewrite"], 1)
+        self.assertEqual(report["repair_strategy_effect_counts"]["repair"]["no_effect"], 1)
+        self.assertEqual(report["repair_strategy_effect_counts"]["repair_rewrite"]["solved"], 1)
+        self.assertTrue(report["consistency_checks"]["repair_effect_counts_match_summary"])
+        self.assertIn("repair_rewrite", markdown)
+
+    def test_rq_suite_plan_includes_core_runs(self):
+        plan = build_rq_suite_plan()
+        run_names = [item.run_name for item in plan]
+        self.assertEqual(
+            run_names,
+            [
+                "baseline_direct",
+                "decomposition_only",
+                "self_refine_style",
+                "reflexion_style",
+                "full_dual_loop",
+            ],
+        )
+
+    def test_apply_run_config_overrides_mode_and_tag(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            config = build_rq_suite_plan(include_repair_ablations=True)[5]
+            configured = apply_run_config(args, config)
+            self.assertEqual(configured.pipeline_mode, "full")
+            self.assertEqual(configured.run_tag, "full_no_counterexample")
+            self.assertTrue(configured.disable_counterexample_repair)
+            self.assertFalse(configured.disable_rewrite_repair)
+
+    def test_build_rq_csv_rows_computes_rq_metrics(self):
+        run_results = [
+            {
+                "config": {
+                    "suite_name": "rq_core",
+                    "run_name": "baseline_direct",
+                    "pipeline_mode": "baseline",
+                    "disable_counterexample_repair": False,
+                    "disable_rewrite_repair": False,
+                    "spec_max_iters": None,
+                    "repair_max_iters": None,
+                    "spec_score_threshold": None,
+                },
+                "summary": {
+                    "model": "fake-model",
+                    "pipeline_mode": "baseline",
+                    "release_version": "release_v6",
+                    "run_tag": "baseline_direct",
+                    "num_problems": 2,
+                    "pass_at_1": 0.25,
+                    "average_initial_sas": 0.0,
+                    "average_final_sas": 0.0,
+                    "average_delta_sas": 0.0,
+                    "average_initial_coverage": 0.0,
+                    "average_final_coverage": 0.0,
+                    "average_initial_faithfulness": 0.0,
+                    "average_final_faithfulness": 0.0,
+                    "average_initial_precision": 0.0,
+                    "average_final_precision": 0.0,
+                    "average_llm_calls": 1.0,
+                    "average_spec_calls": 0.0,
+                    "average_judge_calls": 0.0,
+                    "average_codegen_calls": 1.0,
+                    "average_repair_calls": 0.0,
+                    "average_loop_b_iterations": 0.0,
+                    "average_loop_a_iterations": 0.0,
+                    "average_repairs": 0.0,
+                    "average_prompt_chars": 100.0,
+                    "average_completion_chars": 40.0,
+                    "average_elapsed_seconds": 1.0,
+                    "failure_attribution_counts": {"solved": 1, "implementation_induced": 1},
+                    "verifier_error_counts": {"accepted": 1, "wrong_answer": 1},
+                    "output_dir": "output/baseline",
+                    "spec_max_iters": 3,
+                    "repair_max_iters": 3,
+                },
+                "traces": [
+                    {
+                        "initial_spec_score": {},
+                        "final_spec_score": {},
+                        "effectiveness": {},
+                        "stage_times": {"codegen": 1.5},
+                    },
+                    {
+                        "initial_spec_score": {},
+                        "final_spec_score": {},
+                        "effectiveness": {},
+                        "stage_times": {"codegen": 0.5},
+                    },
+                ],
+            },
+            {
+                "config": {
+                    "suite_name": "rq_core",
+                    "run_name": "decomposition_only",
+                    "pipeline_mode": "decomposition",
+                    "disable_counterexample_repair": False,
+                    "disable_rewrite_repair": False,
+                    "spec_max_iters": None,
+                    "repair_max_iters": None,
+                    "spec_score_threshold": None,
+                },
+                "summary": {
+                    "model": "fake-model",
+                    "pipeline_mode": "decomposition",
+                    "release_version": "release_v6",
+                    "run_tag": "decomposition_only",
+                    "num_problems": 2,
+                    "pass_at_1": 0.4,
+                    "average_initial_sas": 81.0,
+                    "average_final_sas": 81.0,
+                    "average_delta_sas": 0.0,
+                    "average_initial_coverage": 80.0,
+                    "average_final_coverage": 80.0,
+                    "average_initial_faithfulness": 82.0,
+                    "average_final_faithfulness": 82.0,
+                    "average_initial_precision": 81.0,
+                    "average_final_precision": 81.0,
+                    "average_llm_calls": 3.0,
+                    "average_spec_calls": 1.0,
+                    "average_judge_calls": 1.0,
+                    "average_codegen_calls": 1.0,
+                    "average_repair_calls": 0.0,
+                    "average_loop_b_iterations": 0.0,
+                    "average_loop_a_iterations": 0.0,
+                    "average_repairs": 0.0,
+                    "average_prompt_chars": 300.0,
+                    "average_completion_chars": 90.0,
+                    "average_elapsed_seconds": 2.0,
+                    "failure_attribution_counts": {"solved": 1, "implementation_induced": 1},
+                    "verifier_error_counts": {"accepted": 1, "wrong_answer": 1},
+                    "output_dir": "output/decomposition",
+                    "spec_max_iters": 3,
+                    "repair_max_iters": 3,
+                },
+                "traces": [
+                    {
+                        "initial_spec_score": {"overall": 80},
+                        "final_spec_score": {"overall": 80},
+                        "effectiveness": {},
+                        "stage_times": {"spec_draft": 0.8, "spec_score_initial": 0.4, "codegen": 0.6},
+                    },
+                    {
+                        "initial_spec_score": {"overall": 82},
+                        "final_spec_score": {"overall": 82},
+                        "effectiveness": {},
+                        "stage_times": {"spec_draft": 1.0, "spec_score_initial": 0.6, "codegen": 0.8},
+                    },
+                ],
+            },
+            {
+                "config": {
+                    "suite_name": "rq_core",
+                    "run_name": "self_refine_style",
+                    "pipeline_mode": "self_refine",
+                    "disable_counterexample_repair": False,
+                    "disable_rewrite_repair": False,
+                    "spec_max_iters": None,
+                    "repair_max_iters": None,
+                    "spec_score_threshold": None,
+                },
+                "summary": {
+                    "model": "fake-model",
+                    "pipeline_mode": "self_refine",
+                    "release_version": "release_v6",
+                    "run_tag": "self_refine_style",
+                    "num_problems": 2,
+                    "pass_at_1": 0.55,
+                    "average_initial_sas": 80.0,
+                    "average_final_sas": 80.0,
+                    "average_delta_sas": 0.0,
+                    "average_initial_coverage": 80.0,
+                    "average_final_coverage": 80.0,
+                    "average_initial_faithfulness": 80.0,
+                    "average_final_faithfulness": 80.0,
+                    "average_initial_precision": 80.0,
+                    "average_final_precision": 80.0,
+                    "average_llm_calls": 5.0,
+                    "average_spec_calls": 1.0,
+                    "average_judge_calls": 2.0,
+                    "average_codegen_calls": 1.0,
+                    "average_repair_calls": 1.0,
+                    "average_loop_b_iterations": 0.0,
+                    "average_loop_a_iterations": 1.0,
+                    "average_repairs": 1.0,
+                    "average_prompt_chars": 420.0,
+                    "average_completion_chars": 120.0,
+                    "average_elapsed_seconds": 3.0,
+                    "failure_attribution_counts": {"solved": 1, "implementation_induced": 1},
+                    "verifier_error_counts": {"accepted": 1, "wrong_answer": 2},
+                    "output_dir": "output/self_refine",
+                    "spec_max_iters": 3,
+                    "repair_max_iters": 3,
+                },
+                "traces": [
+                    {
+                        "initial_spec_score": {"overall": 80},
+                        "final_spec_score": {"overall": 80},
+                        "effectiveness": {
+                            "repair_steps": [
+                                {"strategy": "repair", "effect": "no_effect"},
+                                {"strategy": "repair_rewrite", "effect": "solved"},
+                            ]
+                        },
+                        "stage_times": {"repair": 1.2},
+                    },
+                    {
+                        "initial_spec_score": {"overall": 80},
+                        "final_spec_score": {"overall": 80},
+                        "effectiveness": {
+                            "repair_steps": [
+                                {"strategy": "repair", "effect": "improved"},
+                            ]
+                        },
+                        "stage_times": {"repair": 0.8},
+                    },
+                ],
+            },
+            {
+                "config": {
+                    "suite_name": "rq_core",
+                    "run_name": "reflexion_style",
+                    "pipeline_mode": "reflexion",
+                    "disable_counterexample_repair": False,
+                    "disable_rewrite_repair": False,
+                    "spec_max_iters": None,
+                    "repair_max_iters": None,
+                    "spec_score_threshold": None,
+                },
+                "summary": {
+                    "model": "fake-model",
+                    "pipeline_mode": "reflexion",
+                    "release_version": "release_v6",
+                    "run_tag": "reflexion_style",
+                    "num_problems": 2,
+                    "pass_at_1": 0.5,
+                    "average_initial_sas": 0.0,
+                    "average_final_sas": 0.0,
+                    "average_delta_sas": 0.0,
+                    "average_initial_coverage": 0.0,
+                    "average_final_coverage": 0.0,
+                    "average_initial_faithfulness": 0.0,
+                    "average_final_faithfulness": 0.0,
+                    "average_initial_precision": 0.0,
+                    "average_final_precision": 0.0,
+                    "average_llm_calls": 6.0,
+                    "average_spec_calls": 0.0,
+                    "average_judge_calls": 0.0,
+                    "average_codegen_calls": 1.0,
+                    "average_repair_calls": 2.0,
+                    "average_loop_b_iterations": 0.0,
+                    "average_loop_a_iterations": 2.0,
+                    "average_repairs": 2.0,
+                    "average_prompt_chars": 500.0,
+                    "average_completion_chars": 150.0,
+                    "average_elapsed_seconds": 3.5,
+                    "failure_attribution_counts": {"solved": 1, "implementation_induced": 1},
+                    "verifier_error_counts": {"accepted": 1, "wrong_answer": 2},
+                    "output_dir": "output/reflexion",
+                    "spec_max_iters": 3,
+                    "repair_max_iters": 3,
+                },
+                "traces": [
+                    {
+                        "initial_spec_score": {},
+                        "final_spec_score": {},
+                        "effectiveness": {
+                            "repair_steps": [
+                                {"strategy": "reflexion_repair", "effect": "improved"}
+                            ]
+                        },
+                        "stage_times": {"repair": 1.1},
+                    },
+                    {
+                        "initial_spec_score": {},
+                        "final_spec_score": {},
+                        "effectiveness": {
+                            "repair_steps": [
+                                {"strategy": "reflexion_repair", "effect": "solved"},
+                                {"strategy": "reflexion_repair", "effect": "no_effect"},
+                            ]
+                        },
+                        "stage_times": {"repair": 1.3},
+                    },
+                ],
+            },
+            {
+                "config": {
+                    "suite_name": "rq_core",
+                    "run_name": "full_dual_loop",
+                    "pipeline_mode": "full",
+                    "disable_counterexample_repair": False,
+                    "disable_rewrite_repair": False,
+                    "spec_max_iters": None,
+                    "repair_max_iters": None,
+                    "spec_score_threshold": None,
+                },
+                "summary": {
+                    "model": "fake-model",
+                    "pipeline_mode": "full",
+                    "release_version": "release_v6",
+                    "run_tag": "full_dual_loop",
+                    "num_problems": 2,
+                    "pass_at_1": 0.7,
+                    "average_initial_sas": 76.0,
+                    "average_final_sas": 86.0,
+                    "average_delta_sas": 10.0,
+                    "average_initial_coverage": 75.0,
+                    "average_final_coverage": 85.0,
+                    "average_initial_faithfulness": 76.0,
+                    "average_final_faithfulness": 87.0,
+                    "average_initial_precision": 77.0,
+                    "average_final_precision": 86.0,
+                    "average_llm_calls": 8.0,
+                    "average_spec_calls": 2.0,
+                    "average_judge_calls": 3.0,
+                    "average_codegen_calls": 1.0,
+                    "average_repair_calls": 2.0,
+                    "average_loop_b_iterations": 2.0,
+                    "average_loop_a_iterations": 2.0,
+                    "average_repairs": 2.0,
+                    "average_prompt_chars": 650.0,
+                    "average_completion_chars": 200.0,
+                    "average_elapsed_seconds": 4.0,
+                    "failure_attribution_counts": {"solved": 2},
+                    "verifier_error_counts": {"accepted": 2, "wrong_answer": 2},
+                    "output_dir": "output/full",
+                    "spec_max_iters": 3,
+                    "repair_max_iters": 3,
+                },
+                "traces": [
+                    {
+                        "initial_spec_score": {"overall": 72},
+                        "final_spec_score": {"overall": 85},
+                        "effectiveness": {
+                            "spec_refine_steps": [
+                                {"effect": "artifact_changed", "reason": "spec_updated"}
+                            ],
+                            "repair_steps": [
+                                {"strategy": "repair", "effect": "no_effect"},
+                                {"strategy": "repair_rewrite", "effect": "solved"},
+                            ],
+                        },
+                        "stage_times": {
+                            "spec_refine": 0.6,
+                            "spec_score_refine": 0.5,
+                            "repair": 1.4,
+                        },
+                    },
+                    {
+                        "initial_spec_score": {"overall": 80},
+                        "final_spec_score": {"overall": 87},
+                        "effectiveness": {
+                            "spec_refine_steps": [
+                                {"effect": "artifact_changed", "reason": "spec_updated"}
+                            ],
+                            "repair_steps": [
+                                {"strategy": "repair_counterexample", "effect": "improved"},
+                                {"strategy": "repair_rewrite", "effect": "solved"},
+                            ],
+                        },
+                        "stage_times": {
+                            "spec_refine": 0.8,
+                            "spec_score_refine": 0.7,
+                            "repair": 1.0,
+                        },
+                    },
+                ],
+            },
+        ]
+
+        rows = build_rq_csv_rows(run_results)
+        by_name = {row["run_name"]: row for row in rows}
+
+        self.assertEqual(by_name["full_dual_loop"]["delta_pass_at_1_vs_baseline"], 0.45)
+        self.assertEqual(by_name["decomposition_only"]["delta_pass_at_1_vs_baseline"], 0.15)
+        self.assertEqual(by_name["self_refine_style"]["repair_solved_count"], 1)
+        self.assertEqual(by_name["reflexion_style"]["repair_improved_count"], 1)
+        self.assertEqual(by_name["full_dual_loop"]["repair_strategy_repair_rewrite_solved"], 2)
+        self.assertEqual(by_name["full_dual_loop"]["delta_pass_at_1_vs_best_iterative_baseline"], 0.15)
+        self.assertEqual(by_name["full_dual_loop"]["cost_ratio_llm_calls_vs_baseline"], 8.0)
 
 
 if __name__ == "__main__":

@@ -11,10 +11,14 @@ from lcb_runner.dual_loop.prompts import (
     build_code_block_repair_prompt,
     build_code_from_spec_prompt,
     build_counterexample_repair_prompt,
+    build_direct_codegen_prompt,
     build_repair_prompt,
+    build_reflexion_prompt,
+    build_reflexion_repair_prompt,
     build_rewrite_from_counterexample_prompt,
     build_spec_draft_prompt,
     build_spec_json_repair_prompt,
+    build_self_refine_repair_prompt,
     build_spec_refine_prompt,
     build_spec_score_prompt,
     build_spec_score_json_repair_prompt,
@@ -165,13 +169,13 @@ class LLMAdapter:
 
 
 class DualLoopPipeline:
-    def __init__(self, args):
+    def __init__(self, args, llm: LLMAdapter | None = None):
         self.args = args
-        self.llm = LLMAdapter(args)
+        self.llm = llm or LLMAdapter(args)
         self.output_dir = self._make_output_dir()
 
-    def run(self) -> dict[str, Any]:
-        benchmark = self._load_benchmark()
+    def run(self, benchmark: list["CodeGenerationProblem"] | None = None) -> dict[str, Any]:
+        benchmark = benchmark or self._load_benchmark()
         traces: list[ProblemTrace] = []
         generations: list[list[str]] = []
 
@@ -195,15 +199,14 @@ class DualLoopPipeline:
             raw_problem=problem.question_content,
         )
 
-        if self.args.pipeline_mode == "baseline":
+        if self.args.pipeline_mode in {"baseline", "self_refine", "reflexion"}:
             initial_code = self._generate_code_baseline(problem)
             trace.code_initial = initial_code
-            trace.final_code = initial_code
             trace.raw_codegen_output = getattr(self, "_last_baseline_codegen_output", "")
             trace.effectiveness["codegen"] = self._build_codegen_effectiveness(
                 raw_output=trace.raw_codegen_output,
                 code=initial_code,
-                strategy="baseline_codegen",
+                strategy=f"{self.args.pipeline_mode}_codegen",
             )
             self._record_usage(trace, getattr(self, "_last_baseline_codegen_usage", None), "codegen")
             for extra_usage in getattr(self, "_last_baseline_codegen_extra_usages", []):
@@ -213,9 +216,31 @@ class DualLoopPipeline:
                 "codegen",
                 float(getattr(self, "_last_baseline_codegen_stage_time", 0.0)),
             )
-            feedback = self._verify(problem, initial_code)
-            trace.verifier_feedbacks.append(asdict(feedback))
-            trace.passed = feedback.passed
+            if self.args.pipeline_mode == "baseline":
+                trace.final_code = initial_code
+                feedback = self._verify(problem, initial_code)
+                trace.verifier_feedbacks.append(asdict(feedback))
+                trace.passed = feedback.passed
+                self._finalize_trace(trace)
+                return trace
+            repaired_code, feedback_trace, repair_meta = self._repair_direct_code(
+                problem,
+                initial_code,
+                strategy=self.args.pipeline_mode,
+            )
+            trace.repair_iterations = max(0, len(feedback_trace) - 1)
+            trace.loop_a_iterations = len(feedback_trace)
+            trace.verifier_feedbacks.extend(feedback_trace)
+            trace.raw_repair_outputs.extend(repair_meta["raw_repair_outputs"])
+            for usage in repair_meta["repair_usages"]:
+                self._record_usage(trace, usage, "repair")
+            for duration in repair_meta["stage_times"]:
+                self._record_stage_time(trace, "repair", float(duration))
+            trace.effectiveness["repair_steps"] = list(repair_meta["effectiveness_steps"])
+            if repair_meta["reflections"]:
+                trace.effectiveness["reflections"] = list(repair_meta["reflections"])
+            trace.final_code = repaired_code
+            trace.passed = bool(feedback_trace[-1]["passed"]) if feedback_trace else False
             self._finalize_trace(trace)
             return trace
 
@@ -435,15 +460,8 @@ class DualLoopPipeline:
 
     def _generate_code_baseline(self, problem: "CodeGenerationProblem") -> str:
         started_at = time.perf_counter()
-        prompt = (
-            "You are an expert Python programmer. Solve the following programming "
-            "problem. Return exactly one Python code block.\n\n"
-            f"{problem.question_content}"
-        )
-        if problem.starter_code:
-            prompt += f"\n\nStarter code:\n```python\n{problem.starter_code}\n```"
         output, usage = self.llm.generate(
-            prompt,
+            build_direct_codegen_prompt(problem),
             role="codegen",
             temperature=self.args.codegen_temperature,
             max_tokens=self.args.codegen_max_tokens,
@@ -474,6 +492,142 @@ class DualLoopPipeline:
         spec._last_codegen_extra_usages = extra_usages
         return code
 
+    def _repair_direct_code(
+        self,
+        problem: "CodeGenerationProblem",
+        code: str,
+        *,
+        strategy: str,
+    ) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
+        feedback_trace: list[dict[str, Any]] = []
+        repair_effectiveness: list[dict[str, Any]] = []
+        raw_repair_outputs: list[str] = []
+        repair_usages: list[dict[str, int | str]] = []
+        repair_stage_times: list[float] = []
+        reflections: list[str] = []
+        current_code = code
+        stagnant_attempts = 0
+        pending_step: dict[str, Any] | None = None
+
+        for attempt_idx in range(self.args.repair_max_iters):
+            feedback = self._verify(problem, current_code)
+            feedback_trace.append(asdict(feedback))
+            if pending_step is not None:
+                repair_effectiveness.append(
+                    self._finalize_repair_effectiveness(
+                        pending_step,
+                        after_feedback=feedback,
+                    )
+                )
+                pending_step = None
+            if feedback.passed:
+                return current_code, feedback_trace, {
+                    "raw_repair_outputs": raw_repair_outputs,
+                    "repair_usages": repair_usages,
+                    "stage_times": repair_stage_times,
+                    "effectiveness_steps": repair_effectiveness,
+                    "reflections": reflections,
+                }
+
+            started_at = time.perf_counter()
+            if strategy == "self_refine":
+                prompt = build_self_refine_repair_prompt(
+                    problem,
+                    current_code,
+                    feedback,
+                    require_change=stagnant_attempts > 0,
+                )
+                role = "self_refine_repair"
+            else:
+                reflection_output, reflection_usage = self.llm.generate(
+                    build_reflexion_prompt(problem, current_code, feedback, reflections),
+                    role="reflexion_reflect",
+                    temperature=min(0.8, self.args.repair_temperature + 0.1 * stagnant_attempts),
+                    max_tokens=min(self.args.judge_max_tokens, 400),
+                )
+                reflection_text = self._normalize_reflection(reflection_output)
+                if reflection_text:
+                    reflections.append(reflection_text)
+                raw_repair_outputs.append(reflection_output)
+                repair_usages.append(reflection_usage)
+                prompt = build_reflexion_repair_prompt(
+                    problem,
+                    current_code,
+                    feedback,
+                    reflections,
+                )
+                role = "reflexion_repair"
+
+            repair_output, usage = self.llm.generate(
+                prompt,
+                role=role,
+                temperature=min(0.8, self.args.repair_temperature + 0.2 * stagnant_attempts),
+                max_tokens=self.args.codegen_max_tokens,
+            )
+            raw_repair_outputs.append(repair_output)
+            repair_usages.append(usage)
+            repair_stage_times.append(time.perf_counter() - started_at)
+            next_code, extra_outputs, extra_usages = self._extract_valid_code(repair_output)
+            raw_repair_outputs.extend(extra_outputs)
+            repair_usages.extend(extra_usages)
+            if not next_code:
+                repair_effectiveness.append(
+                    self._build_repair_effectiveness(
+                        attempt_index=attempt_idx + 1,
+                        strategy=role,
+                        before_code=current_code,
+                        after_code="",
+                        before_feedback=feedback,
+                        effect="no_effect",
+                        reason="invalid_candidate",
+                    )
+                )
+                stagnant_attempts += 1
+                continue
+            if next_code == current_code:
+                repair_effectiveness.append(
+                    self._build_repair_effectiveness(
+                        attempt_index=attempt_idx + 1,
+                        strategy=role,
+                        before_code=current_code,
+                        after_code=next_code,
+                        before_feedback=feedback,
+                        effect="no_effect",
+                        reason="unchanged_candidate",
+                    )
+                )
+                stagnant_attempts += 1
+                continue
+
+            pending_step = self._build_repair_effectiveness(
+                attempt_index=attempt_idx + 1,
+                strategy=role,
+                before_code=current_code,
+                after_code=next_code,
+                before_feedback=feedback,
+                effect="pending",
+                reason="candidate_changed",
+            )
+            current_code = next_code
+            stagnant_attempts = 0
+
+        final_feedback = self._verify(problem, current_code)
+        feedback_trace.append(asdict(final_feedback))
+        if pending_step is not None:
+            repair_effectiveness.append(
+                self._finalize_repair_effectiveness(
+                    pending_step,
+                    after_feedback=final_feedback,
+                )
+            )
+        return current_code, feedback_trace, {
+            "raw_repair_outputs": raw_repair_outputs,
+            "repair_usages": repair_usages,
+            "stage_times": repair_stage_times,
+            "effectiveness_steps": repair_effectiveness,
+            "reflections": reflections,
+        }
+
     def _repair_code(
         self, problem: "CodeGenerationProblem", spec: StructuredSpec, code: str
     ) -> tuple[str, list[dict[str, Any]]]:
@@ -499,9 +653,13 @@ class DualLoopPipeline:
             started_at = time.perf_counter()
             counterexample = self._build_counterexample_summary(feedback)
             use_rewrite_fallback = (
-                feedback.error_type == "wrong_answer" and (stagnant_attempts > 1 or attempt_idx >= 2)
+                not getattr(self.args, "disable_rewrite_repair", False)
+                and feedback.error_type == "wrong_answer"
+                and (stagnant_attempts > 1 or attempt_idx >= 2)
             )
             use_counterexample_fallback = (
+                not getattr(self.args, "disable_counterexample_repair", False)
+                and
                 feedback.error_type == "wrong_answer"
                 and not use_rewrite_fallback
                 and (stagnant_attempts > 0 or attempt_idx > 0)
@@ -824,6 +982,11 @@ class DualLoopPipeline:
         return hashlib.sha1(text.encode("utf-8")).hexdigest()[:12]
 
     @staticmethod
+    def _normalize_reflection(text: str) -> str:
+        lines = [line.strip(" -*\t") for line in text.splitlines() if line.strip()]
+        return " ".join(lines[:3]).strip()
+
+    @staticmethod
     def _looks_like_python(code: str) -> bool:
         stripped = code.strip()
         if not stripped:
@@ -960,6 +1123,7 @@ class DualLoopPipeline:
             "model": self.args.model,
             "local_model_path": self.args.local_model_path,
             "pipeline_mode": self.args.pipeline_mode,
+            "run_tag": getattr(self.args, "run_tag", None),
             "release_version": self.args.release_version,
             "num_problems": len(benchmark),
             "pass_at_1": metrics[0]["pass@1"],
@@ -1031,6 +1195,7 @@ class DualLoopPipeline:
             "output_dir": self.output_dir,
             "spec_max_iters": self.args.spec_max_iters,
             "repair_max_iters": self.args.repair_max_iters,
+            "spec_score_threshold": self.args.spec_score_threshold,
         }
 
     def _write_outputs(self, summary: dict[str, Any], traces: list[ProblemTrace]) -> None:
@@ -1123,6 +1288,12 @@ class DualLoopPipeline:
                 reasons.append("solved_without_loops")
             return "solved", reasons
 
+        if trace.pipeline_mode in {"baseline", "self_refine", "reflexion"}:
+            if trace.verifier_feedbacks:
+                last_feedback = trace.verifier_feedbacks[-1]
+                reasons.append(last_feedback.get("error_type", "unknown_failure"))
+            return "implementation_induced", reasons
+
         if final_sas < self.args.spec_score_threshold:
             reasons.append("low_final_sas")
             if trace.spec_issue_types:
@@ -1185,9 +1356,12 @@ class DualLoopPipeline:
         return issue_types
 
     def _make_output_dir(self) -> str:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         model_repr = self.llm.model.model_repr.replace("/", "_").replace(" ", "_")
+        run_tag = str(getattr(self.args, "run_tag", "") or "").strip()
+        if run_tag:
+            run_tag = "_" + run_tag.replace("/", "_").replace(" ", "_")
         return os.path.join(
             self.args.output_root,
-            f"{self.args.pipeline_mode}_{model_repr}_{timestamp}",
+            f"{self.args.pipeline_mode}_{model_repr}{run_tag}_{timestamp}",
         )

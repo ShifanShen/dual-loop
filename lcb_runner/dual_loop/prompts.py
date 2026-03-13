@@ -175,6 +175,24 @@ Requirements:
 """
 
 
+def build_direct_codegen_prompt(problem: "CodeGenerationProblem") -> str:
+    starter = ""
+    if problem.starter_code:
+        starter = f"\nStarter code:\n```python\n{problem.starter_code}\n```\n"
+    return f"""You are an expert Python programmer.
+Solve the following programming problem.
+Return exactly one complete Python code block and nothing else.
+
+Problem:
+{problem.question_content}
+{starter}
+Requirements:
+- Follow the exact input/output contract.
+- Do not print extra text.
+- Prefer a direct, contest-style solution.
+"""
+
+
 def build_repair_prompt(
     problem: "CodeGenerationProblem",
     spec: StructuredSpec,
@@ -214,6 +232,110 @@ Repair target:
 - Fix the failure without breaking the input/output contract.
 - Satisfy the checkable subset of the structured spec.
 {change_requirement}
+"""
+
+
+def build_self_refine_repair_prompt(
+    problem: "CodeGenerationProblem",
+    code: str,
+    feedback: VerifierFeedback,
+    *,
+    require_change: bool = False,
+) -> str:
+    starter = ""
+    if problem.starter_code:
+        starter = f"\nStarter code:\n```python\n{problem.starter_code}\n```\n"
+    change_requirement = ""
+    if require_change:
+        change_requirement = (
+            "\n- Your previous revision did not fix the failure."
+            "\n- Do not return the same program again."
+            "\n- Change the failing logic."
+        )
+    return f"""You are refining a Python solution after execution feedback.
+Briefly think about why the program failed, then return exactly one complete Python code block.
+
+Problem:
+{problem.question_content}
+{starter}
+Current code:
+```python
+{code}
+```
+
+Execution feedback:
+{feedback.to_json()}
+
+Requirements:
+- Fix the reported failure.
+- Preserve the input/output contract.
+- Return only the revised program.
+{change_requirement}
+"""
+
+
+def build_reflexion_prompt(
+    problem: "CodeGenerationProblem",
+    code: str,
+    feedback: VerifierFeedback,
+    reflections: list[str],
+) -> str:
+    prior_reflections = "\n".join(f"- {item}" for item in reflections) or "- None yet."
+    return f"""You are writing a short reflection for a failed Python solution.
+Return 1 to 3 bullet points only. Do not return code.
+
+Problem:
+{problem.question_content}
+
+Current code:
+```python
+{code}
+```
+
+Execution feedback:
+{feedback.to_json()}
+
+Previous reflections:
+{prior_reflections}
+
+Write reflections that identify:
+- the likely root cause
+- what to change next
+- what to avoid repeating
+"""
+
+
+def build_reflexion_repair_prompt(
+    problem: "CodeGenerationProblem",
+    code: str,
+    feedback: VerifierFeedback,
+    reflections: list[str],
+) -> str:
+    starter = ""
+    if problem.starter_code:
+        starter = f"\nStarter code:\n```python\n{problem.starter_code}\n```\n"
+    reflection_block = "\n".join(f"- {item}" for item in reflections) or "- No reflections available."
+    return f"""You are revising a Python solution using accumulated reflections from prior failures.
+Return exactly one complete Python code block and nothing else.
+
+Problem:
+{problem.question_content}
+{starter}
+Current code:
+```python
+{code}
+```
+
+Execution feedback:
+{feedback.to_json()}
+
+Reflections:
+{reflection_block}
+
+Requirements:
+- Use the reflections to fix the root cause.
+- Do not repeat the same failing logic.
+- Preserve the input/output contract.
 """
 
 

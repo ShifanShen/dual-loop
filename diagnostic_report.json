@@ -1,0 +1,33 @@
+{
+  "run_overview": {
+    "model": "Qwen/Qwen2.5-Coder-7B-Instruct",
+    "pipeline_mode": "full",
+    "num_problems": 1,
+    "pass_at_1": 1.0,
+    "average_initial_sas": 75.0,
+    "average_final_sas": 90.0,
+    "average_repairs": 0.0,
+    "output_dir": "C:\\Users\\Stan1ey\\AppData\\Local\\Temp\\tmpkbubjn1j\\full_fake-model_20260313_172318"
+  },
+  "stage_effect_counts": {
+    "spec_draft": {},
+    "spec_score_initial": {},
+    "spec_score_final": {},
+    "spec_refine": {},
+    "codegen": {},
+    "repair": {}
+  },
+  "repair_strategy_counts": {},
+  "repair_strategy_effect_counts": {},
+  "failure_attribution_counts": {
+    "solved": 1
+  },
+  "verifier_error_counts": {
+    "unknown": 1
+  },
+  "examples": {},
+  "consistency_checks": {
+    "repair_effect_counts_match_summary": true,
+    "spec_refine_effect_counts_match_summary": true
+  }
+}

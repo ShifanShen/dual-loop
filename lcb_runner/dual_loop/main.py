@@ -36,7 +36,15 @@ def get_args():
         "--pipeline_mode",
         type=str,
         default="full",
-        choices=["baseline", "decomposition", "loop_a", "loop_b", "full"],
+        choices=[
+            "baseline",
+            "decomposition",
+            "loop_a",
+            "loop_b",
+            "self_refine",
+            "reflexion",
+            "full",
+        ],
         help="Ablation mode for the dual-loop pipeline",
     )
     parser.add_argument(
@@ -56,6 +64,12 @@ def get_args():
     parser.add_argument("--question_ids", type=str, default=None)
     parser.add_argument("--max_problems", type=int, default=10)
     parser.add_argument("--output_root", type=str, default="output/dual_loop")
+    parser.add_argument(
+        "--run_tag",
+        type=str,
+        default=None,
+        help="Optional tag appended to the output directory name for multi-run experiment suites.",
+    )
     parser.add_argument("--trust_remote_code", action="store_true")
     parser.add_argument("--dtype", type=str, default="bfloat16")
     parser.add_argument("--tensor_parallel_size", type=int, default=1)
@@ -74,6 +88,8 @@ def get_args():
     parser.add_argument("--spec_max_iters", type=int, default=3)
     parser.add_argument("--repair_max_iters", type=int, default=3)
     parser.add_argument("--spec_score_threshold", type=int, default=80)
+    parser.add_argument("--disable_counterexample_repair", action="store_true")
+    parser.add_argument("--disable_rewrite_repair", action="store_true")
     parser.add_argument("--spec_temperature", type=float, default=0.0)
     parser.add_argument("--judge_temperature", type=float, default=0.0)
     parser.add_argument("--codegen_temperature", type=float, default=0.2)

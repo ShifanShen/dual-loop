@@ -1,0 +1,58 @@
+[
+  {
+    "question_id": "q1",
+    "question_title": "Two Sum",
+    "pipeline_mode": "full",
+    "raw_problem": "problem",
+    "spec_initial": {
+      "task": "solve"
+    },
+    "spec_final": {
+      "task": "solve"
+    },
+    "initial_spec_score": {
+      "overall": 75,
+      "coverage": 70,
+      "faithfulness": 80,
+      "precision": 75
+    },
+    "final_spec_score": {
+      "overall": 90,
+      "coverage": 90,
+      "faithfulness": 90,
+      "precision": 90
+    },
+    "spec_scores": [
+      {
+        "overall": 90
+      }
+    ],
+    "spec_issue_types": [],
+    "code_initial": "print(1)",
+    "final_code": "print(1)",
+    "verifier_feedbacks": [
+      {
+        "passed": true
+      }
+    ],
+    "failure_attribution": "solved",
+    "failure_reason_tags": [],
+    "llm_calls": 0,
+    "spec_calls": 0,
+    "judge_calls": 0,
+    "codegen_calls": 0,
+    "repair_calls": 0,
+    "loop_b_iterations": 0,
+    "loop_a_iterations": 0,
+    "token_usage": {},
+    "stage_times": {},
+    "raw_spec_outputs": [],
+    "raw_score_outputs": [],
+    "raw_codegen_output": "",
+    "raw_repair_outputs": [],
+    "effectiveness": {},
+    "passed": true,
+    "repair_iterations": 0,
+    "elapsed_seconds": 0.0
+  }
+]

@@ -1,0 +1,42 @@
+{
+  "model": "Qwen/Qwen2.5-Coder-7B-Instruct",
+  "local_model_path": null,
+  "pipeline_mode": "full",
+  "release_version": "release_v6",
+  "num_problems": 1,
+  "pass_at_1": 1.0,
+  "average_repairs": 0.0,
+  "average_spec_score": 90.0,
+  "average_initial_sas": 75.0,
+  "average_final_sas": 90.0,
+  "average_delta_sas": 15.0,
+  "average_initial_coverage": 70.0,
+  "average_final_coverage": 90.0,
+  "average_initial_faithfulness": 80.0,
+  "average_final_faithfulness": 90.0,
+  "average_initial_precision": 75.0,
+  "average_final_precision": 90.0,
+  "average_llm_calls": 0.0,
+  "average_spec_calls": 0.0,
+  "average_judge_calls": 0.0,
+  "average_codegen_calls": 0.0,
+  "average_repair_calls": 0.0,
+  "average_loop_b_iterations": 0.0,
+  "average_loop_a_iterations": 0.0,
+  "average_prompt_chars": 0.0,
+  "average_completion_chars": 0.0,
+  "average_elapsed_seconds": 0.0,
+  "failure_attribution_counts": {
+    "solved": 1
+  },
+  "failure_reason_counts": {},
+  "verifier_error_counts": {
+    "unknown": 1
+  },
+  "repair_effect_counts": {},
+  "spec_refine_effect_counts": {},
+  "spec_issue_type_counts": {},
+  "output_dir": "C:\\Users\\Stan1ey\\AppData\\Local\\Temp\\tmpkmufiqv_\\full_fake-model_20260313_172334",
+  "spec_max_iters": 2,
+  "repair_max_iters": 2
+}
