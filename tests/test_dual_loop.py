@@ -376,6 +376,8 @@ class DualLoopPipelineTests(unittest.TestCase):
             self.assertIn("average_initial_sas", summary)
             self.assertTrue(os.path.exists(os.path.join(pipeline.output_dir, "summary.json")))
             self.assertTrue(os.path.exists(os.path.join(pipeline.output_dir, "traces.json")))
+            self.assertTrue(os.path.exists(os.path.join(os.getcwd(), "summary.json")))
+            self.assertTrue(os.path.exists(os.path.join(os.getcwd(), "traces.json")))
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
     def test_refine_spec_keeps_last_valid_spec_when_refine_parse_fails(self, mock_adapter_cls):

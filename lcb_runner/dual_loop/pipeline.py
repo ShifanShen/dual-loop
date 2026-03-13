@@ -1035,10 +1035,21 @@ class DualLoopPipeline:
 
     def _write_outputs(self, summary: dict[str, Any], traces: list[ProblemTrace]) -> None:
         os.makedirs(self.output_dir, exist_ok=True)
-        with open(os.path.join(self.output_dir, "summary.json"), "w", encoding="utf-8") as f:
-            json.dump(summary, f, indent=2, ensure_ascii=True)
-        with open(os.path.join(self.output_dir, "traces.json"), "w", encoding="utf-8") as f:
-            json.dump([asdict(trace) for trace in traces], f, indent=2, ensure_ascii=True)
+        serialized_traces = [asdict(trace) for trace in traces]
+        output_targets = [
+            os.path.join(self.output_dir, "summary.json"),
+            os.path.join(os.getcwd(), "summary.json"),
+        ]
+        trace_targets = [
+            os.path.join(self.output_dir, "traces.json"),
+            os.path.join(os.getcwd(), "traces.json"),
+        ]
+        for path in output_targets:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(summary, f, indent=2, ensure_ascii=True)
+        for path in trace_targets:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(serialized_traces, f, indent=2, ensure_ascii=True)
 
     def _compute_metrics(
         self,
