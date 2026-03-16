@@ -422,6 +422,24 @@ class DualLoopPipelineTests(unittest.TestCase):
             self.assertEqual(trace.effectiveness["repair_steps"][0]["strategy"], "reflexion_repair")
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_verify_maps_subprocess_failure_to_verifier_error(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            mock_adapter_cls.return_value.model.model_repr = "fake-model"
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+
+            with patch(
+                "lcb_runner.evaluation.compute_code_generation_metrics.check_correctness",
+                side_effect=RuntimeError("worker crashed"),
+            ):
+                feedback = pipeline._verify(problem, "print('x')")
+
+            self.assertFalse(feedback.passed)
+            self.assertEqual(feedback.error_type, "verifier_error")
+            self.assertIn("Verifier subprocess failed", feedback.message)
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
     def test_run_writes_summary_and_traces(self, mock_adapter_cls):
         with tempfile.TemporaryDirectory() as tmpdir:
             args = self.make_args(tmpdir)

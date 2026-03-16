@@ -1023,14 +1023,22 @@ class DualLoopPipeline:
     def _verify(
         self, problem: "CodeGenerationProblem", code: str
     ) -> VerifierFeedback:
-        from lcb_runner.evaluation.testing_util import run_test
+        from lcb_runner.evaluation.compute_code_generation_metrics import check_correctness
 
-        results, metadata = run_test(
-            problem.get_evaluation_sample(),
-            test=code,
-            debug=False,
-            timeout=self.args.timeout,
-        )
+        try:
+            results, metadata = check_correctness(
+                problem.get_evaluation_sample(),
+                code,
+                timeout=self.args.timeout,
+                debug=False,
+            )
+        except Exception as exc:
+            results = [-5]
+            metadata = {
+                "error_code": -5,
+                "error_message": "Verifier subprocess failed",
+                "error": repr(exc),
+            }
         passed = bool(results) and all(result is True for result in results)
         if passed:
             return VerifierFeedback(

@@ -44,12 +44,21 @@ def check_correctness(sample, generation, timeout, debug=True):
     )
     if p.is_alive():
         p.kill()
+    in_outs = json.loads(sample["input_output"])
+    num_cases = len(in_outs.get("inputs", []))
     if not result:
-        in_outs = json.loads(sample["input_output"])
         # consider that all tests failed
-        result = [[-1 for i in range(len(in_outs["inputs"]))]]
+        result = [[-1 for _ in range(num_cases)]]
+        crash_reason = "global timeout" if p.exitcode is None else f"subprocess_exit_{p.exitcode}"
+        metadata_list.append(
+            {
+                "error_code": -5,
+                "error_message": "Verifier subprocess failed",
+                "error": crash_reason,
+            }
+        )
         if debug:
-            print(f"global timeout")
+            print(crash_reason)
     return result[0], metadata_list[0]
 
 
