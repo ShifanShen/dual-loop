@@ -52,6 +52,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--spec_max_tokens", type=int, default=1400)
     parser.add_argument("--judge_max_tokens", type=int, default=1200)
     parser.add_argument("--codegen_max_tokens", type=int, default=2200)
+    parser.add_argument("--include_pipeline_ablations", action="store_true")
     parser.add_argument("--include_repair_ablations", action="store_true")
     parser.add_argument("--include_budget_ablations", action="store_true")
     args = parser.parse_args()
@@ -88,6 +89,7 @@ def main() -> None:
 
     run_results = run_rq_suite(
         args,
+        include_pipeline_ablations=args.include_pipeline_ablations,
         include_repair_ablations=args.include_repair_ablations,
         include_budget_ablations=args.include_budget_ablations,
     )
@@ -104,6 +106,7 @@ def main() -> None:
         "model_repr": args.model_repr,
         "release_version": args.release_version,
         "max_problems": args.max_problems,
+        "include_pipeline_ablations": args.include_pipeline_ablations,
         "include_repair_ablations": args.include_repair_ablations,
         "include_budget_ablations": args.include_budget_ablations,
         "suite_dir": str(suite_dir),

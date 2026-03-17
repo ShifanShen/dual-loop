@@ -800,6 +800,22 @@ class DualLoopPipelineTests(unittest.TestCase):
             ],
         )
 
+    def test_rq_suite_plan_includes_pipeline_ablations_when_enabled(self):
+        plan = build_rq_suite_plan(include_pipeline_ablations=True)
+        run_names = [item.run_name for item in plan]
+        self.assertEqual(
+            run_names,
+            [
+                "baseline_direct",
+                "decomposition_only",
+                "self_refine_style",
+                "reflexion_style",
+                "full_dual_loop",
+                "loop_b_only",
+                "loop_a_only",
+            ],
+        )
+
     def test_apply_run_config_overrides_mode_and_tag(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             args = self.make_args(tmpdir)

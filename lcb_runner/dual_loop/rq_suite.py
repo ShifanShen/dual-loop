@@ -28,6 +28,7 @@ CORE_SUITE_NAME = "main_comparison"
 
 def build_rq_suite_plan(
     *,
+    include_pipeline_ablations: bool = False,
     include_repair_ablations: bool = False,
     include_budget_ablations: bool = False,
 ) -> list[SuiteRunConfig]:
@@ -38,6 +39,14 @@ def build_rq_suite_plan(
         SuiteRunConfig(CORE_SUITE_NAME, "reflexion_style", "reflexion"),
         SuiteRunConfig(CORE_SUITE_NAME, "full_dual_loop", "full"),
     ]
+
+    if include_pipeline_ablations:
+        plan.extend(
+            [
+                SuiteRunConfig("pipeline_ablations", "loop_b_only", "loop_b"),
+                SuiteRunConfig("pipeline_ablations", "loop_a_only", "loop_a"),
+            ]
+        )
 
     if include_repair_ablations:
         plan.extend(
@@ -120,10 +129,12 @@ def apply_run_config(base_args: Namespace, config: SuiteRunConfig) -> Namespace:
 def run_rq_suite(
     base_args: Namespace,
     *,
+    include_pipeline_ablations: bool = False,
     include_repair_ablations: bool = False,
     include_budget_ablations: bool = False,
 ) -> list[dict[str, Any]]:
     plan = build_rq_suite_plan(
+        include_pipeline_ablations=include_pipeline_ablations,
         include_repair_ablations=include_repair_ablations,
         include_budget_ablations=include_budget_ablations,
     )
@@ -586,6 +597,8 @@ def _method_label(run_name: str) -> str:
     labels = {
         "baseline_direct": "Direct NL->Code",
         "decomposition_only": "Decomposition Only",
+        "loop_b_only": "Loop B Only",
+        "loop_a_only": "Loop A Only",
         "self_refine_style": "Self-Refine-style",
         "reflexion_style": "Reflexion-style",
         "full_dual_loop": "Full Dual-Loop",
