@@ -23,6 +23,11 @@ _SPEC_SCORE_FIELD_ALIASES = {
         "臆造约束",
     ],
     "ambiguities": ["ambiguities", "ambiguity", "歧义", "模糊点"],
+    "requires_refine": ["requires_refine", "requires refine"],
+    "blocking_issues": ["blocking_issues", "blocking issues"],
+    "target_fields": ["target_fields", "target fields"],
+    "edit_plan": ["edit_plan", "edit plan"],
+    "do_not_change": ["do_not_change", "do not change"],
     "action": ["action", "建议", "修订建议", "revision", "next_action"],
 }
 
@@ -139,6 +144,16 @@ def _extract_string_field(text: str, field: str) -> str:
     return ""
 
 
+def _extract_bool_field(text: str, field: str) -> bool:
+    text = _normalize_text(text)
+    for alias in _field_aliases(field):
+        pattern = rf'["\']?{re.escape(alias)}["\']?\s*[:=]\s*(true|false|yes|no)'
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            return match.group(1).strip().lower() in {"true", "yes"}
+    return False
+
+
 def _coerce_score_payload(payload: dict[str, Any]) -> dict[str, Any]:
     normalized = {}
     nested_scores = payload.get("scores")
@@ -163,6 +178,19 @@ def _to_int_score(value: Any) -> int:
     if match:
         return int(match.group(1))
     return 0
+
+
+def _to_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    text = _normalize_text(str(value)).strip().lower()
+    if text in {"true", "yes", "1"}:
+        return True
+    if text in {"false", "no", "0", ""}:
+        return False
+    return False
 
 
 @dataclass
@@ -240,6 +268,11 @@ class SpecScore:
     missing_constraints: list[str] = field(default_factory=list)
     unsupported_constraints: list[str] = field(default_factory=list)
     ambiguities: list[str] = field(default_factory=list)
+    requires_refine: bool = False
+    blocking_issues: list[str] = field(default_factory=list)
+    target_fields: list[str] = field(default_factory=list)
+    edit_plan: list[str] = field(default_factory=list)
+    do_not_change: list[str] = field(default_factory=list)
     action: str = ""
     parse_ok: bool = False
     parse_source: str = "default"
@@ -264,6 +297,11 @@ class SpecScore:
                     text, "unsupported_constraints"
                 ),
                 "ambiguities": _extract_list_field(text, "ambiguities"),
+                "requires_refine": _extract_bool_field(text, "requires_refine"),
+                "blocking_issues": _extract_list_field(text, "blocking_issues"),
+                "target_fields": _extract_list_field(text, "target_fields"),
+                "edit_plan": _extract_list_field(text, "edit_plan"),
+                "do_not_change": _extract_list_field(text, "do_not_change"),
                 "action": _extract_string_field(text, "action"),
             }
         parse_ok = any(
@@ -275,6 +313,10 @@ class SpecScore:
                 bool(_ensure_list(payload.get("missing_constraints"))),
                 bool(_ensure_list(payload.get("unsupported_constraints"))),
                 bool(_ensure_list(payload.get("ambiguities"))),
+                _to_bool(payload.get("requires_refine", False)),
+                bool(_ensure_list(payload.get("blocking_issues"))),
+                bool(_ensure_list(payload.get("target_fields"))),
+                bool(_ensure_list(payload.get("edit_plan"))),
                 bool(str(payload.get("action", "")).strip()),
             ]
         )
@@ -288,6 +330,11 @@ class SpecScore:
                 payload.get("unsupported_constraints")
             ),
             ambiguities=_ensure_list(payload.get("ambiguities")),
+            requires_refine=_to_bool(payload.get("requires_refine", False)),
+            blocking_issues=_ensure_list(payload.get("blocking_issues")),
+            target_fields=_ensure_list(payload.get("target_fields")),
+            edit_plan=_ensure_list(payload.get("edit_plan")),
+            do_not_change=_ensure_list(payload.get("do_not_change")),
             action=str(payload.get("action", "")).strip(),
             parse_ok=parse_ok,
             parse_source=parse_source if parse_ok else "default",

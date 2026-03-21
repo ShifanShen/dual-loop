@@ -45,6 +45,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--spec_max_iters", type=int, default=3)
     parser.add_argument("--repair_max_iters", type=int, default=3)
     parser.add_argument("--spec_score_threshold", type=int, default=80)
+    parser.add_argument("--spec_min_improvement", type=int, default=1)
+    parser.add_argument("--spec_precision_floor", type=int, default=85)
+    parser.add_argument("--spec_max_rejected_refines", type=int, default=1)
+    parser.add_argument(
+        "--spec_skip_ambiguity_only",
+        dest="spec_skip_ambiguity_only",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--no_spec_skip_ambiguity_only",
+        dest="spec_skip_ambiguity_only",
+        action="store_false",
+    )
+    parser.set_defaults(spec_skip_ambiguity_only=True)
     parser.add_argument("--spec_temperature", type=float, default=0.0)
     parser.add_argument("--judge_temperature", type=float, default=0.0)
     parser.add_argument("--codegen_temperature", type=float, default=0.2)

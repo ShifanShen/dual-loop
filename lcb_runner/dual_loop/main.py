@@ -94,6 +94,27 @@ def get_args():
     parser.add_argument("--spec_max_iters", type=int, default=3)
     parser.add_argument("--repair_max_iters", type=int, default=3)
     parser.add_argument("--spec_score_threshold", type=int, default=80)
+    parser.add_argument("--spec_min_improvement", type=int, default=1)
+    parser.add_argument("--spec_precision_floor", type=int, default=85)
+    parser.add_argument(
+        "--spec_max_rejected_refines",
+        type=int,
+        default=1,
+        help="Stop SAL after this many consecutive skipped/rejected refine attempts.",
+    )
+    parser.add_argument(
+        "--spec_skip_ambiguity_only",
+        dest="spec_skip_ambiguity_only",
+        action="store_true",
+        help="Skip SAL refine when the judge only reports minor ambiguity.",
+    )
+    parser.add_argument(
+        "--no_spec_skip_ambiguity_only",
+        dest="spec_skip_ambiguity_only",
+        action="store_false",
+        help="Allow SAL to refine ambiguity-only critiques.",
+    )
+    parser.set_defaults(spec_skip_ambiguity_only=True)
     parser.add_argument("--disable_counterexample_repair", action="store_true")
     parser.add_argument("--disable_rewrite_repair", action="store_true")
     parser.add_argument("--spec_temperature", type=float, default=0.0)

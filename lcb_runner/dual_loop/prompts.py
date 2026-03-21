@@ -53,6 +53,11 @@ Return JSON only with the following schema:
   "missing_constraints": ["..."],
   "unsupported_constraints": ["..."],
   "ambiguities": ["..."],
+  "requires_refine": false,
+  "blocking_issues": ["..."],
+  "target_fields": ["constraints", "rules"],
+  "edit_plan": ["Add one missing constraint ..."],
+  "do_not_change": ["task", "inputs", "outputs"],
   "action": "one short revision instruction"
 }}
 
@@ -67,6 +72,16 @@ Scoring rules:
 - faithfulness: whether the spec avoids unsupported assumptions
 - precision: whether the spec is clear enough to drive code generation
 - overall: rounded weighted score using 0.4 coverage, 0.4 faithfulness, 0.2 precision
+- requires_refine: true only if a revision is likely to improve downstream code generation
+- blocking_issues: concrete issues that materially block code generation
+- target_fields: only list schema fields that should be edited
+- edit_plan: concrete field-level edits; avoid generic advice like "clarify the spec"
+- do_not_change: fields that are already adequate and should be preserved verbatim
+
+Decision rules:
+- If the spec only has minor wording ambiguity and no missing or unsupported constraints, set requires_refine to false.
+- If no revision is needed, return target_fields as [] and edit_plan as [].
+- Prefer local edits over full rewrites.
 
 Problem:
 {problem.question_content}
@@ -92,10 +107,15 @@ Review feedback:
 {score.to_json()}
 
 Requirements:
+- If requires_refine is false, return the current spec unchanged.
+- Modify only the fields listed in target_fields.
+- Preserve every field listed in do_not_change exactly unless changing it is absolutely necessary to remove an unsupported assumption.
 - Preserve supported constraints.
 - Add missing constraints.
 - Remove unsupported assumptions.
 - Keep the spec concise and executable.
+- Do not rewrite the whole spec if only one local fix is needed.
+- Apply the edit_plan concretely and avoid generic wording-only changes.
 """
 
 
@@ -124,6 +144,11 @@ def build_spec_score_json_repair_prompt(raw_output: str) -> str:
   "missing_constraints": ["..."],
   "unsupported_constraints": ["..."],
   "ambiguities": ["..."],
+  "requires_refine": false,
+  "blocking_issues": ["..."],
+  "target_fields": ["constraints", "rules"],
+  "edit_plan": ["Add one missing constraint ..."],
+  "do_not_change": ["task", "inputs", "outputs"],
   "action": "one short revision instruction"
 }}
 

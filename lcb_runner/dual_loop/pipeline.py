@@ -398,6 +398,66 @@ class DualLoopPipeline:
         score._stage_time = time.perf_counter() - started_at
         return score
 
+    def _should_attempt_spec_refine(self, score: SpecScore) -> tuple[bool, str]:
+        if not score.parse_ok:
+            return False, "score_unavailable"
+        if score.overall >= self.args.spec_score_threshold:
+            return False, "threshold_met"
+        if not score.requires_refine:
+            return False, "judge_no_refine"
+        if (
+            getattr(self.args, "spec_skip_ambiguity_only", True)
+            and not score.missing_constraints
+            and not score.unsupported_constraints
+            and score.ambiguities
+            and score.precision >= getattr(self.args, "spec_precision_floor", 85)
+        ):
+            return False, "ambiguity_only"
+        if not score.target_fields or not score.edit_plan:
+            return False, "no_edit_plan"
+        return True, "eligible"
+
+    def _accept_refined_spec(
+        self,
+        *,
+        previous_spec: StructuredSpec,
+        previous_score: SpecScore,
+        candidate_spec: StructuredSpec,
+        candidate_score: SpecScore,
+    ) -> tuple[bool, str]:
+        if not candidate_spec.parse_ok:
+            return False, "rejected_parse_fail"
+        if not candidate_score.parse_ok:
+            return False, "rejected_candidate_score_unavailable"
+        if self._spec_core_payload(previous_spec) == self._spec_core_payload(candidate_spec):
+            return False, "rejected_unchanged_candidate"
+
+        previous_unsupported = len(previous_score.unsupported_constraints)
+        candidate_unsupported = len(candidate_score.unsupported_constraints)
+        if candidate_unsupported > previous_unsupported:
+            return False, "rejected_unsupported_increase"
+        if candidate_score.faithfulness < previous_score.faithfulness:
+            return False, "rejected_faithfulness_drop"
+        if candidate_score.overall < previous_score.overall:
+            return False, "rejected_overall_drop"
+
+        min_gain = int(getattr(self.args, "spec_min_improvement", 1))
+        if candidate_score.overall >= previous_score.overall + min_gain:
+            return True, "accepted_improved_overall"
+        if (
+            candidate_score.precision > previous_score.precision
+            and candidate_score.coverage >= previous_score.coverage
+            and candidate_score.faithfulness >= previous_score.faithfulness
+        ):
+            return True, "accepted_precision_gain"
+        if (
+            len(candidate_score.missing_constraints) < len(previous_score.missing_constraints)
+            and candidate_score.coverage >= previous_score.coverage
+            and candidate_score.faithfulness >= previous_score.faithfulness
+        ):
+            return True, "accepted_reduced_missing_constraints"
+        return False, "rejected_no_gain"
+
     def _refine_spec(
         self, problem: "CodeGenerationProblem", spec: StructuredSpec
     ) -> tuple[StructuredSpec, list[dict[str, Any]], dict[str, Any]]:
@@ -411,6 +471,8 @@ class DualLoopPipeline:
             "effectiveness_steps": [],
         }
         current = spec
+        consecutive_skips = 0
+        consecutive_rejections = 0
         for attempt_idx in range(self.args.spec_max_iters):
             score = self._score_spec(problem, current)
             score_trace.append(asdict(score))
@@ -423,8 +485,28 @@ class DualLoopPipeline:
                 refine_meta["stage_times"].get("spec_score_refine", 0.0)
                 + float(getattr(score, "_stage_time", 0.0))
             )
-            if score.overall >= self.args.spec_score_threshold:
-                break
+            should_refine, decision_reason = self._should_attempt_spec_refine(score)
+            if not should_refine:
+                refine_meta["effectiveness_steps"].append(
+                    self._build_spec_refine_effectiveness(
+                        previous_spec=current,
+                        candidate_spec=current,
+                        score_before=score,
+                        candidate_score=None,
+                        attempt_index=attempt_idx + 1,
+                        effect="skipped",
+                        reason=decision_reason,
+                        accepted=False,
+                    )
+                )
+                consecutive_skips += 1
+                if decision_reason == "threshold_met" or consecutive_skips >= getattr(
+                    self.args, "spec_max_rejected_refines", 1
+                ):
+                    break
+                continue
+
+            consecutive_skips = 0
             started_at = time.perf_counter()
             refine_output, usage = self.llm.generate(
                 build_spec_refine_prompt(problem, current, score),
@@ -432,30 +514,65 @@ class DualLoopPipeline:
                 temperature=self.args.spec_temperature,
                 max_tokens=self.args.spec_max_tokens,
             )
-            next_spec, raw_attempt_outputs, extra_usages = self._parse_spec_output(
+            candidate_spec, raw_attempt_outputs, extra_usages = self._parse_spec_output(
                 refine_output,
                 fallback_task=problem.question_title,
             )
-            previous_spec = current
-            if next_spec.parse_ok:
-                current = next_spec
-            current._raw_output = refine_output
-            current._usage = usage
             refine_meta["raw_spec_outputs"].extend(raw_attempt_outputs)
             refine_meta["spec_usages"].append(usage)
             refine_meta["spec_usages"].extend(extra_usages)
-            refine_meta["effectiveness_steps"].append(
-                self._build_spec_refine_effectiveness(
-                    previous_spec=previous_spec,
-                    next_spec=next_spec,
-                    score_before=score,
-                    attempt_index=attempt_idx + 1,
-                )
-            )
             refine_meta["stage_times"]["spec_refine"] = (
                 refine_meta["stage_times"].get("spec_refine", 0.0)
                 + (time.perf_counter() - started_at)
             )
+
+            candidate_score: SpecScore | None = None
+            if candidate_spec.parse_ok:
+                candidate_score = self._score_spec(problem, candidate_spec)
+                refine_meta["raw_score_outputs"].extend(
+                    getattr(
+                        candidate_score,
+                        "_raw_attempt_outputs",
+                        [getattr(candidate_score, "_raw_output", "")],
+                    )
+                )
+                refine_meta["judge_usages"].append(getattr(candidate_score, "_usage", None))
+                refine_meta["judge_usages"].extend(
+                    getattr(candidate_score, "_extra_usages", [])
+                )
+                refine_meta["stage_times"]["spec_score_refine"] = (
+                    refine_meta["stage_times"].get("spec_score_refine", 0.0)
+                    + float(getattr(candidate_score, "_stage_time", 0.0))
+                )
+                accepted, accept_reason = self._accept_refined_spec(
+                    previous_spec=current,
+                    previous_score=score,
+                    candidate_spec=candidate_spec,
+                    candidate_score=candidate_score,
+                )
+            else:
+                accepted = False
+                accept_reason = "rejected_parse_fail"
+
+            refine_meta["effectiveness_steps"].append(
+                self._build_spec_refine_effectiveness(
+                    previous_spec=current,
+                    candidate_spec=candidate_spec,
+                    score_before=score,
+                    candidate_score=candidate_score,
+                    attempt_index=attempt_idx + 1,
+                    effect="artifact_changed" if accepted else "no_effect",
+                    reason=accept_reason,
+                    accepted=accepted,
+                )
+            )
+            if accepted:
+                current = candidate_spec
+                consecutive_rejections = 0
+            else:
+                consecutive_rejections += 1
+                if consecutive_rejections >= getattr(self.args, "spec_max_rejected_refines", 1):
+                    break
         return current, score_trace, refine_meta
 
     def _generate_code_baseline(self, problem: "CodeGenerationProblem") -> str:
@@ -866,26 +983,23 @@ class DualLoopPipeline:
         self,
         *,
         previous_spec: StructuredSpec,
-        next_spec: StructuredSpec,
+        candidate_spec: StructuredSpec,
         score_before: SpecScore,
+        candidate_score: SpecScore | None,
         attempt_index: int,
+        effect: str,
+        reason: str,
+        accepted: bool,
     ) -> dict[str, Any]:
-        artifact_changed = self._spec_core_payload(previous_spec) != self._spec_core_payload(next_spec)
-        if not next_spec.parse_ok:
-            effect = "no_effect"
-            reason = "refine_parse_failed"
-        elif artifact_changed:
-            effect = "artifact_changed"
-            reason = "spec_updated"
-        else:
-            effect = "no_effect"
-            reason = "spec_unchanged"
+        artifact_changed = self._spec_core_payload(previous_spec) != self._spec_core_payload(candidate_spec)
         return {
             "stage": "spec_refine",
             "attempt_index": attempt_index,
             "score_before": score_before.overall,
-            "parse_ok": next_spec.parse_ok,
+            "score_after": candidate_score.overall if candidate_score is not None else None,
+            "parse_ok": candidate_spec.parse_ok,
             "artifact_changed": artifact_changed,
+            "accepted": accepted,
             "effect": effect,
             "reason": reason,
         }
@@ -1204,6 +1318,14 @@ class DualLoopPipeline:
             "spec_max_iters": self.args.spec_max_iters,
             "repair_max_iters": self.args.repair_max_iters,
             "spec_score_threshold": self.args.spec_score_threshold,
+            "spec_min_improvement": getattr(self.args, "spec_min_improvement", 1),
+            "spec_precision_floor": getattr(self.args, "spec_precision_floor", 85),
+            "spec_max_rejected_refines": getattr(
+                self.args, "spec_max_rejected_refines", 1
+            ),
+            "spec_skip_ambiguity_only": getattr(
+                self.args, "spec_skip_ambiguity_only", True
+            ),
         }
 
     def _write_outputs(self, summary: dict[str, Any], traces: list[ProblemTrace]) -> None:

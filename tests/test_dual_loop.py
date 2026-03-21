@@ -144,6 +144,31 @@ class SpecParsingTests(unittest.TestCase):
         self.assertIn("missing edge case", score.missing_constraints)
         self.assertEqual(score.action, "revise the spec")
 
+    def test_spec_score_parses_refine_control_fields(self):
+        text = json.dumps(
+            {
+                "coverage": 84,
+                "faithfulness": 91,
+                "precision": 76,
+                "overall": 85,
+                "missing_constraints": ["edge case: empty array"],
+                "unsupported_constraints": [],
+                "ambiguities": ["tie-break not specified"],
+                "requires_refine": True,
+                "blocking_issues": ["missing executable edge case"],
+                "target_fields": ["edge_cases", "checkable_properties"],
+                "edit_plan": ["Add the empty-array edge case explicitly"],
+                "do_not_change": ["task", "inputs", "outputs"],
+                "action": "add one missing edge case",
+            }
+        )
+        score = SpecScore.from_llm_output(text)
+        self.assertTrue(score.requires_refine)
+        self.assertIn("missing executable edge case", score.blocking_issues)
+        self.assertEqual(score.target_fields, ["edge_cases", "checkable_properties"])
+        self.assertEqual(score.edit_plan, ["Add the empty-array edge case explicitly"])
+        self.assertEqual(score.do_not_change, ["task", "inputs", "outputs"])
+
     def test_spec_score_parses_freeform_fields(self):
         text = """
         Here is the evaluation.
@@ -273,6 +298,10 @@ class DualLoopPipelineTests(unittest.TestCase):
             spec_max_iters=2,
             repair_max_iters=2,
             spec_score_threshold=80,
+            spec_min_improvement=1,
+            spec_precision_floor=85,
+            spec_max_rejected_refines=1,
+            spec_skip_ambiguity_only=True,
             disable_counterexample_repair=False,
             disable_rewrite_repair=False,
             spec_temperature=0.0,
@@ -500,7 +529,16 @@ class DualLoopPipelineTests(unittest.TestCase):
                 pipeline,
                 "_score_spec",
                 side_effect=[
-                    SpecScore(coverage=20, faithfulness=20, precision=20, overall=20),
+                    SpecScore(
+                        coverage=20,
+                        faithfulness=20,
+                        precision=20,
+                        overall=20,
+                        parse_ok=True,
+                        requires_refine=True,
+                        target_fields=["rules"],
+                        edit_plan=["Add the missing rule"],
+                    ),
                     SpecScore(coverage=90, faithfulness=90, precision=90, overall=90),
                 ],
             ):
@@ -508,8 +546,142 @@ class DualLoopPipelineTests(unittest.TestCase):
 
             self.assertEqual(refined.task, "solve")
             self.assertEqual(refined.rules, ["valid output"])
-            self.assertEqual(len(score_trace), 2)
+            self.assertEqual(len(score_trace), 1)
             self.assertEqual(len(refine_meta["raw_spec_outputs"]), 2)
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_refine_spec_skips_ambiguity_only_feedback(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            mock_adapter_cls.return_value.model.model_repr = "fake-model"
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+            spec = StructuredSpec(task="solve", rules=["valid output"])
+
+            with patch.object(
+                pipeline,
+                "_score_spec",
+                return_value=SpecScore(
+                    coverage=88,
+                    faithfulness=92,
+                    precision=87,
+                    overall=79,
+                    parse_ok=True,
+                    ambiguities=["Minor wording ambiguity"],
+                    requires_refine=True,
+                ),
+            ), patch.object(pipeline.llm, "generate") as mock_generate:
+                refined, score_trace, refine_meta = pipeline._refine_spec(problem, spec)
+
+            self.assertEqual(refined.task, "solve")
+            self.assertEqual(len(score_trace), 1)
+            self.assertEqual(refine_meta["effectiveness_steps"][0]["reason"], "ambiguity_only")
+            mock_generate.assert_not_called()
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_refine_spec_rejects_candidate_without_gain(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            mock_adapter = mock_adapter_cls.return_value
+            mock_adapter.model.model_repr = "fake-model"
+            mock_adapter.generate.return_value = (
+                json.dumps(
+                    {
+                        "task": "solve",
+                        "rules": ["valid output", "same logic"],
+                    }
+                ),
+                {"prompt_chars": 1, "completion_chars": 1},
+            )
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+            spec = StructuredSpec(task="solve", rules=["valid output"])
+
+            with patch.object(
+                pipeline,
+                "_score_spec",
+                side_effect=[
+                    SpecScore(
+                        coverage=70,
+                        faithfulness=80,
+                        precision=70,
+                        overall=75,
+                        parse_ok=True,
+                        requires_refine=True,
+                        target_fields=["rules"],
+                        edit_plan=["Clarify the rule"],
+                    ),
+                    SpecScore(
+                        coverage=70,
+                        faithfulness=80,
+                        precision=70,
+                        overall=75,
+                        parse_ok=True,
+                    ),
+                ],
+            ):
+                refined, score_trace, refine_meta = pipeline._refine_spec(problem, spec)
+
+            self.assertEqual(refined.rules, ["valid output"])
+            self.assertEqual(len(score_trace), 1)
+            self.assertEqual(refine_meta["effectiveness_steps"][0]["reason"], "rejected_no_gain")
+            self.assertFalse(refine_meta["effectiveness_steps"][0]["accepted"])
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_refine_spec_accepts_candidate_with_overall_gain(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            mock_adapter = mock_adapter_cls.return_value
+            mock_adapter.model.model_repr = "fake-model"
+            mock_adapter.generate.return_value = (
+                json.dumps(
+                    {
+                        "task": "solve",
+                        "rules": ["valid output", "new executable rule"],
+                    }
+                ),
+                {"prompt_chars": 1, "completion_chars": 1},
+            )
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+            spec = StructuredSpec(task="solve", rules=["valid output"])
+
+            with patch.object(
+                pipeline,
+                "_score_spec",
+                side_effect=[
+                    SpecScore(
+                        coverage=70,
+                        faithfulness=80,
+                        precision=70,
+                        overall=75,
+                        parse_ok=True,
+                        requires_refine=True,
+                        target_fields=["rules"],
+                        edit_plan=["Add one executable rule"],
+                    ),
+                    SpecScore(
+                        coverage=72,
+                        faithfulness=80,
+                        precision=72,
+                        overall=77,
+                        parse_ok=True,
+                    ),
+                    SpecScore(
+                        coverage=95,
+                        faithfulness=95,
+                        precision=95,
+                        overall=95,
+                        parse_ok=True,
+                    ),
+                ],
+            ):
+                refined, score_trace, refine_meta = pipeline._refine_spec(problem, spec)
+
+            self.assertEqual(refined.rules, ["valid output", "new executable rule"])
+            self.assertEqual(len(score_trace), 2)
+            self.assertEqual(refine_meta["effectiveness_steps"][0]["reason"], "accepted_improved_overall")
+            self.assertTrue(refine_meta["effectiveness_steps"][0]["accepted"])
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
     def test_repair_code_keeps_current_code_when_model_returns_non_code(self, mock_adapter_cls):
