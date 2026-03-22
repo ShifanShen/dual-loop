@@ -5,6 +5,21 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 
+_SPEC_FIELD_NAMES = (
+    "task",
+    "inputs",
+    "outputs",
+    "constraints",
+    "rules",
+    "edge_cases",
+    "checkable_properties",
+    "tie_break",
+    "reference_strategy",
+    "algorithmic_notes",
+    "non_checkable_notes",
+)
+
+
 _SPEC_SCORE_FIELD_ALIASES = {
     "coverage": ["coverage", "覆盖率", "覆盖", "完整性"],
     "faithfulness": ["faithfulness", "忠实度", "忠实性", "faithful"],
@@ -257,6 +272,81 @@ class StructuredSpec:
             chunks.extend(f"- {value}" for value in values)
             chunks.append("")
         return "\n".join(chunks).strip()
+
+
+@dataclass
+class SpecPatch:
+    task: str | None = None
+    inputs: list[str] | None = None
+    outputs: list[str] | None = None
+    constraints: list[str] | None = None
+    rules: list[str] | None = None
+    edge_cases: list[str] | None = None
+    checkable_properties: list[str] | None = None
+    tie_break: list[str] | None = None
+    reference_strategy: str | None = None
+    algorithmic_notes: list[str] | None = None
+    non_checkable_notes: list[str] | None = None
+    parse_ok: bool = False
+    parse_source: str = "default"
+
+    @classmethod
+    def from_llm_output(cls, text: str) -> "SpecPatch":
+        payload = _extract_json_block(text) or {}
+        parse_ok = bool(payload)
+        if not parse_ok:
+            return cls(parse_ok=False, parse_source="default")
+
+        def list_or_none(field: str) -> list[str] | None:
+            if field not in payload:
+                return None
+            return _ensure_list(payload.get(field))
+
+        def string_or_none(field: str) -> str | None:
+            if field not in payload:
+                return None
+            return str(payload.get(field, "")).strip()
+
+        return cls(
+            task=string_or_none("task"),
+            inputs=list_or_none("inputs"),
+            outputs=list_or_none("outputs"),
+            constraints=list_or_none("constraints"),
+            rules=list_or_none("rules"),
+            edge_cases=list_or_none("edge_cases"),
+            checkable_properties=list_or_none("checkable_properties"),
+            tie_break=list_or_none("tie_break"),
+            reference_strategy=string_or_none("reference_strategy"),
+            algorithmic_notes=list_or_none("algorithmic_notes"),
+            non_checkable_notes=list_or_none("non_checkable_notes"),
+            parse_ok=True,
+            parse_source="json",
+        )
+
+    def touched_fields(self) -> list[str]:
+        fields: list[str] = []
+        for field_name in _SPEC_FIELD_NAMES:
+            if getattr(self, field_name) is not None:
+                fields.append(field_name)
+        return fields
+
+    def to_json(self) -> str:
+        payload = {
+            field_name: getattr(self, field_name)
+            for field_name in _SPEC_FIELD_NAMES
+            if getattr(self, field_name) is not None
+        }
+        return json.dumps(payload, ensure_ascii=True, indent=2)
+
+    def apply(self, spec: StructuredSpec) -> StructuredSpec:
+        payload = asdict(spec)
+        for field_name in _SPEC_FIELD_NAMES:
+            value = getattr(self, field_name)
+            if value is not None:
+                payload[field_name] = value
+        payload["parse_ok"] = True
+        payload["parse_source"] = "patch_merge"
+        return StructuredSpec(**payload)
 
 
 @dataclass

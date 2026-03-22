@@ -18,12 +18,13 @@ from lcb_runner.dual_loop.prompts import (
     build_rewrite_from_counterexample_prompt,
     build_spec_draft_prompt,
     build_spec_json_repair_prompt,
+    build_spec_patch_json_repair_prompt,
     build_self_refine_repair_prompt,
     build_spec_refine_prompt,
     build_spec_score_prompt,
     build_spec_score_json_repair_prompt,
 )
-from lcb_runner.dual_loop.spec import SpecScore, StructuredSpec, VerifierFeedback
+from lcb_runner.dual_loop.spec import SpecPatch, SpecScore, StructuredSpec, VerifierFeedback
 from lcb_runner.lm_styles import LMStyle
 from lcb_runner.lm_styles import resolve_language_model
 from lcb_runner.runner.runner_utils import build_runner
@@ -458,6 +459,31 @@ class DualLoopPipeline:
             return True, "accepted_reduced_missing_constraints"
         return False, "rejected_no_gain"
 
+    @staticmethod
+    def _validate_spec_patch_scope(
+        patch: SpecPatch,
+        current_spec: StructuredSpec,
+        score: SpecScore,
+    ) -> tuple[bool, str]:
+        candidate_spec = patch.apply(current_spec)
+        changed_fields = {
+            field_name
+            for field_name in patch.touched_fields()
+            if getattr(current_spec, field_name) != getattr(candidate_spec, field_name)
+        }
+        if not changed_fields:
+            return False, "rejected_empty_patch"
+
+        forbidden_fields = set(score.do_not_change)
+        if changed_fields & forbidden_fields:
+            return False, "rejected_do_not_change_patch"
+
+        allowed_fields = set(score.target_fields)
+        if not changed_fields.issubset(allowed_fields):
+            return False, "rejected_out_of_scope_patch"
+
+        return True, "patch_in_scope"
+
     def _refine_spec(
         self, problem: "CodeGenerationProblem", spec: StructuredSpec
     ) -> tuple[StructuredSpec, list[dict[str, Any]], dict[str, Any]]:
@@ -514,9 +540,8 @@ class DualLoopPipeline:
                 temperature=self.args.spec_temperature,
                 max_tokens=self.args.spec_max_tokens,
             )
-            candidate_spec, raw_attempt_outputs, extra_usages = self._parse_spec_output(
-                refine_output,
-                fallback_task=problem.question_title,
+            candidate_patch, raw_attempt_outputs, extra_usages = self._parse_spec_patch_output(
+                refine_output
             )
             refine_meta["raw_spec_outputs"].extend(raw_attempt_outputs)
             refine_meta["spec_usages"].append(usage)
@@ -526,8 +551,24 @@ class DualLoopPipeline:
                 + (time.perf_counter() - started_at)
             )
 
+            candidate_spec = current
             candidate_score: SpecScore | None = None
-            if candidate_spec.parse_ok:
+            if candidate_patch.parse_ok:
+                patch_allowed, patch_reason = self._validate_spec_patch_scope(
+                    candidate_patch,
+                    current,
+                    score,
+                )
+                if patch_allowed:
+                    candidate_spec = candidate_patch.apply(current)
+                else:
+                    accepted = False
+                    accept_reason = patch_reason
+            else:
+                accepted = False
+                accept_reason = "rejected_parse_fail"
+
+            if candidate_patch.parse_ok and patch_allowed:
                 candidate_score = self._score_spec(problem, candidate_spec)
                 refine_meta["raw_score_outputs"].extend(
                     getattr(
@@ -550,9 +591,6 @@ class DualLoopPipeline:
                     candidate_spec=candidate_spec,
                     candidate_score=candidate_score,
                 )
-            else:
-                accepted = False
-                accept_reason = "rejected_parse_fail"
 
             refine_meta["effectiveness_steps"].append(
                 self._build_spec_refine_effectiveness(
@@ -921,6 +959,28 @@ class DualLoopPipeline:
         if repaired_spec.parse_ok:
             return repaired_spec, raw_attempt_outputs, extra_usages
         return spec, raw_attempt_outputs, extra_usages
+
+    def _parse_spec_patch_output(
+        self, output: str
+    ) -> tuple[SpecPatch, list[str], list[dict[str, int | str]]]:
+        raw_attempt_outputs = [output]
+        extra_usages: list[dict[str, int | str]] = []
+        patch = SpecPatch.from_llm_output(output)
+        if patch.parse_ok:
+            return patch, raw_attempt_outputs, extra_usages
+
+        repair_output, repair_usage = self.llm.generate(
+            build_spec_patch_json_repair_prompt(output),
+            role="spec_patch_json_repair",
+            temperature=0.0,
+            max_tokens=self.args.spec_max_tokens,
+        )
+        raw_attempt_outputs.append(repair_output)
+        extra_usages.append(repair_usage)
+        repaired_patch = SpecPatch.from_llm_output(repair_output)
+        if repaired_patch.parse_ok:
+            return repaired_patch, raw_attempt_outputs, extra_usages
+        return patch, raw_attempt_outputs, extra_usages
 
     def _extract_valid_code(
         self, output: str

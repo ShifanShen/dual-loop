@@ -21,6 +21,27 @@ SPEC_JSON_SCHEMA = """{
 }"""
 
 
+SPEC_PATCH_JSON_SCHEMA = """{
+  "constraints": ["updated constraint if needed"],
+  "rules": ["updated rule if needed"],
+  "edge_cases": ["updated edge case if needed"]
+}"""
+
+SPEC_PATCH_ALLOWED_FIELDS = (
+    "task",
+    "inputs",
+    "outputs",
+    "constraints",
+    "rules",
+    "edge_cases",
+    "checkable_properties",
+    "tie_break",
+    "reference_strategy",
+    "algorithmic_notes",
+    "non_checkable_notes",
+)
+
+
 def build_spec_draft_prompt(problem: "CodeGenerationProblem") -> str:
     return f"""You are building a structured specification for a competitive programming problem.
 Return JSON only. Do not include markdown, prose, or code fences.
@@ -94,8 +115,12 @@ Spec:
 def build_spec_refine_prompt(
     problem: "CodeGenerationProblem", spec: StructuredSpec, score: SpecScore
 ) -> str:
-    return f"""Revise the structured spec so it is more faithful to the problem.
-Return JSON only using the same schema as before.
+    return f"""Produce a field-level patch for the structured spec.
+Return JSON only. Return a JSON object that contains only the fields you want to update.
+Do not return the full spec. If no safe update is possible, return {{}}.
+
+Example patch schema:
+{SPEC_PATCH_JSON_SCHEMA}
 
 Problem:
 {problem.question_content}
@@ -107,14 +132,15 @@ Review feedback:
 {score.to_json()}
 
 Requirements:
-- If requires_refine is false, return the current spec unchanged.
+- If requires_refine is false, return {{}}.
 - Modify only the fields listed in target_fields.
 - Preserve every field listed in do_not_change exactly unless changing it is absolutely necessary to remove an unsupported assumption.
+- Return only updated field values. Omit every unchanged field.
 - Preserve supported constraints.
 - Add missing constraints.
 - Remove unsupported assumptions.
 - Keep the spec concise and executable.
-- Do not rewrite the whole spec if only one local fix is needed.
+- Do not rewrite the whole spec.
 - Apply the edit_plan concretely and avoid generic wording-only changes.
 """
 
@@ -157,6 +183,22 @@ Rules:
 - Do not add markdown, code fences, or commentary.
 - Every score must be an integer from 0 to 100.
 - Preserve the original judgment when possible.
+
+Response to normalize:
+{raw_output}
+"""
+
+
+def build_spec_patch_json_repair_prompt(raw_output: str) -> str:
+    return f"""Convert the following response into one valid JSON patch object.
+
+Rules:
+- Return JSON only.
+- Do not add markdown, code fences, or commentary.
+- The object may contain only these fields:
+  {", ".join(SPEC_PATCH_ALLOWED_FIELDS)}
+- Omit unchanged fields.
+- If no valid patch is recoverable, return {{}}.
 
 Response to normalize:
 {raw_output}
