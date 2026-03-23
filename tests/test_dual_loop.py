@@ -159,6 +159,7 @@ class SpecParsingTests(unittest.TestCase):
                 "target_fields": ["edge_cases", "checkable_properties"],
                 "edit_plan": ["Add the empty-array edge case explicitly"],
                 "do_not_change": ["task", "inputs", "outputs"],
+                "proposed_patch": {"edge_cases": ["empty array"]},
                 "action": "add one missing edge case",
             }
         )
@@ -168,6 +169,7 @@ class SpecParsingTests(unittest.TestCase):
         self.assertEqual(score.target_fields, ["edge_cases", "checkable_properties"])
         self.assertEqual(score.edit_plan, ["Add the empty-array edge case explicitly"])
         self.assertEqual(score.do_not_change, ["task", "inputs", "outputs"])
+        self.assertEqual(score.proposed_patch, {"edge_cases": ["empty array"]})
 
     def test_spec_score_parses_freeform_fields(self):
         text = """
@@ -682,6 +684,56 @@ class DualLoopPipelineTests(unittest.TestCase):
             self.assertEqual(len(score_trace), 2)
             self.assertEqual(refine_meta["effectiveness_steps"][0]["reason"], "accepted_improved_overall")
             self.assertTrue(refine_meta["effectiveness_steps"][0]["accepted"])
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_refine_spec_uses_judge_proposed_patch_without_refine_call(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            mock_adapter_cls.return_value.model.model_repr = "fake-model"
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+            spec = StructuredSpec(task="solve", rules=["valid output"])
+
+            with patch.object(
+                pipeline,
+                "_score_spec",
+                side_effect=[
+                    SpecScore(
+                        coverage=70,
+                        faithfulness=80,
+                        precision=70,
+                        overall=75,
+                        parse_ok=True,
+                        requires_refine=True,
+                        target_fields=["rules"],
+                        edit_plan=["Add one executable rule"],
+                        proposed_patch={"rules": ["valid output", "new executable rule"]},
+                    ),
+                    SpecScore(
+                        coverage=72,
+                        faithfulness=80,
+                        precision=72,
+                        overall=77,
+                        parse_ok=True,
+                    ),
+                    SpecScore(
+                        coverage=95,
+                        faithfulness=95,
+                        precision=95,
+                        overall=95,
+                        parse_ok=True,
+                    ),
+                ],
+            ), patch.object(pipeline.llm, "generate") as mock_generate:
+                refined, score_trace, refine_meta = pipeline._refine_spec(problem, spec)
+
+            self.assertEqual(refined.rules, ["valid output", "new executable rule"])
+            self.assertEqual(len(score_trace), 2)
+            self.assertEqual(
+                refine_meta["effectiveness_steps"][0]["patch_source"],
+                "judge_proposed_patch",
+            )
+            mock_generate.assert_not_called()
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
     def test_repair_code_keeps_current_code_when_model_returns_non_code(self, mock_adapter_cls):

@@ -79,6 +79,7 @@ Return JSON only with the following schema:
   "target_fields": ["constraints", "rules"],
   "edit_plan": ["Add one missing constraint ..."],
   "do_not_change": ["task", "inputs", "outputs"],
+  "proposed_patch": {"rules": ["updated executable rule"]},
   "action": "one short revision instruction"
 }}
 
@@ -98,10 +99,12 @@ Scoring rules:
 - target_fields: only list schema fields that should be edited
 - edit_plan: concrete field-level edits; avoid generic advice like "clarify the spec"
 - do_not_change: fields that are already adequate and should be preserved verbatim
+- proposed_patch: the concrete candidate field values to try next; keep it local, use at most 1-2 fields, and omit unchanged fields
 
 Decision rules:
 - If the spec only has minor wording ambiguity and no missing or unsupported constraints, set requires_refine to false.
-- If no revision is needed, return target_fields as [] and edit_plan as [].
+- If no revision is needed, return target_fields as [], edit_plan as [], and proposed_patch as {{}}.
+- If requires_refine is true, proposed_patch should contain concrete candidate content for the listed target_fields.
 - Prefer local edits over full rewrites.
 
 Problem:
@@ -133,6 +136,7 @@ Review feedback:
 
 Requirements:
 - If requires_refine is false, return {{}}.
+- Use proposed_patch from the review feedback as the primary candidate to normalize or minimally adjust.
 - Modify only the fields listed in target_fields.
 - Preserve every field listed in do_not_change exactly unless changing it is absolutely necessary to remove an unsupported assumption.
 - Return only updated field values. Omit every unchanged field.
@@ -175,6 +179,7 @@ def build_spec_score_json_repair_prompt(raw_output: str) -> str:
   "target_fields": ["constraints", "rules"],
   "edit_plan": ["Add one missing constraint ..."],
   "do_not_change": ["task", "inputs", "outputs"],
+  "proposed_patch": {"rules": ["updated executable rule"]},
   "action": "one short revision instruction"
 }}
 

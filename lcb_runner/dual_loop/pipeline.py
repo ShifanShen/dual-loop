@@ -523,6 +523,7 @@ class DualLoopPipeline:
                         effect="skipped",
                         reason=decision_reason,
                         accepted=False,
+                        patch_source="none",
                     )
                 )
                 consecutive_skips += 1
@@ -533,26 +534,41 @@ class DualLoopPipeline:
                 continue
 
             consecutive_skips = 0
-            started_at = time.perf_counter()
-            refine_output, usage = self.llm.generate(
-                build_spec_refine_prompt(problem, current, score),
-                role="spec_refine",
-                temperature=self.args.spec_temperature,
-                max_tokens=self.args.spec_max_tokens,
-            )
-            candidate_patch, raw_attempt_outputs, extra_usages = self._parse_spec_patch_output(
-                refine_output
-            )
+            candidate_patch = score.to_candidate_patch()
+            raw_attempt_outputs: list[str] = []
+            extra_usages: list[dict[str, int | str]] = []
+            patch_source = "judge_proposed_patch"
+            patch_usage: dict[str, int | str] | None = None
+            if candidate_patch.parse_ok:
+                raw_attempt_outputs.append(
+                    json.dumps(score.proposed_patch, ensure_ascii=True, indent=2)
+                )
+            else:
+                patch_source = "refine_prompt_patch"
+                started_at = time.perf_counter()
+                refine_output, patch_usage = self.llm.generate(
+                    build_spec_refine_prompt(problem, current, score),
+                    role="spec_refine",
+                    temperature=self.args.spec_temperature,
+                    max_tokens=self.args.spec_max_tokens,
+                )
+                candidate_patch, raw_attempt_outputs, extra_usages = self._parse_spec_patch_output(
+                    refine_output
+                )
+                refine_meta["stage_times"]["spec_refine"] = (
+                    refine_meta["stage_times"].get("spec_refine", 0.0)
+                    + (time.perf_counter() - started_at)
+                )
             refine_meta["raw_spec_outputs"].extend(raw_attempt_outputs)
-            refine_meta["spec_usages"].append(usage)
+            if patch_usage is not None:
+                refine_meta["spec_usages"].append(patch_usage)
             refine_meta["spec_usages"].extend(extra_usages)
-            refine_meta["stage_times"]["spec_refine"] = (
-                refine_meta["stage_times"].get("spec_refine", 0.0)
-                + (time.perf_counter() - started_at)
-            )
 
             candidate_spec = current
             candidate_score: SpecScore | None = None
+            patch_allowed = False
+            accepted = False
+            accept_reason = "rejected_parse_fail"
             if candidate_patch.parse_ok:
                 patch_allowed, patch_reason = self._validate_spec_patch_scope(
                     candidate_patch,
@@ -602,6 +618,7 @@ class DualLoopPipeline:
                     effect="artifact_changed" if accepted else "no_effect",
                     reason=accept_reason,
                     accepted=accepted,
+                    patch_source=patch_source,
                 )
             )
             if accepted:
@@ -1050,6 +1067,7 @@ class DualLoopPipeline:
         effect: str,
         reason: str,
         accepted: bool,
+        patch_source: str = "none",
     ) -> dict[str, Any]:
         artifact_changed = self._spec_core_payload(previous_spec) != self._spec_core_payload(candidate_spec)
         return {
@@ -1060,6 +1078,7 @@ class DualLoopPipeline:
             "parse_ok": candidate_spec.parse_ok,
             "artifact_changed": artifact_changed,
             "accepted": accepted,
+            "patch_source": patch_source,
             "effect": effect,
             "reason": reason,
         }

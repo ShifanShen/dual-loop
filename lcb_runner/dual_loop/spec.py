@@ -43,6 +43,7 @@ _SPEC_SCORE_FIELD_ALIASES = {
     "target_fields": ["target_fields", "target fields"],
     "edit_plan": ["edit_plan", "edit plan"],
     "do_not_change": ["do_not_change", "do not change"],
+    "proposed_patch": ["proposed_patch", "candidate_patch", "suggested_patch", "patch"],
     "action": ["action", "建议", "修订建议", "revision", "next_action"],
 }
 
@@ -69,6 +70,16 @@ def _ensure_list(value: Any) -> list[str]:
         stripped = value.strip()
         return [stripped] if stripped else []
     return [str(value).strip()]
+
+
+def _ensure_patch_payload(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    return {
+        field_name: value[field_name]
+        for field_name in _SPEC_FIELD_NAMES
+        if field_name in value
+    }
 
 
 def _extract_json_block(text: str) -> dict[str, Any] | None:
@@ -363,6 +374,7 @@ class SpecScore:
     target_fields: list[str] = field(default_factory=list)
     edit_plan: list[str] = field(default_factory=list)
     do_not_change: list[str] = field(default_factory=list)
+    proposed_patch: dict[str, Any] = field(default_factory=dict)
     action: str = ""
     parse_ok: bool = False
     parse_source: str = "default"
@@ -392,6 +404,7 @@ class SpecScore:
                 "target_fields": _extract_list_field(text, "target_fields"),
                 "edit_plan": _extract_list_field(text, "edit_plan"),
                 "do_not_change": _extract_list_field(text, "do_not_change"),
+                "proposed_patch": _ensure_patch_payload(payload.get("proposed_patch")),
                 "action": _extract_string_field(text, "action"),
             }
         parse_ok = any(
@@ -407,6 +420,7 @@ class SpecScore:
                 bool(_ensure_list(payload.get("blocking_issues"))),
                 bool(_ensure_list(payload.get("target_fields"))),
                 bool(_ensure_list(payload.get("edit_plan"))),
+                bool(_ensure_patch_payload(payload.get("proposed_patch"))),
                 bool(str(payload.get("action", "")).strip()),
             ]
         )
@@ -425,6 +439,7 @@ class SpecScore:
             target_fields=_ensure_list(payload.get("target_fields")),
             edit_plan=_ensure_list(payload.get("edit_plan")),
             do_not_change=_ensure_list(payload.get("do_not_change")),
+            proposed_patch=_ensure_patch_payload(payload.get("proposed_patch")),
             action=str(payload.get("action", "")).strip(),
             parse_ok=parse_ok,
             parse_source=parse_source if parse_ok else "default",
@@ -432,6 +447,11 @@ class SpecScore:
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), ensure_ascii=True, indent=2)
+
+    def to_candidate_patch(self) -> SpecPatch:
+        if not self.proposed_patch:
+            return SpecPatch(parse_ok=False, parse_source="default")
+        return SpecPatch.from_llm_output(json.dumps(self.proposed_patch, ensure_ascii=True))
 
 
 @dataclass
