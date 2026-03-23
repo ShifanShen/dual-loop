@@ -79,7 +79,7 @@ Return JSON only with the following schema:
   "target_fields": ["constraints", "rules"],
   "edit_plan": ["Add one missing constraint ..."],
   "do_not_change": ["task", "inputs", "outputs"],
-  "proposed_patch": {"rules": ["updated executable rule"]},
+  "proposed_patch": {{"rules": ["updated executable rule"]}},
   "action": "one short revision instruction"
 }}
 
@@ -179,7 +179,7 @@ def build_spec_score_json_repair_prompt(raw_output: str) -> str:
   "target_fields": ["constraints", "rules"],
   "edit_plan": ["Add one missing constraint ..."],
   "do_not_change": ["task", "inputs", "outputs"],
-  "proposed_patch": {"rules": ["updated executable rule"]},
+  "proposed_patch": {{"rules": ["updated executable rule"]}},
   "action": "one short revision instruction"
 }}
 
