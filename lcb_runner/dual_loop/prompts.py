@@ -76,8 +76,8 @@ Return JSON only with the following schema:
   "ambiguities": ["..."],
   "requires_refine": false,
   "blocking_issues": ["..."],
-  "target_fields": ["constraints", "rules"],
-  "edit_plan": ["Add one missing constraint ..."],
+  "target_fields": ["rules"],
+  "edit_plan": ["Add one executable rule ..."],
   "do_not_change": ["task", "inputs", "outputs"],
   "proposed_patch": {{"rules": ["updated executable rule"]}},
   "action": "one short revision instruction"
@@ -96,15 +96,17 @@ Scoring rules:
 - overall: rounded weighted score using 0.4 coverage, 0.4 faithfulness, 0.2 precision
 - requires_refine: true only if a revision is likely to improve downstream code generation
 - blocking_issues: concrete issues that materially block code generation
-- target_fields: only list schema fields that should be edited
-- edit_plan: concrete field-level edits; avoid generic advice like "clarify the spec"
+- target_fields: list exactly one field that should be edited
+- edit_plan: provide exactly one concrete field-level edit; avoid generic advice like "clarify the spec"
 - do_not_change: fields that are already adequate and should be preserved verbatim
-- proposed_patch: the concrete candidate field values to try next; keep it local, use at most 1-2 fields, and omit unchanged fields
+- proposed_patch: provide a concrete candidate update for exactly one target field; address only the single highest-priority blocking issue and omit unchanged fields
 
 Decision rules:
 - If the spec only has minor wording ambiguity and no missing or unsupported constraints, set requires_refine to false.
 - If no revision is needed, return target_fields as [], edit_plan as [], and proposed_patch as {{}}.
-- If requires_refine is true, proposed_patch should contain concrete candidate content for the listed target_fields.
+- If requires_refine is true, choose one highest-priority issue only.
+- Do not propose multi-field rewrites.
+- If multiple issues exist, leave lower-priority issues for later iterations.
 - Prefer local edits over full rewrites.
 
 Problem:
@@ -137,7 +139,7 @@ Review feedback:
 Requirements:
 - If requires_refine is false, return {{}}.
 - Use proposed_patch from the review feedback as the primary candidate to normalize or minimally adjust.
-- Modify only the fields listed in target_fields.
+- Modify only the single field listed in target_fields.
 - Preserve every field listed in do_not_change exactly unless changing it is absolutely necessary to remove an unsupported assumption.
 - Return only updated field values. Omit every unchanged field.
 - Preserve supported constraints.
@@ -145,6 +147,7 @@ Requirements:
 - Remove unsupported assumptions.
 - Keep the spec concise and executable.
 - Do not rewrite the whole spec.
+- Do not introduce edits for secondary issues.
 - Apply the edit_plan concretely and avoid generic wording-only changes.
 """
 
@@ -176,8 +179,8 @@ def build_spec_score_json_repair_prompt(raw_output: str) -> str:
   "ambiguities": ["..."],
   "requires_refine": false,
   "blocking_issues": ["..."],
-  "target_fields": ["constraints", "rules"],
-  "edit_plan": ["Add one missing constraint ..."],
+  "target_fields": ["rules"],
+  "edit_plan": ["Add one executable rule ..."],
   "do_not_change": ["task", "inputs", "outputs"],
   "proposed_patch": {{"rules": ["updated executable rule"]}},
   "action": "one short revision instruction"
@@ -188,6 +191,9 @@ Rules:
 - Do not add markdown, code fences, or commentary.
 - Every score must be an integer from 0 to 100.
 - Preserve the original judgment when possible.
+- Keep target_fields to at most one field.
+- Keep edit_plan to at most one concrete edit.
+- Keep proposed_patch focused on one field and one highest-priority issue.
 
 Response to normalize:
 {raw_output}
