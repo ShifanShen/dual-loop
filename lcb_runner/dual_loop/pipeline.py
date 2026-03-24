@@ -418,20 +418,6 @@ class DualLoopPipeline:
             return False, "no_edit_plan"
         return True, "eligible"
 
-    @staticmethod
-    def _localize_spec_refine_score(score: SpecScore) -> SpecScore:
-        primary_field = score.target_fields[0] if score.target_fields else ""
-        payload = asdict(score)
-        payload["target_fields"] = [primary_field] if primary_field else []
-        payload["edit_plan"] = score.edit_plan[:1]
-        if primary_field and primary_field in score.proposed_patch:
-            payload["proposed_patch"] = {
-                primary_field: score.proposed_patch[primary_field]
-            }
-        else:
-            payload["proposed_patch"] = {}
-        return SpecScore(**payload)
-
     def _accept_refined_spec(
         self,
         *,
@@ -515,7 +501,6 @@ class DualLoopPipeline:
         consecutive_rejections = 0
         for attempt_idx in range(self.args.spec_max_iters):
             score = self._score_spec(problem, current)
-            refine_score = self._localize_spec_refine_score(score)
             score_trace.append(asdict(score))
             refine_meta["raw_score_outputs"].extend(
                 getattr(score, "_raw_attempt_outputs", [getattr(score, "_raw_output", "")])
@@ -526,7 +511,7 @@ class DualLoopPipeline:
                 refine_meta["stage_times"].get("spec_score_refine", 0.0)
                 + float(getattr(score, "_stage_time", 0.0))
             )
-            should_refine, decision_reason = self._should_attempt_spec_refine(refine_score)
+            should_refine, decision_reason = self._should_attempt_spec_refine(score)
             if not should_refine:
                 refine_meta["effectiveness_steps"].append(
                     self._build_spec_refine_effectiveness(
@@ -549,20 +534,20 @@ class DualLoopPipeline:
                 continue
 
             consecutive_skips = 0
-            candidate_patch = refine_score.to_candidate_patch()
+            candidate_patch = score.to_candidate_patch()
             raw_attempt_outputs: list[str] = []
             extra_usages: list[dict[str, int | str]] = []
             patch_source = "judge_proposed_patch"
             patch_usage: dict[str, int | str] | None = None
             if candidate_patch.parse_ok:
                 raw_attempt_outputs.append(
-                    json.dumps(refine_score.proposed_patch, ensure_ascii=True, indent=2)
+                    json.dumps(score.proposed_patch, ensure_ascii=True, indent=2)
                 )
             else:
                 patch_source = "refine_prompt_patch"
                 started_at = time.perf_counter()
                 refine_output, patch_usage = self.llm.generate(
-                    build_spec_refine_prompt(problem, current, refine_score),
+                    build_spec_refine_prompt(problem, current, score),
                     role="spec_refine",
                     temperature=self.args.spec_temperature,
                     max_tokens=self.args.spec_max_tokens,
@@ -588,7 +573,7 @@ class DualLoopPipeline:
                 patch_allowed, patch_reason = self._validate_spec_patch_scope(
                     candidate_patch,
                     current,
-                    refine_score,
+                    score,
                 )
                 if patch_allowed:
                     candidate_spec = candidate_patch.apply(current)

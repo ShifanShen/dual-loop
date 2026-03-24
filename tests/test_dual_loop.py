@@ -736,37 +736,6 @@ class DualLoopPipelineTests(unittest.TestCase):
             mock_generate.assert_not_called()
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
-    def test_localize_spec_refine_score_keeps_only_primary_field(self, mock_adapter_cls):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            args = self.make_args(tmpdir)
-            mock_adapter_cls.return_value.model.model_repr = "fake-model"
-            pipeline = DualLoopPipeline(args)
-
-            score = SpecScore(
-                coverage=70,
-                faithfulness=80,
-                precision=70,
-                overall=75,
-                parse_ok=True,
-                requires_refine=True,
-                target_fields=["rules", "edge_cases"],
-                edit_plan=["Add one executable rule", "Add one edge case"],
-                proposed_patch={
-                    "rules": ["valid output", "new executable rule"],
-                    "edge_cases": ["empty list"],
-                },
-            )
-
-            localized = pipeline._localize_spec_refine_score(score)
-
-            self.assertEqual(localized.target_fields, ["rules"])
-            self.assertEqual(localized.edit_plan, ["Add one executable rule"])
-            self.assertEqual(
-                localized.proposed_patch,
-                {"rules": ["valid output", "new executable rule"]},
-            )
-
-    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
     def test_repair_code_keeps_current_code_when_model_returns_non_code(self, mock_adapter_cls):
         with tempfile.TemporaryDirectory() as tmpdir:
             args = self.make_args(tmpdir)
