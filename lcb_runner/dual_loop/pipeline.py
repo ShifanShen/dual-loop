@@ -690,7 +690,7 @@ class DualLoopPipeline:
         pending_step: dict[str, Any] | None = None
 
         for attempt_idx in range(self.args.repair_max_iters):
-            feedback = self._verify(problem, current_code, spec=spec)
+            feedback = self._verify(problem, current_code)
             feedback_trace.append(asdict(feedback))
             if pending_step is not None:
                 repair_effectiveness.append(
@@ -791,7 +791,7 @@ class DualLoopPipeline:
             current_code = next_code
             stagnant_attempts = 0
 
-        final_feedback = self._verify(problem, current_code, spec=spec)
+        final_feedback = self._verify(problem, current_code)
         feedback_trace.append(asdict(final_feedback))
         if pending_step is not None:
             repair_effectiveness.append(

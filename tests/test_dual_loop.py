@@ -545,6 +545,52 @@ class DualLoopPipelineTests(unittest.TestCase):
             )
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_repair_direct_code_does_not_require_spec(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            args.pipeline_mode = "self_refine"
+            args.repair_max_iters = 1
+            mock_adapter_cls.return_value.model.model_repr = "fake-model"
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+
+            wrong_answer = VerifierFeedback(
+                passed=False,
+                error_type="wrong_answer",
+                field="Rules",
+                message="bad",
+            )
+            accepted = VerifierFeedback(
+                passed=True,
+                error_type="accepted",
+                field="checkable_subset",
+                message="ok",
+            )
+
+            with patch.object(
+                pipeline,
+                "_verify",
+                side_effect=[wrong_answer, accepted],
+            ), patch.object(
+                pipeline.llm,
+                "generate",
+                return_value=("```python\nprint('fixed')\n```", {}),
+            ), patch.object(
+                pipeline,
+                "_extract_valid_code",
+                return_value=("print('fixed')", [], []),
+            ):
+                repaired_code, feedback_trace, repair_meta = pipeline._repair_direct_code(
+                    problem,
+                    "print('x')",
+                    strategy="self_refine",
+                )
+
+            self.assertEqual(repaired_code, "print('fixed')")
+            self.assertEqual(len(feedback_trace), 2)
+            self.assertEqual(repair_meta["effectiveness_steps"][0]["effect"], "solved")
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
     def test_run_writes_summary_and_traces(self, mock_adapter_cls):
         with tempfile.TemporaryDirectory() as tmpdir:
             args = self.make_args(tmpdir)
