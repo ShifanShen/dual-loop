@@ -464,6 +464,7 @@ class VerifierFeedback:
     output: str = ""
     expected: str = ""
     violated_spec_items: list[str] = field(default_factory=list)
+    property_feedbacks: list[dict[str, Any]] = field(default_factory=list)
     repair_hint: str = ""
     raw_metadata: dict[str, Any] = field(default_factory=dict)
 

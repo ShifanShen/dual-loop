@@ -309,6 +309,7 @@ Verifier feedback:
 Repair target:
 - Fix the failure without breaking the input/output contract.
 - Satisfy the checkable subset of the structured spec.
+- If property_feedbacks are present, treat them as the highest-priority semantic obligations to fix.
 {change_requirement}
 """
 
@@ -412,6 +413,7 @@ Reflections:
 
 Requirements:
 - Use the reflections to fix the root cause.
+- If property_feedbacks are present, prioritize fixing those violated properties.
 - Do not repeat the same failing logic.
 - Preserve the input/output contract.
 """
@@ -444,6 +446,7 @@ Current code:
 Bug summary:
 - The current program fails on this concrete counterexample.
 - Fix the logic that causes this mismatch.
+- If property_feedbacks are present, use them to identify which semantic obligation is violated.
 - Do not return the same program again.
 
 Counterexample:
@@ -476,6 +479,7 @@ Requirements:
 - Ignore the previous implementation and write a fresh solution from scratch.
 - Follow the exact input/output protocol.
 - Fix the wrong-answer behavior shown in the counterexample.
+- If property_feedbacks are present, ensure the rewritten program satisfies those violated properties.
 - Prefer the simplest correct contest-style solution.
 
 Counterexample:

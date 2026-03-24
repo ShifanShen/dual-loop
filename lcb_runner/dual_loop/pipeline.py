@@ -24,6 +24,10 @@ from lcb_runner.dual_loop.prompts import (
     build_spec_score_prompt,
     build_spec_score_json_repair_prompt,
 )
+from lcb_runner.dual_loop.property_oracle import (
+    compile_property_clauses,
+    evaluate_property_clauses,
+)
 from lcb_runner.dual_loop.spec import SpecPatch, SpecScore, StructuredSpec, VerifierFeedback
 from lcb_runner.lm_styles import LMStyle
 from lcb_runner.lm_styles import resolve_language_model
@@ -44,6 +48,7 @@ class ProblemTrace:
     spec_final: dict[str, Any] | None = None
     initial_spec_score: dict[str, Any] | None = None
     final_spec_score: dict[str, Any] | None = None
+    property_clauses: list[dict[str, Any]] = field(default_factory=list)
     spec_scores: list[dict[str, Any]] = field(default_factory=list)
     spec_issue_types: list[str] = field(default_factory=list)
     code_initial: str = ""
@@ -291,6 +296,9 @@ class DualLoopPipeline:
         trace.spec_final = asdict(spec)
         final_score = self._score_spec(problem, spec)
         trace.final_spec_score = asdict(final_score)
+        trace.property_clauses = [
+            clause.to_dict() for clause in compile_property_clauses(spec)
+        ]
         trace.raw_score_outputs.extend(
             getattr(
                 final_score,
@@ -343,7 +351,7 @@ class DualLoopPipeline:
             self._finalize_trace(trace)
             return trace
 
-        feedback = self._verify(problem, code)
+        feedback = self._verify(problem, code, spec=spec)
         trace.verifier_feedbacks.append(asdict(feedback))
         trace.final_code = code
         trace.passed = feedback.passed
@@ -682,7 +690,7 @@ class DualLoopPipeline:
         pending_step: dict[str, Any] | None = None
 
         for attempt_idx in range(self.args.repair_max_iters):
-            feedback = self._verify(problem, current_code)
+            feedback = self._verify(problem, current_code, spec=spec)
             feedback_trace.append(asdict(feedback))
             if pending_step is not None:
                 repair_effectiveness.append(
@@ -783,7 +791,7 @@ class DualLoopPipeline:
             current_code = next_code
             stagnant_attempts = 0
 
-        final_feedback = self._verify(problem, current_code)
+        final_feedback = self._verify(problem, current_code, spec=spec)
         feedback_trace.append(asdict(final_feedback))
         if pending_step is not None:
             repair_effectiveness.append(
@@ -809,7 +817,7 @@ class DualLoopPipeline:
         stagnant_attempts = 0
         pending_step: dict[str, Any] | None = None
         for attempt_idx in range(self.args.repair_max_iters):
-            feedback = self._verify(problem, current_code)
+            feedback = self._verify(problem, current_code, spec=spec)
             feedback_trace.append(asdict(feedback))
             if pending_step is not None:
                 repair_effectiveness.append(
@@ -919,7 +927,7 @@ class DualLoopPipeline:
             current_code = next_code
             stagnant_attempts = 0
 
-        final_feedback = self._verify(problem, current_code)
+        final_feedback = self._verify(problem, current_code, spec=spec)
         feedback_trace.append(asdict(final_feedback))
         if pending_step is not None:
             repair_effectiveness.append(
@@ -1214,7 +1222,7 @@ class DualLoopPipeline:
         return any(token in stripped for token in signal_tokens)
 
     def _verify(
-        self, problem: "CodeGenerationProblem", code: str
+        self, problem: "CodeGenerationProblem", code: str, spec: StructuredSpec | None = None
     ) -> VerifierFeedback:
         from lcb_runner.evaluation.compute_code_generation_metrics import check_correctness
 
@@ -1272,6 +1280,24 @@ class DualLoopPipeline:
         elif field == "Algorithmic Notes":
             violated_spec_items.append("Checkable Properties: solution must run within the time limit")
 
+        property_feedbacks: list[dict[str, Any]] = []
+        if spec is not None and error_type == "wrong_answer":
+            clauses = compile_property_clauses(spec)
+            property_feedbacks = [
+                feedback_item.to_dict()
+                for feedback_item in evaluate_property_clauses(
+                    clauses,
+                    actual_output=str(metadata.get("output", "")),
+                    expected_output=str(metadata.get("expected", "")),
+                    raw_input=str(metadata.get("inputs", "")),
+                )
+            ]
+            for property_feedback in property_feedbacks:
+                violated_spec_items.append(
+                    f"Property {property_feedback.get('property_type', 'unknown')}: "
+                    f"{property_feedback.get('message', '')}"
+                )
+
         return VerifierFeedback(
             passed=False,
             error_type=error_type,
@@ -1281,6 +1307,7 @@ class DualLoopPipeline:
             output=str(metadata.get("output", "")),
             expected=str(metadata.get("expected", "")),
             violated_spec_items=violated_spec_items,
+            property_feedbacks=property_feedbacks,
             repair_hint=repair_hint,
             raw_metadata=metadata,
         )
@@ -1388,6 +1415,21 @@ class DualLoopPipeline:
                     step.get("effect", "unknown")
                     for trace in traces
                     for step in trace.effectiveness.get("spec_refine_steps", [])
+                )
+            ),
+            "property_clause_type_counts": dict(
+                Counter(
+                    clause.get("property_type", "unknown")
+                    for trace in traces
+                    for clause in trace.property_clauses
+                )
+            ),
+            "property_violation_counts": dict(
+                Counter(
+                    property_feedback.get("property_type", "unknown")
+                    for trace in traces
+                    for verifier_feedback in trace.verifier_feedbacks
+                    for property_feedback in verifier_feedback.get("property_feedbacks", [])
                 )
             ),
             "spec_issue_type_counts": dict(

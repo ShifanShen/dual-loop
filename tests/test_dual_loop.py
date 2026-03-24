@@ -43,6 +43,10 @@ if "tqdm" not in sys.modules:
 
 from lcb_runner.dual_loop.main import get_args
 from lcb_runner.dual_loop.diagnostics import build_diagnostic_report, render_diagnostic_markdown
+from lcb_runner.dual_loop.property_oracle import (
+    compile_property_clauses,
+    evaluate_property_clauses,
+)
 from lcb_runner.dual_loop.rq_suite import (
     apply_run_config,
     build_rq_csv_rows,
@@ -218,6 +222,42 @@ class SpecParsingTests(unittest.TestCase):
         self.assertEqual(score.action, "补充边界情况")
         self.assertTrue(score.parse_ok)
         self.assertEqual(score.parse_source, "json")
+
+    def test_compile_property_clauses_extracts_executable_properties(self):
+        spec = StructuredSpec(
+            task="sort numbers",
+            rules=["Return the numbers in ascending order."],
+            checkable_properties=[
+                "output contains exactly the same elements as input",
+                "output length equals input length",
+            ],
+            outputs=["Output YES or NO when required."],
+        )
+
+        clauses = compile_property_clauses(spec)
+        property_types = {clause.property_type for clause in clauses}
+
+        self.assertIn("sorted_order", property_types)
+        self.assertIn("same_multiset", property_types)
+        self.assertIn("same_length", property_types)
+        self.assertIn("yes_no_output", property_types)
+
+    def test_evaluate_property_clauses_reports_sortedness_violation(self):
+        spec = StructuredSpec(
+            task="sort numbers",
+            checkable_properties=["output is sorted in ascending order"],
+        )
+        clauses = compile_property_clauses(spec)
+
+        feedbacks = evaluate_property_clauses(
+            clauses,
+            actual_output="3 2 1",
+            expected_output="1 2 3",
+        )
+
+        self.assertEqual(len(feedbacks), 1)
+        self.assertEqual(feedbacks[0].property_type, "sorted_order")
+        self.assertIn("ascending", feedbacks[0].message)
 
     def test_reliability_guard_restores_process_state(self):
         import os
@@ -469,6 +509,40 @@ class DualLoopPipelineTests(unittest.TestCase):
             self.assertFalse(feedback.passed)
             self.assertEqual(feedback.error_type, "verifier_error")
             self.assertIn("Verifier subprocess failed", feedback.message)
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_verify_attaches_property_feedback_for_spec_based_wrong_answer(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            mock_adapter_cls.return_value.model.model_repr = "fake-model"
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+            spec = StructuredSpec(
+                task="sort numbers",
+                checkable_properties=["output is sorted in ascending order"],
+            )
+
+            with patch(
+                "lcb_runner.evaluation.compute_code_generation_metrics.check_correctness",
+                return_value=(
+                    [-2],
+                    {
+                        "error_code": -2,
+                        "error_message": "Wrong answer",
+                        "inputs": "3 1 2",
+                        "output": "3 2 1",
+                        "expected": "1 2 3",
+                    },
+                ),
+            ):
+                feedback = pipeline._verify(problem, "print('x')", spec=spec)
+
+            self.assertEqual(feedback.error_type, "wrong_answer")
+            self.assertEqual(len(feedback.property_feedbacks), 1)
+            self.assertEqual(
+                feedback.property_feedbacks[0]["property_type"],
+                "sorted_order",
+            )
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
     def test_run_writes_summary_and_traces(self, mock_adapter_cls):
