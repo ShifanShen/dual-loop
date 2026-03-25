@@ -259,6 +259,21 @@ class SpecParsingTests(unittest.TestCase):
         self.assertEqual(feedbacks[0].property_type, "sorted_order")
         self.assertIn("ascending", feedbacks[0].message)
 
+    def test_evaluate_property_clauses_skips_mixed_type_sortedness_sequences(self):
+        spec = StructuredSpec(
+            task="sort numbers",
+            checkable_properties=["output is sorted in ascending order"],
+        )
+        clauses = compile_property_clauses(spec)
+
+        feedbacks = evaluate_property_clauses(
+            clauses,
+            actual_output="1 A 2",
+            expected_output="1 2 3",
+        )
+
+        self.assertEqual(feedbacks, [])
+
     def test_reliability_guard_restores_process_state(self):
         import os
         import shutil

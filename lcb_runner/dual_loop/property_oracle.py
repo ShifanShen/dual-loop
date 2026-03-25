@@ -201,7 +201,7 @@ def _evaluate_clause(
 ) -> PropertyFeedback | None:
     property_type = clause.property_type
     if property_type == "sorted_order":
-        actual_values = _parse_sequence(actual_output)
+        actual_values = _coerce_numeric_sequence(_parse_sequence(actual_output))
         if len(actual_values) < 2:
             return None
         order = clause.parameters.get("order", "ascending")
@@ -295,6 +295,26 @@ def _parse_sequence(text: str) -> list[Any]:
     if len(tokens) > 1:
         return tokens
     return []
+
+
+def _coerce_numeric_sequence(values: list[Any]) -> list[int | float]:
+    coerced: list[int | float] = []
+    for value in values:
+        if isinstance(value, bool):
+            return []
+        if isinstance(value, (int, float)):
+            coerced.append(value)
+            continue
+        if isinstance(value, str):
+            value = value.strip()
+            if re.fullmatch(r"-?\d+", value):
+                coerced.append(int(value))
+                continue
+            if re.fullmatch(r"-?\d+\.\d+", value):
+                coerced.append(float(value))
+                continue
+        return []
+    return coerced
 
 
 def _tokenize_scalars(text: str) -> list[Any]:
