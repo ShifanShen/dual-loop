@@ -61,6 +61,50 @@ Problem:
 """
 
 
+def build_plan_draft_prompt(problem: "CodeGenerationProblem") -> str:
+    starter = ""
+    if problem.starter_code:
+        starter = f"\nStarter code:\n```python\n{problem.starter_code}\n```\n"
+    return f"""You are writing a concise natural-language solution plan for a competitive programming problem.
+Return plain text only. Do not return code, JSON, or markdown fences.
+
+Write the plan in four short parts:
+1. Goal
+2. Key constraints and invariants
+3. Solution steps
+4. Edge cases
+
+Requirements:
+- Focus on how the task should be solved.
+- Mention critical constraints from the prompt.
+- Keep the plan concise and implementation-oriented.
+- Do not write pseudocode or Python code.
+
+Problem:
+{problem.question_content}
+{starter}
+"""
+
+
+def build_pseudocode_draft_prompt(problem: "CodeGenerationProblem") -> str:
+    starter = ""
+    if problem.starter_code:
+        starter = f"\nStarter code:\n```python\n{problem.starter_code}\n```\n"
+    return f"""You are writing language-agnostic pseudocode for a competitive programming problem.
+Return plain text only. Do not return Python code, JSON, or markdown fences.
+
+Requirements:
+- Capture the main algorithm and control flow.
+- Mention important constraints and special cases in comments when needed.
+- Keep the pseudocode precise enough to implement directly.
+- Do not output executable Python.
+
+Problem:
+{problem.question_content}
+{starter}
+"""
+
+
 def build_spec_score_prompt(
     problem: "CodeGenerationProblem", spec: StructuredSpec
 ) -> str:
@@ -248,6 +292,52 @@ Structured spec:
 {starter}
 Requirements:
 - Follow the stated input/output protocol.
+- Do not print extra text.
+- Prefer a direct, contest-style solution.
+"""
+
+
+def build_code_from_plan_prompt(problem: "CodeGenerationProblem", plan_text: str) -> str:
+    starter = ""
+    if problem.starter_code:
+        starter = f"\nStarter code:\n```python\n{problem.starter_code}\n```\n"
+    return f"""You are an expert Python programmer.
+Write a complete Python solution using the natural-language solution plan below.
+Return only one Python code block.
+
+Original problem:
+{problem.question_content}
+
+Solution plan:
+{plan_text}
+{starter}
+Requirements:
+- Follow the exact input/output contract from the original problem.
+- Use the plan as guidance, but resolve any missing implementation details from the original problem statement.
+- Do not print extra text.
+- Prefer a direct, contest-style solution.
+"""
+
+
+def build_code_from_pseudocode_prompt(
+    problem: "CodeGenerationProblem", pseudocode_text: str
+) -> str:
+    starter = ""
+    if problem.starter_code:
+        starter = f"\nStarter code:\n```python\n{problem.starter_code}\n```\n"
+    return f"""You are an expert Python programmer.
+Write a complete Python solution using the pseudocode below.
+Return only one Python code block.
+
+Original problem:
+{problem.question_content}
+
+Pseudocode:
+{pseudocode_text}
+{starter}
+Requirements:
+- Follow the exact input/output contract from the original problem.
+- Preserve the logic of the pseudocode while fixing any language-level gaps.
 - Do not print extra text.
 - Prefer a direct, contest-style solution.
 """
