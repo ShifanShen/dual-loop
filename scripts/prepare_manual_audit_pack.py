@@ -23,6 +23,39 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _resolve_suite_dir(raw_suite_dir: str) -> Path:
+    suite_dir = Path(raw_suite_dir)
+    candidates = []
+
+    if suite_dir.is_absolute():
+        candidates.append(suite_dir)
+    else:
+        candidates.extend(
+            [
+                ROOT / suite_dir,
+                ROOT / "output" / "dual_loop_rq_suite" / suite_dir,
+                ROOT / "assets" / "output" / "dual_loop_rq_suite" / suite_dir,
+            ]
+        )
+
+    # If the caller already passed output/... or assets/output/... relative to repo root,
+    # keep those exact paths near the front of the search order.
+    if not suite_dir.is_absolute():
+        normalized = str(suite_dir).replace("\\", "/")
+        if normalized.startswith("output/") or normalized.startswith("assets/output/"):
+            candidates.insert(0, ROOT / suite_dir)
+
+    for candidate in candidates:
+        if (candidate / "run_manifest.json").exists():
+            return candidate
+
+    searched = "\n".join(f"- {candidate}" for candidate in candidates)
+    raise FileNotFoundError(
+        "Could not find run_manifest.json for the requested suite. "
+        f"Tried:\n{searched}"
+    )
+
+
 def _load_manifest(suite_dir: Path) -> list[dict]:
     with open(suite_dir / "run_manifest.json", "r", encoding="utf-8") as f:
         return json.load(f)
@@ -73,7 +106,7 @@ def _build_record(trace: dict, *, source_run: str, source_suite: str) -> dict:
 
 def main() -> None:
     args = parse_args()
-    suite_dir = Path(args.suite_dir)
+    suite_dir = _resolve_suite_dir(args.suite_dir)
     output_dir = Path(args.output_dir) if args.output_dir else suite_dir / "manual_audit_pack"
     output_dir.mkdir(parents=True, exist_ok=True)
     rng = random.Random(args.seed)
