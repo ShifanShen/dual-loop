@@ -17,6 +17,13 @@ def parse_args() -> argparse.Namespace:
         description="Prepare a human-audit pack for validating semantic attribution."
     )
     parser.add_argument("--suite_dir", type=str, required=True)
+    parser.add_argument(
+        "--extra_suite_dir",
+        type=str,
+        action="append",
+        default=[],
+        help="Optional extra suite directories used to supplement sparse labels.",
+    )
     parser.add_argument("--per_label", type=int, default=12)
     parser.add_argument("--seed", type=int, default=13)
     parser.add_argument("--output_dir", type=str, default=None)
@@ -104,15 +111,49 @@ def _build_record(trace: dict, *, source_run: str, source_suite: str) -> dict:
     }
 
 
+def _collect_pool(
+    *,
+    label: str,
+    preferred_runs: list[str],
+    suite_manifests: list[tuple[Path, dict[str, dict]]],
+) -> list[tuple[str, str, dict]]:
+    pool: list[tuple[str, str, dict]] = []
+    seen: set[tuple[str, str, str, str]] = set()
+
+    for suite_dir, run_entries in suite_manifests:
+        for run_name in preferred_runs:
+            if run_name not in run_entries:
+                continue
+            _, traces = _load_run(run_entries[run_name])
+            for trace in traces:
+                if trace.get("failure_attribution") != label:
+                    continue
+                key = (
+                    suite_dir.name,
+                    run_name,
+                    str(trace.get("question_id", "")),
+                    str(trace.get("pipeline_mode", "")),
+                )
+                if key in seen:
+                    continue
+                seen.add(key)
+                pool.append((suite_dir.name, run_name, trace))
+    return pool
+
+
 def main() -> None:
     args = parse_args()
     suite_dir = _resolve_suite_dir(args.suite_dir)
+    extra_suite_dirs = [_resolve_suite_dir(raw_dir) for raw_dir in args.extra_suite_dir]
     output_dir = Path(args.output_dir) if args.output_dir else suite_dir / "manual_audit_pack"
     output_dir.mkdir(parents=True, exist_ok=True)
     rng = random.Random(args.seed)
 
-    manifest = _load_manifest(suite_dir)
-    run_entries = {entry["run_name"]: entry for entry in manifest}
+    suite_manifests: list[tuple[Path, dict[str, dict]]] = []
+    for current_suite_dir in [suite_dir, *extra_suite_dirs]:
+        manifest = _load_manifest(current_suite_dir)
+        run_entries = {entry["run_name"]: entry for entry in manifest}
+        suite_manifests.append((current_suite_dir, run_entries))
 
     sampled_records: list[dict] = []
     source_map = {
@@ -122,17 +163,14 @@ def main() -> None:
     }
 
     for label, preferred_runs in source_map.items():
-        pool: list[tuple[str, dict]] = []
-        for run_name in preferred_runs:
-            if run_name not in run_entries:
-                continue
-            _, traces = _load_run(run_entries[run_name])
-            for trace in traces:
-                if trace.get("failure_attribution") == label:
-                    pool.append((run_name, trace))
+        pool = _collect_pool(
+            label=label,
+            preferred_runs=preferred_runs,
+            suite_manifests=suite_manifests,
+        )
         rng.shuffle(pool)
-        for idx, (run_name, trace) in enumerate(pool[: args.per_label], start=1):
-            record = _build_record(trace, source_run=run_name, source_suite=suite_dir.name)
+        for idx, (source_suite_name, run_name, trace) in enumerate(pool[: args.per_label], start=1):
+            record = _build_record(trace, source_run=run_name, source_suite=source_suite_name)
             record["audit_id"] = f"{label}-{idx:02d}"
             sampled_records.append(record)
 
@@ -182,6 +220,7 @@ Suggested annotation fields:
 
     summary = {
         "suite_dir": str(suite_dir),
+        "extra_suite_dirs": [str(path) for path in extra_suite_dirs],
         "output_dir": str(output_dir),
         "num_samples": len(sampled_records),
         "counts_by_label": {
