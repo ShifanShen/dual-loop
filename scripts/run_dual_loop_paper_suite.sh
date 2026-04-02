@@ -14,6 +14,7 @@ RELEASE_VERSION="${RELEASE_VERSION:-release_v6}"
 GPU_ID="${GPU_ID:-0}"
 DTYPE="${DTYPE:-bfloat16}"
 TIMEOUT="${TIMEOUT:-6}"
+CODEGEN_NUM_CANDIDATES="${CODEGEN_NUM_CANDIDATES:-1}"
 
 # Frozen configuration.
 SPEC_MAX_ITERS="${SPEC_MAX_ITERS:-3}"
@@ -36,6 +37,11 @@ RUN_BUDGET_ABLATIONS="${RUN_BUDGET_ABLATIONS:-0}"
 RUN_INTERMEDIATE_REP_STUDY="${RUN_INTERMEDIATE_REP_STUDY:-1}"
 RUN_SAS_CORRELATION="${RUN_SAS_CORRELATION:-1}"
 RUN_MANUAL_AUDIT_PACK="${RUN_MANUAL_AUDIT_PACK:-1}"
+RUN_SPEC_COUNTERFACTUAL_SUITE="${RUN_SPEC_COUNTERFACTUAL_SUITE:-0}"
+SPEC_COUNTERFACTUAL_SOURCE="${SPEC_COUNTERFACTUAL_SOURCE:-medium}"
+SPEC_COUNTERFACTUAL_REPEATS="${SPEC_COUNTERFACTUAL_REPEATS:-5}"
+SPEC_COUNTERFACTUAL_TEMPERATURE="${SPEC_COUNTERFACTUAL_TEMPERATURE:-0.2}"
+SPEC_COUNTERFACTUAL_LOW_SAS_THRESHOLD="${SPEC_COUNTERFACTUAL_LOW_SAS_THRESHOLD:-85}"
 MANUAL_AUDIT_PER_LABEL="${MANUAL_AUDIT_PER_LABEL:-12}"
 
 COMMON_ARGS=(
@@ -53,6 +59,7 @@ COMMON_ARGS=(
   --spec_precision_floor "$SPEC_PRECISION_FLOOR"
   --spec_max_rejected_refines "$SPEC_MAX_REJECTED_REFINES"
   --timeout "$TIMEOUT"
+  --codegen_num_candidates "$CODEGEN_NUM_CANDIDATES"
 )
 
 run_suite() {
@@ -83,6 +90,7 @@ echo "  spec_score_threshold=$SPEC_SCORE_THRESHOLD"
 echo "  spec_min_improvement=$SPEC_MIN_IMPROVEMENT"
 echo "  spec_precision_floor=$SPEC_PRECISION_FLOOR"
 echo "  spec_max_rejected_refines=$SPEC_MAX_REJECTED_REFINES"
+echo "  codegen_num_candidates=$CODEGEN_NUM_CANDIDATES"
 echo "  gpu_id=$GPU_ID"
 
 run_suite "[1/4] 50-problem pipeline ablations" \
@@ -130,9 +138,49 @@ if [[ "$RUN_MANUAL_AUDIT_PACK" == "1" && -n "${MEDIUM_PIPELINE_SUITE_DIR:-}" ]];
     --per_label "$MANUAL_AUDIT_PER_LABEL"
 fi
 
+if [[ "$RUN_SPEC_COUNTERFACTUAL_SUITE" == "1" && "$SPEC_COUNTERFACTUAL_SOURCE" != "full" ]]; then
+  COUNTERFACTUAL_SOURCE_DIR=""
+  if [[ "$SPEC_COUNTERFACTUAL_SOURCE" == "full" && -n "${FULL_RELEASE_PROBLEMS:-}" && "$FULL_RELEASE_PROBLEMS" -gt 0 ]]; then
+    COUNTERFACTUAL_SOURCE_DIR="$(latest_dir output/dual_loop_rq_suite 'rq_suite_*')"
+  else
+    COUNTERFACTUAL_SOURCE_DIR="${MEDIUM_PIPELINE_SUITE_DIR:-}"
+  fi
+
+  if [[ -n "$COUNTERFACTUAL_SOURCE_DIR" ]]; then
+    echo
+    echo "============================================================"
+    echo "[Extra] Spec counterfactual suite"
+    echo "============================================================"
+    RUN_SPEC_COUNTERFACTUAL_REPEATS="$SPEC_COUNTERFACTUAL_REPEATS" \
+    RUN_SPEC_COUNTERFACTUAL_TEMPERATURE="$SPEC_COUNTERFACTUAL_TEMPERATURE" \
+    RUN_SPEC_COUNTERFACTUAL_LOW_SAS_THRESHOLD="$SPEC_COUNTERFACTUAL_LOW_SAS_THRESHOLD" \
+    RUN_SPEC_COUNTERFACTUAL_CODEGEN_NUM_CANDIDATES="$CODEGEN_NUM_CANDIDATES" \
+    CUDA_VISIBLE_DEVICES="$GPU_ID" bash scripts/run_spec_counterfactual_suite.sh \
+      "$COUNTERFACTUAL_SOURCE_DIR" \
+      "$LOCAL_MODEL_PATH" \
+      "$MODEL_STYLE"
+  fi
+fi
+
 if [[ "$FULL_RELEASE_PROBLEMS" -gt 0 ]]; then
   run_suite "[4/4] Full-release main comparison" \
     --max_problems "$FULL_RELEASE_PROBLEMS"
+  FULL_SUITE_DIR="$(latest_dir output/dual_loop_rq_suite 'rq_suite_*')"
+fi
+
+if [[ "$RUN_SPEC_COUNTERFACTUAL_SUITE" == "1" && "$SPEC_COUNTERFACTUAL_SOURCE" == "full" && -n "${FULL_SUITE_DIR:-}" ]]; then
+  echo
+  echo "============================================================"
+  echo "[Extra] Spec counterfactual suite"
+  echo "============================================================"
+  RUN_SPEC_COUNTERFACTUAL_REPEATS="$SPEC_COUNTERFACTUAL_REPEATS" \
+  RUN_SPEC_COUNTERFACTUAL_TEMPERATURE="$SPEC_COUNTERFACTUAL_TEMPERATURE" \
+  RUN_SPEC_COUNTERFACTUAL_LOW_SAS_THRESHOLD="$SPEC_COUNTERFACTUAL_LOW_SAS_THRESHOLD" \
+  RUN_SPEC_COUNTERFACTUAL_CODEGEN_NUM_CANDIDATES="$CODEGEN_NUM_CANDIDATES" \
+  CUDA_VISIBLE_DEVICES="$GPU_ID" bash scripts/run_spec_counterfactual_suite.sh \
+    "$FULL_SUITE_DIR" \
+    "$LOCAL_MODEL_PATH" \
+    "$MODEL_STYLE"
 fi
 
 if [[ "$RUN_BUDGET_ABLATIONS" == "1" ]]; then

@@ -60,6 +60,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--spec_temperature", type=float, default=0.0)
     parser.add_argument("--judge_temperature", type=float, default=0.0)
     parser.add_argument("--codegen_temperature", type=float, default=0.2)
+    parser.add_argument("--codegen_num_candidates", type=int, default=1)
     parser.add_argument("--repair_temperature", type=float, default=0.1)
     parser.add_argument("--spec_max_tokens", type=int, default=1400)
     parser.add_argument("--judge_max_tokens", type=int, default=1200)
@@ -277,6 +278,8 @@ def main() -> None:
         "model_repr": args.model_repr,
         "release_version": args.release_version,
         "max_problems": args.max_problems,
+        "codegen_num_candidates": args.codegen_num_candidates,
+        "codegen_temperature": args.codegen_temperature,
         "output_dir": str(output_dir),
         "results_csv": str(csv_path),
         "rows": rows,

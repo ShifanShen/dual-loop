@@ -325,6 +325,13 @@ class DualLoopPipeline:
             raw_output=trace.raw_codegen_output,
             code=code,
             strategy="spec_codegen",
+            candidate_count=int(getattr(spec, "_last_codegen_candidate_count", 1) or 1),
+            selected_candidate_index=int(getattr(spec, "_last_codegen_selected_index", 1) or 1),
+            selected_error_type=str(
+                ((getattr(spec, "_last_codegen_candidate_feedbacks", []) or [{}])[
+                    max(0, int(getattr(spec, "_last_codegen_selected_index", 1) or 1) - 1)
+                ] or {}).get("error_type", "")
+            ),
         )
         self._record_usage(trace, getattr(spec, "_last_codegen_usage", None), "codegen")
         for extra_usage in getattr(spec, "_last_codegen_extra_usages", []):
@@ -654,23 +661,132 @@ class DualLoopPipeline:
         self._last_baseline_codegen_stage_time = time.perf_counter() - started_at
         return code
 
+    def _codegen_candidate_count(self) -> int:
+        return max(1, int(getattr(self.args, "codegen_num_candidates", 1) or 1))
+
+    @staticmethod
+    def _invalid_codegen_feedback(message: str) -> VerifierFeedback:
+        return VerifierFeedback(
+            passed=False,
+            error_type="invalid_candidate",
+            field="Non-checkable Notes",
+            message=message,
+            repair_hint="Produce valid Python code before execution-based verification.",
+        )
+
+    def _candidate_feedback_rank(self, feedback: VerifierFeedback) -> tuple[Any, ...]:
+        error_priority = {
+            "accepted": 0,
+            "wrong_answer": 1,
+            "runtime_error": 2,
+            "time_limit_exceeded": 3,
+            "verifier_error": 4,
+            "invalid_candidate": 5,
+            "unknown_failure": 6,
+        }
+        return (
+            0 if feedback.passed else 1,
+            error_priority.get(feedback.error_type, 99),
+            len(feedback.property_feedbacks or []),
+            len(feedback.violated_spec_items or []),
+            -self._matching_line_count(feedback),
+        )
+
+    def _select_best_codegen_candidate(
+        self,
+        problem: "CodeGenerationProblem",
+        *,
+        prompt: str,
+        spec: StructuredSpec | None,
+    ) -> dict[str, Any]:
+        candidate_records: list[dict[str, Any]] = []
+        total_started_at = time.perf_counter()
+        candidate_count = self._codegen_candidate_count()
+
+        for candidate_index in range(candidate_count):
+            output, usage = self.llm.generate(
+                prompt,
+                role="codegen",
+                temperature=self.args.codegen_temperature,
+                max_tokens=self.args.codegen_max_tokens,
+            )
+            code, extra_outputs, extra_usages = self._extract_valid_code(output)
+            if code:
+                feedback = self._verify(problem, code, spec=spec)
+            else:
+                feedback = self._invalid_codegen_feedback(
+                    "Candidate could not be parsed into valid Python code."
+                )
+
+            candidate_records.append(
+                {
+                    "candidate_index": candidate_index + 1,
+                    "raw_output": output,
+                    "usage": usage,
+                    "code": code,
+                    "extra_outputs": extra_outputs,
+                    "extra_usages": extra_usages,
+                    "feedback": feedback,
+                }
+            )
+
+            if feedback.passed:
+                break
+
+        best_record = min(
+            candidate_records,
+            key=lambda record: self._candidate_feedback_rank(record["feedback"]),
+        )
+        chosen_index = int(best_record["candidate_index"])
+        chosen_code = str(best_record["code"])
+        chosen_raw_output = str(best_record["raw_output"])
+        chosen_usage = best_record["usage"]
+        chosen_extra_outputs = list(best_record["extra_outputs"])
+        chosen_extra_usages = list(best_record["extra_usages"])
+        all_extra_outputs: list[str] = []
+        all_extra_usages: list[dict[str, int | str]] = []
+
+        for record in candidate_records:
+            if int(record["candidate_index"]) == chosen_index:
+                continue
+            all_extra_outputs.append(str(record["raw_output"]))
+            all_extra_usages.append(record["usage"])
+            all_extra_outputs.extend(record["extra_outputs"])
+            all_extra_usages.extend(record["extra_usages"])
+
+        all_extra_outputs.extend(chosen_extra_outputs)
+        all_extra_usages.extend(chosen_extra_usages)
+
+        return {
+            "code": chosen_code,
+            "raw_output": chosen_raw_output,
+            "usage": chosen_usage,
+            "extra_outputs": all_extra_outputs,
+            "extra_usages": all_extra_usages,
+            "feedback": best_record["feedback"],
+            "candidate_count": len(candidate_records),
+            "selected_candidate_index": chosen_index,
+            "stage_time": time.perf_counter() - total_started_at,
+            "candidate_feedbacks": [asdict(record["feedback"]) for record in candidate_records],
+        }
+
     def _generate_code_from_spec(
         self, problem: "CodeGenerationProblem", spec: StructuredSpec
     ) -> str:
-        started_at = time.perf_counter()
-        output, usage = self.llm.generate(
-            build_code_from_spec_prompt(problem, spec),
-            role="codegen",
-            temperature=self.args.codegen_temperature,
-            max_tokens=self.args.codegen_max_tokens,
+        candidate_result = self._select_best_codegen_candidate(
+            problem,
+            prompt=build_code_from_spec_prompt(problem, spec),
+            spec=spec,
         )
-        spec._last_codegen_output = output
-        spec._last_codegen_usage = usage
-        spec._last_codegen_stage_time = time.perf_counter() - started_at
-        code, extra_outputs, extra_usages = self._extract_valid_code(output)
-        spec._last_codegen_extra_outputs = extra_outputs
-        spec._last_codegen_extra_usages = extra_usages
-        return code
+        spec._last_codegen_output = candidate_result["raw_output"]
+        spec._last_codegen_usage = candidate_result["usage"]
+        spec._last_codegen_stage_time = candidate_result["stage_time"]
+        spec._last_codegen_extra_outputs = candidate_result["extra_outputs"]
+        spec._last_codegen_extra_usages = candidate_result["extra_usages"]
+        spec._last_codegen_candidate_count = candidate_result["candidate_count"]
+        spec._last_codegen_selected_index = candidate_result["selected_candidate_index"]
+        spec._last_codegen_candidate_feedbacks = candidate_result["candidate_feedbacks"]
+        return candidate_result["code"]
 
     def _repair_direct_code(
         self,
@@ -1097,11 +1213,17 @@ class DualLoopPipeline:
         raw_output: str,
         code: str,
         strategy: str,
+        candidate_count: int = 1,
+        selected_candidate_index: int = 1,
+        selected_error_type: str = "",
     ) -> dict[str, Any]:
         code_valid = self._looks_like_python(code)
         return {
             "stage": "codegen",
             "strategy": strategy,
+            "candidate_count": candidate_count,
+            "selected_candidate_index": selected_candidate_index,
+            "selected_error_type": selected_error_type,
             "code_valid": code_valid,
             "code_changed_from_raw": raw_output.strip() != code.strip(),
             "code_hash": self._hash_text(code),
@@ -1447,6 +1569,7 @@ class DualLoopPipeline:
             "spec_skip_ambiguity_only": getattr(
                 self.args, "spec_skip_ambiguity_only", True
             ),
+            "codegen_num_candidates": int(getattr(self.args, "codegen_num_candidates", 1) or 1),
         }
 
     def _write_outputs(self, summary: dict[str, Any], traces: list[ProblemTrace]) -> None:
@@ -1491,10 +1614,13 @@ class DualLoopPipeline:
         trace.failure_attribution, trace.failure_reason_tags = self._attribute_failure(trace)
 
     def _populate_trace_counters(self, trace: ProblemTrace) -> None:
-        trace.spec_calls = len(trace.raw_spec_outputs)
-        trace.judge_calls = len(trace.raw_score_outputs)
-        trace.codegen_calls = 1 if trace.raw_codegen_output else (1 if trace.code_initial else 0)
-        trace.repair_calls = len(trace.raw_repair_outputs)
+        trace.spec_calls = max(trace.spec_calls, len(trace.raw_spec_outputs))
+        trace.judge_calls = max(trace.judge_calls, len(trace.raw_score_outputs))
+        trace.codegen_calls = max(
+            trace.codegen_calls,
+            1 if trace.raw_codegen_output else (1 if trace.code_initial else 0),
+        )
+        trace.repair_calls = max(trace.repair_calls, len(trace.raw_repair_outputs))
         trace.llm_calls = (
             trace.spec_calls
             + trace.judge_calls
@@ -1511,6 +1637,14 @@ class DualLoopPipeline:
     ) -> None:
         if not usage:
             return
+        if role == "spec":
+            trace.spec_calls += 1
+        elif role == "judge":
+            trace.judge_calls += 1
+        elif role == "codegen":
+            trace.codegen_calls += 1
+        elif role == "repair":
+            trace.repair_calls += 1
         trace.token_usage["prompt_chars"] = int(trace.token_usage.get("prompt_chars", 0)) + int(
             usage.get("prompt_chars", 0)
         )

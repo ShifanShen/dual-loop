@@ -364,6 +364,7 @@ class DualLoopPipelineTests(unittest.TestCase):
             spec_temperature=0.0,
             judge_temperature=0.0,
             codegen_temperature=0.2,
+            codegen_num_candidates=1,
             repair_temperature=0.1,
             spec_max_tokens=512,
             judge_max_tokens=512,
@@ -524,6 +525,53 @@ class DualLoopPipelineTests(unittest.TestCase):
             self.assertFalse(feedback.passed)
             self.assertEqual(feedback.error_type, "verifier_error")
             self.assertIn("Verifier subprocess failed", feedback.message)
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_generate_code_from_spec_candidate_search_selects_best_candidate(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            args.codegen_num_candidates = 3
+            mock_adapter_cls.return_value.model.model_repr = "fake-model"
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+            spec = StructuredSpec(task="solve")
+
+            pipeline.llm.generate.side_effect = [
+                ("candidate one", {"prompt_chars": 10, "completion_chars": 5}),
+                ("candidate two", {"prompt_chars": 12, "completion_chars": 6}),
+            ]
+            with patch.object(
+                pipeline,
+                "_extract_valid_code",
+                side_effect=[
+                    ("print('bad')", [], []),
+                    ("print('good')", [], []),
+                ],
+            ), patch.object(
+                pipeline,
+                "_verify",
+                side_effect=[
+                    VerifierFeedback(
+                        passed=False,
+                        error_type="wrong_answer",
+                        field="Rules",
+                        message="bad answer",
+                    ),
+                    VerifierFeedback(
+                        passed=True,
+                        error_type="accepted",
+                        field="checkable_subset",
+                        message="ok",
+                    ),
+                ],
+            ):
+                code = pipeline._generate_code_from_spec(problem, spec)
+
+            self.assertEqual(code, "print('good')")
+            self.assertEqual(spec._last_codegen_candidate_count, 2)
+            self.assertEqual(spec._last_codegen_selected_index, 2)
+            self.assertEqual(len(spec._last_codegen_candidate_feedbacks), 2)
+            self.assertEqual(spec._last_codegen_candidate_feedbacks[1]["error_type"], "accepted")
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
     def test_verify_attaches_property_feedback_for_spec_based_wrong_answer(self, mock_adapter_cls):

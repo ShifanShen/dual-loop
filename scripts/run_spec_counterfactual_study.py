@@ -44,6 +44,12 @@ def parse_args() -> argparse.Namespace:
             "low_initial_sas",
             "changed_and_low_initial_sas",
             "sal_attempted",
+            "initial_codegen_failed",
+            "changed_and_initial_codegen_failed",
+            "changed_low_sas_and_initial_codegen_failed",
+            "source_spec_induced",
+            "resolved_by_loop_b",
+            "resolved_by_loop_b_and_initial_codegen_failed",
         ],
         help="Filter traces before rerunning code generation.",
     )
@@ -102,6 +108,12 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=0.0,
         help="Defaults to greedy decoding to reduce sampling noise in the counterfactual comparison.",
+    )
+    parser.add_argument(
+        "--codegen_num_candidates",
+        type=int,
+        default=1,
+        help="Number of candidates to generate under each spec variant before selecting the best one.",
     )
     parser.add_argument("--repair_temperature", type=float, default=0.1)
     parser.add_argument("--spec_max_tokens", type=int, default=1400)
@@ -204,11 +216,31 @@ def _resolve_repo_path(raw_path: str) -> Path:
     return path if path.is_absolute() else ROOT / path
 
 
+def _source_initial_codegen_failed(trace: dict[str, Any]) -> bool:
+    verifier_feedbacks = trace.get("verifier_feedbacks") or []
+    if not verifier_feedbacks:
+        return False
+    first_feedback = verifier_feedbacks[0] or {}
+    return not bool(first_feedback.get("passed", False))
+
+
+def _source_failure_attribution(trace: dict[str, Any]) -> str:
+    return str(trace.get("failure_attribution", "") or "")
+
+
+def _source_resolved_by_loop_b(trace: dict[str, Any]) -> bool:
+    tags = trace.get("failure_reason_tags") or []
+    return "resolved_by_loop_b" in tags
+
+
 def _trace_selected(trace: dict[str, Any], *, subset: str, low_initial_sas_threshold: float) -> bool:
     initial_score = trace.get("initial_spec_score") or {}
     initial_sas = float(initial_score.get("overall", 0.0) or 0.0)
     spec_changed = (trace.get("spec_initial") or {}) != (trace.get("spec_final") or {})
     sal_attempted = bool(((trace.get("effectiveness") or {}).get("spec_refine_steps") or []))
+    initial_codegen_failed = _source_initial_codegen_failed(trace)
+    source_spec_induced = _source_failure_attribution(trace) == "spec_induced"
+    resolved_by_loop_b = _source_resolved_by_loop_b(trace)
 
     if subset == "all":
         return True
@@ -220,6 +252,18 @@ def _trace_selected(trace: dict[str, Any], *, subset: str, low_initial_sas_thres
         return spec_changed and initial_sas < low_initial_sas_threshold
     if subset == "sal_attempted":
         return sal_attempted
+    if subset == "initial_codegen_failed":
+        return initial_codegen_failed
+    if subset == "changed_and_initial_codegen_failed":
+        return spec_changed and initial_codegen_failed
+    if subset == "changed_low_sas_and_initial_codegen_failed":
+        return spec_changed and initial_sas < low_initial_sas_threshold and initial_codegen_failed
+    if subset == "source_spec_induced":
+        return source_spec_induced
+    if subset == "resolved_by_loop_b":
+        return resolved_by_loop_b
+    if subset == "resolved_by_loop_b_and_initial_codegen_failed":
+        return resolved_by_loop_b and initial_codegen_failed
     return True
 
 
@@ -274,12 +318,21 @@ def _problem_row(trace: dict[str, Any], initial_result: dict[str, Any], final_re
     final_score = trace.get("final_spec_score") or {}
     spec_changed = (trace.get("spec_initial") or {}) != (trace.get("spec_final") or {})
     sal_attempted = bool(((trace.get("effectiveness") or {}).get("spec_refine_steps") or []))
+    initial_codegen_failed = _source_initial_codegen_failed(trace)
+    source_failure_attribution = _source_failure_attribution(trace)
+    resolved_by_loop_b = _source_resolved_by_loop_b(trace)
     delta_pass_rate = round(float(final_result["pass_rate"]) - float(initial_result["pass_rate"]), 4)
     outcome = "tie"
     if delta_pass_rate > 0:
         outcome = "final_better"
     elif delta_pass_rate < 0:
         outcome = "initial_better"
+    first_code_identical = False
+    if initial_result["attempts"] and final_result["attempts"]:
+        first_code_identical = (
+            initial_result["attempts"][0].get("final_code", "")
+            == final_result["attempts"][0].get("final_code", "")
+        )
 
     return {
         "question_id": trace.get("question_id", ""),
@@ -289,11 +342,14 @@ def _problem_row(trace: dict[str, Any], initial_result: dict[str, Any], final_re
         "delta_sas": round(float(final_score.get("overall", 0.0) or 0.0) - float(initial_score.get("overall", 0.0) or 0.0), 4),
         "spec_changed": spec_changed,
         "sal_attempted": sal_attempted,
-        "failure_attribution": trace.get("failure_attribution", ""),
+        "source_initial_codegen_failed": initial_codegen_failed,
+        "source_failure_attribution": source_failure_attribution,
+        "source_resolved_by_loop_b": resolved_by_loop_b,
         "initial_pass_rate": initial_result["pass_rate"],
         "final_pass_rate": final_result["pass_rate"],
         "delta_pass_rate": delta_pass_rate,
         "outcome": outcome,
+        "first_code_identical": first_code_identical,
         "initial_average_llm_calls": initial_result["average_llm_calls"],
         "final_average_llm_calls": final_result["average_llm_calls"],
         "initial_average_elapsed_seconds": initial_result["average_elapsed_seconds"],
@@ -323,6 +379,10 @@ def _aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "tie_count": 0,
             "spec_changed_count": 0,
             "sal_attempted_count": 0,
+            "source_initial_codegen_failed_count": 0,
+            "source_spec_induced_count": 0,
+            "source_resolved_by_loop_b_count": 0,
+            "first_code_identical_count": 0,
             "average_initial_sas": 0.0,
             "average_final_sas": 0.0,
             "average_delta_sas": 0.0,
@@ -342,6 +402,16 @@ def _aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "tie_count": int(outcome_counts.get("tie", 0)),
         "spec_changed_count": int(sum(1 for row in rows if row["spec_changed"])),
         "sal_attempted_count": int(sum(1 for row in rows if row["sal_attempted"])),
+        "source_initial_codegen_failed_count": int(
+            sum(1 for row in rows if row["source_initial_codegen_failed"])
+        ),
+        "source_spec_induced_count": int(
+            sum(1 for row in rows if row["source_failure_attribution"] == "spec_induced")
+        ),
+        "source_resolved_by_loop_b_count": int(
+            sum(1 for row in rows if row["source_resolved_by_loop_b"])
+        ),
+        "first_code_identical_count": int(sum(1 for row in rows if row["first_code_identical"])),
         "average_initial_sas": round(mean(float(row["initial_sas"]) for row in rows), 4),
         "average_final_sas": round(mean(float(row["final_sas"]) for row in rows), 4),
         "average_delta_sas": round(mean(float(row["delta_sas"]) for row in rows), 4),
@@ -445,6 +515,28 @@ def main() -> None:
             if row["spec_changed"] and float(row["initial_sas"]) < args.low_initial_sas_threshold
         ],
         "sal_attempted": [row for row in rows if row["sal_attempted"]],
+        "initial_codegen_failed": [row for row in rows if row["source_initial_codegen_failed"]],
+        "changed_and_initial_codegen_failed": [
+            row for row in rows if row["spec_changed"] and row["source_initial_codegen_failed"]
+        ],
+        "changed_low_sas_and_initial_codegen_failed": [
+            row
+            for row in rows
+            if (
+                row["spec_changed"]
+                and float(row["initial_sas"]) < args.low_initial_sas_threshold
+                and row["source_initial_codegen_failed"]
+            )
+        ],
+        "source_spec_induced": [
+            row for row in rows if row["source_failure_attribution"] == "spec_induced"
+        ],
+        "resolved_by_loop_b": [row for row in rows if row["source_resolved_by_loop_b"]],
+        "resolved_by_loop_b_and_initial_codegen_failed": [
+            row
+            for row in rows
+            if row["source_resolved_by_loop_b"] and row["source_initial_codegen_failed"]
+        ],
     }
     slice_summaries = {name: _aggregate_rows(slice_rows) for name, slice_rows in slices.items()}
 
@@ -470,6 +562,8 @@ def main() -> None:
         "subset": args.subset,
         "low_initial_sas_threshold": args.low_initial_sas_threshold,
         "repeats": args.repeats,
+        "codegen_num_candidates": args.codegen_num_candidates,
+        "codegen_temperature": args.codegen_temperature,
         "num_selected_problems": len(rows),
         "output_dir": str(output_dir),
         "results_csv": str(csv_path),
