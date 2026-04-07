@@ -16,6 +16,7 @@ OUTPUT_ROOT="${OUTPUT_ROOT:-output/spec_counterfactual}"
 DTYPE="${DTYPE:-bfloat16}"
 TIMEOUT="${TIMEOUT:-6}"
 GPU_ID="${GPU_ID:-0}"
+UV_BIN="${UV_BIN:-}"
 
 RUN_SPEC_COUNTERFACTUAL_REPEATS="${RUN_SPEC_COUNTERFACTUAL_REPEATS:-5}"
 RUN_SPEC_COUNTERFACTUAL_TEMPERATURE="${RUN_SPEC_COUNTERFACTUAL_TEMPERATURE:-0.2}"
@@ -41,6 +42,17 @@ COMMON_ARGS=(
   --allow_empty
 )
 
+hash -r 2>/dev/null || true
+if [[ -z "$UV_BIN" ]]; then
+  UV_BIN="$(type -P uv || true)"
+fi
+
+if [[ -z "$UV_BIN" || ! -x "$UV_BIN" ]]; then
+  echo "Could not find a usable uv executable." >&2
+  echo "Set UV_BIN=/absolute/path/to/uv and rerun." >&2
+  exit 127
+fi
+
 run_subset() {
   local label="$1"
   shift
@@ -48,7 +60,7 @@ run_subset() {
   echo "============================================================"
   echo "$label"
   echo "============================================================"
-  CUDA_VISIBLE_DEVICES="$GPU_ID" uv run python scripts/run_spec_counterfactual_study.py \
+  CUDA_VISIBLE_DEVICES="$GPU_ID" "$UV_BIN" run python scripts/run_spec_counterfactual_study.py \
     "${COMMON_ARGS[@]}" \
     "$@"
 }
@@ -62,6 +74,7 @@ echo "  repeats=$RUN_SPEC_COUNTERFACTUAL_REPEATS"
 echo "  codegen_temperature=$RUN_SPEC_COUNTERFACTUAL_TEMPERATURE"
 echo "  codegen_num_candidates=$RUN_SPEC_COUNTERFACTUAL_CODEGEN_NUM_CANDIDATES"
 echo "  low_initial_sas_threshold=$RUN_SPEC_COUNTERFACTUAL_LOW_SAS_THRESHOLD"
+echo "  uv_bin=$UV_BIN"
 
 run_subset "[1/3] changed_and_initial_codegen_failed" \
   --subset changed_and_initial_codegen_failed
