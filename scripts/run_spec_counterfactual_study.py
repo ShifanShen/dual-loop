@@ -66,6 +66,11 @@ def parse_args() -> argparse.Namespace:
         help="Optional cap after subset filtering. Use 0 for all selected problems.",
     )
     parser.add_argument(
+        "--allow_empty",
+        action="store_true",
+        help="If set, emit a skipped summary instead of failing when the requested subset has no matching traces.",
+    )
+    parser.add_argument(
         "--repeats",
         type=int,
         default=1,
@@ -437,6 +442,11 @@ def main() -> None:
     if args.release_version is None:
         args.release_version = str(summary.get("release_version") or suite_metadata.get("release_version") or "release_latest")
 
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    model_repr = (args.model_repr or args.model or "model").replace("/", "_").replace(" ", "_")
+    output_dir = Path(args.output_root) / f"spec_counterfactual_{model_repr}_{timestamp}"
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     filtered_traces = [
         trace
         for trace in traces
@@ -450,6 +460,32 @@ def main() -> None:
     if args.max_problems and args.max_problems > 0:
         filtered_traces = filtered_traces[: args.max_problems]
     if not filtered_traces:
+        summary_payload = {
+            "status": "skipped_empty_subset" if args.allow_empty else "error_empty_subset",
+            "source_suite_dir": str(suite_dir),
+            "source_run_name": args.run_name,
+            "source_pipeline_mode": run_entry.get("pipeline_mode", ""),
+            "source_summary_path": run_entry.get("summary_path", ""),
+            "source_traces_path": run_entry.get("traces_path", ""),
+            "release_version": args.release_version,
+            "model": args.model,
+            "model_repr": args.model_repr,
+            "local_model_path": args.local_model_path,
+            "subset": args.subset,
+            "low_initial_sas_threshold": args.low_initial_sas_threshold,
+            "repeats": args.repeats,
+            "codegen_num_candidates": args.codegen_num_candidates,
+            "codegen_temperature": args.codegen_temperature,
+            "num_selected_problems": 0,
+            "output_dir": str(output_dir),
+            "results_csv": "",
+            "slice_summaries": {},
+            "message": "No traces matched the requested subset/filter configuration.",
+        }
+        _write_json(output_dir / "summary.json", summary_payload)
+        print(json.dumps(summary_payload, indent=2, ensure_ascii=True))
+        if args.allow_empty:
+            return
         raise ValueError("No traces matched the requested subset/filter configuration.")
 
     wanted_ids = [str(trace.get("question_id", "")) for trace in filtered_traces]
@@ -460,11 +496,6 @@ def main() -> None:
     pipeline = DualLoopPipeline(args, llm=llm)
     benchmark = pipeline._load_benchmark()
     benchmark_by_qid = {problem.question_id: problem for problem in benchmark}
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    model_repr = (args.model_repr or args.model or "model").replace("/", "_").replace(" ", "_")
-    output_dir = Path(args.output_root) / f"spec_counterfactual_{model_repr}_{timestamp}"
-    output_dir.mkdir(parents=True, exist_ok=True)
 
     rows: list[dict[str, Any]] = []
     detailed_records: list[dict[str, Any]] = []

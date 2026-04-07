@@ -38,6 +38,7 @@ COMMON_ARGS=(
   --codegen_temperature "$RUN_SPEC_COUNTERFACTUAL_TEMPERATURE"
   --codegen_num_candidates "$RUN_SPEC_COUNTERFACTUAL_CODEGEN_NUM_CANDIDATES"
   --low_initial_sas_threshold "$RUN_SPEC_COUNTERFACTUAL_LOW_SAS_THRESHOLD"
+  --allow_empty
 )
 
 run_subset() {
