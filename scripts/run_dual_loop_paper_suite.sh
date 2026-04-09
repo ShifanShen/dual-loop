@@ -15,6 +15,7 @@ GPU_ID="${GPU_ID:-0}"
 DTYPE="${DTYPE:-bfloat16}"
 TIMEOUT="${TIMEOUT:-6}"
 CODEGEN_NUM_CANDIDATES="${CODEGEN_NUM_CANDIDATES:-1}"
+UV_BIN="${UV_BIN:-}"
 
 # Frozen configuration.
 SPEC_MAX_ITERS="${SPEC_MAX_ITERS:-3}"
@@ -69,7 +70,7 @@ run_suite() {
   echo "============================================================"
   echo "$label"
   echo "============================================================"
-  CUDA_VISIBLE_DEVICES="$GPU_ID" uv run python scripts/run_dual_loop_rq_suite.py \
+  CUDA_VISIBLE_DEVICES="$GPU_ID" "$UV_BIN" run python scripts/run_dual_loop_rq_suite.py \
     "${COMMON_ARGS[@]}" \
     "$@"
 }
@@ -79,6 +80,17 @@ latest_dir() {
   local pattern="$2"
   find "$root" -maxdepth 1 -type d -name "$pattern" -printf '%T@ %p\n' 2>/dev/null | sort -nr | head -n 1 | cut -d' ' -f2-
 }
+
+hash -r 2>/dev/null || true
+if [[ -z "$UV_BIN" ]]; then
+  UV_BIN="$(type -P uv || true)"
+fi
+
+if [[ -z "$UV_BIN" || ! -x "$UV_BIN" ]]; then
+  echo "Could not find a usable uv executable." >&2
+  echo "Set UV_BIN=/absolute/path/to/uv and rerun." >&2
+  exit 127
+fi
 
 echo "Running frozen paper experiment suite with:"
 echo "  model_path=$LOCAL_MODEL_PATH"
@@ -92,6 +104,7 @@ echo "  spec_precision_floor=$SPEC_PRECISION_FLOOR"
 echo "  spec_max_rejected_refines=$SPEC_MAX_REJECTED_REFINES"
 echo "  codegen_num_candidates=$CODEGEN_NUM_CANDIDATES"
 echo "  gpu_id=$GPU_ID"
+echo "  uv_bin=$UV_BIN"
 
 run_suite "[1/4] 50-problem pipeline ablations" \
   --max_problems "$DEV_PIPELINE_PROBLEMS" \
@@ -108,7 +121,7 @@ if [[ "$RUN_INTERMEDIATE_REP_STUDY" == "1" ]]; then
   echo "============================================================"
   echo "[Extra] 50-problem spec vs plan/pseudocode intermediate study"
   echo "============================================================"
-  CUDA_VISIBLE_DEVICES="$GPU_ID" uv run python scripts/run_intermediate_repr_study.py \
+  CUDA_VISIBLE_DEVICES="$GPU_ID" "$UV_BIN" run python scripts/run_intermediate_repr_study.py \
     "${COMMON_ARGS[@]}" \
     --max_problems "$INTERMEDIATE_STUDY_PROBLEMS" \
     --output_root output/intermediate_repr_study
@@ -124,7 +137,7 @@ if [[ "$RUN_SAS_CORRELATION" == "1" && -n "${MEDIUM_PIPELINE_SUITE_DIR:-}" ]]; t
   echo "============================================================"
   echo "[Extra] SAS vs semantic-failure correlation analysis"
   echo "============================================================"
-  CUDA_VISIBLE_DEVICES="$GPU_ID" uv run python scripts/analyze_sas_failure_correlation.py \
+  CUDA_VISIBLE_DEVICES="$GPU_ID" "$UV_BIN" run python scripts/analyze_sas_failure_correlation.py \
     --suite_dir "$MEDIUM_PIPELINE_SUITE_DIR"
 fi
 
@@ -133,7 +146,7 @@ if [[ "$RUN_MANUAL_AUDIT_PACK" == "1" && -n "${MEDIUM_PIPELINE_SUITE_DIR:-}" ]];
   echo "============================================================"
   echo "[Extra] Manual audit pack preparation"
   echo "============================================================"
-  CUDA_VISIBLE_DEVICES="$GPU_ID" uv run python scripts/prepare_manual_audit_pack.py \
+  CUDA_VISIBLE_DEVICES="$GPU_ID" "$UV_BIN" run python scripts/prepare_manual_audit_pack.py \
     --suite_dir "$MEDIUM_PIPELINE_SUITE_DIR" \
     --per_label "$MANUAL_AUDIT_PER_LABEL"
 fi
@@ -155,6 +168,7 @@ if [[ "$RUN_SPEC_COUNTERFACTUAL_SUITE" == "1" && "$SPEC_COUNTERFACTUAL_SOURCE" !
     RUN_SPEC_COUNTERFACTUAL_TEMPERATURE="$SPEC_COUNTERFACTUAL_TEMPERATURE" \
     RUN_SPEC_COUNTERFACTUAL_LOW_SAS_THRESHOLD="$SPEC_COUNTERFACTUAL_LOW_SAS_THRESHOLD" \
     RUN_SPEC_COUNTERFACTUAL_CODEGEN_NUM_CANDIDATES="$CODEGEN_NUM_CANDIDATES" \
+    UV_BIN="$UV_BIN" \
     CUDA_VISIBLE_DEVICES="$GPU_ID" bash scripts/run_spec_counterfactual_suite.sh \
       "$COUNTERFACTUAL_SOURCE_DIR" \
       "$LOCAL_MODEL_PATH" \
@@ -177,6 +191,7 @@ if [[ "$RUN_SPEC_COUNTERFACTUAL_SUITE" == "1" && "$SPEC_COUNTERFACTUAL_SOURCE" =
   RUN_SPEC_COUNTERFACTUAL_TEMPERATURE="$SPEC_COUNTERFACTUAL_TEMPERATURE" \
   RUN_SPEC_COUNTERFACTUAL_LOW_SAS_THRESHOLD="$SPEC_COUNTERFACTUAL_LOW_SAS_THRESHOLD" \
   RUN_SPEC_COUNTERFACTUAL_CODEGEN_NUM_CANDIDATES="$CODEGEN_NUM_CANDIDATES" \
+  UV_BIN="$UV_BIN" \
   CUDA_VISIBLE_DEVICES="$GPU_ID" bash scripts/run_spec_counterfactual_suite.sh \
     "$FULL_SUITE_DIR" \
     "$LOCAL_MODEL_PATH" \
