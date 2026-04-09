@@ -17,6 +17,7 @@ DTYPE="${DTYPE:-bfloat16}"
 TIMEOUT="${TIMEOUT:-6}"
 GPU_ID="${GPU_ID:-0}"
 UV_BIN="${UV_BIN:-}"
+DATASET_PATH="${DATASET_PATH:-}"
 
 RUN_SPEC_COUNTERFACTUAL_REPEATS="${RUN_SPEC_COUNTERFACTUAL_REPEATS:-5}"
 RUN_SPEC_COUNTERFACTUAL_TEMPERATURE="${RUN_SPEC_COUNTERFACTUAL_TEMPERATURE:-0.2}"
@@ -41,6 +42,10 @@ COMMON_ARGS=(
   --low_initial_sas_threshold "$RUN_SPEC_COUNTERFACTUAL_LOW_SAS_THRESHOLD"
   --allow_empty
 )
+
+if [[ -n "$DATASET_PATH" ]]; then
+  COMMON_ARGS+=(--dataset_path "$DATASET_PATH")
+fi
 
 hash -r 2>/dev/null || true
 if [[ -z "$UV_BIN" ]]; then
@@ -75,6 +80,9 @@ echo "  codegen_temperature=$RUN_SPEC_COUNTERFACTUAL_TEMPERATURE"
 echo "  codegen_num_candidates=$RUN_SPEC_COUNTERFACTUAL_CODEGEN_NUM_CANDIDATES"
 echo "  low_initial_sas_threshold=$RUN_SPEC_COUNTERFACTUAL_LOW_SAS_THRESHOLD"
 echo "  uv_bin=$UV_BIN"
+if [[ -n "$DATASET_PATH" ]]; then
+  echo "  dataset_path=$DATASET_PATH"
+fi
 
 run_subset "[1/3] changed_and_initial_codegen_failed" \
   --subset changed_and_initial_codegen_failed

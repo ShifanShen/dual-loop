@@ -16,6 +16,7 @@ DTYPE="${DTYPE:-bfloat16}"
 TIMEOUT="${TIMEOUT:-6}"
 CODEGEN_NUM_CANDIDATES="${CODEGEN_NUM_CANDIDATES:-1}"
 UV_BIN="${UV_BIN:-}"
+DATASET_PATH="${DATASET_PATH:-}"
 
 # Frozen configuration.
 SPEC_MAX_ITERS="${SPEC_MAX_ITERS:-3}"
@@ -63,6 +64,10 @@ COMMON_ARGS=(
   --codegen_num_candidates "$CODEGEN_NUM_CANDIDATES"
 )
 
+if [[ -n "$DATASET_PATH" ]]; then
+  COMMON_ARGS+=(--dataset_path "$DATASET_PATH")
+fi
+
 run_suite() {
   local label="$1"
   shift
@@ -105,6 +110,9 @@ echo "  spec_max_rejected_refines=$SPEC_MAX_REJECTED_REFINES"
 echo "  codegen_num_candidates=$CODEGEN_NUM_CANDIDATES"
 echo "  gpu_id=$GPU_ID"
 echo "  uv_bin=$UV_BIN"
+if [[ -n "$DATASET_PATH" ]]; then
+  echo "  dataset_path=$DATASET_PATH"
+fi
 
 run_suite "[1/4] 50-problem pipeline ablations" \
   --max_problems "$DEV_PIPELINE_PROBLEMS" \

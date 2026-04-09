@@ -29,6 +29,7 @@ SYNC_ENV="${SYNC_ENV:-1}"
 CLEAR_OUTPUT="${CLEAR_OUTPUT:-0}"
 GPU_ID="${GPU_ID:-0}"
 UV_BIN="${UV_BIN:-}"
+DATASET_PATH="${DATASET_PATH:-}"
 LOG_ROOT="${LOG_ROOT:-$REPO_ROOT/output/recovery_logs}"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 LOG_PATH="$LOG_ROOT/paper_recovery_${TIMESTAMP}.log"
@@ -101,6 +102,9 @@ echo "sync_env=$SYNC_ENV"
 echo "clear_output=$CLEAR_OUTPUT"
 echo "gpu_id=$GPU_ID"
 echo "log_path=$LOG_PATH"
+if [[ -n "$DATASET_PATH" ]]; then
+  echo "dataset_path=$DATASET_PATH"
+fi
 echo "============================================================"
 
 (
@@ -117,6 +121,7 @@ echo "============================================================"
   CODEGEN_NUM_CANDIDATES="${CODEGEN_NUM_CANDIDATES:-3}" \
   GPU_ID="$GPU_ID" \
   UV_BIN="$UV_BIN" \
+  DATASET_PATH="$DATASET_PATH" \
   bash scripts/run_dual_loop_paper_suite.sh "$LOCAL_MODEL_PATH" "$MODEL_STYLE"
 ) 2>&1 | tee "$LOG_PATH"
 
