@@ -2,6 +2,7 @@ import json
 import zlib
 import pickle
 import base64
+import os
 from enum import Enum
 from datetime import datetime
 from dataclasses import dataclass
@@ -127,7 +128,7 @@ def load_code_generation_dataset(
     end_date=None,
     dataset_path: str | None = None,
 ) -> list[CodeGenerationProblem]:
-    dataset_path = dataset_path or None
+    dataset_path = dataset_path or os.environ.get("DATASET_PATH") or None
     if dataset_path:
         try:
             dataset = load_from_disk(dataset_path)
@@ -141,12 +142,20 @@ def load_code_generation_dataset(
                 trust_remote_code=True,
             )
     else:
-        dataset = load_dataset(
-            "livecodebench/code_generation_lite",
-            split="test",
-            version_tag=release_version,
-            trust_remote_code=True,
-        )
+        try:
+            dataset = load_dataset(
+                "livecodebench/code_generation_lite",
+                split="test",
+                version_tag=release_version,
+                trust_remote_code=True,
+            )
+        except Exception as exc:
+            raise ConnectionError(
+                "Could not load 'livecodebench/code_generation_lite' from the Hub. "
+                "If the server cannot reach Hugging Face, prepare a local dataset "
+                "directory with save_to_disk and rerun with --dataset_path <dir> "
+                "or export DATASET_PATH=<dir>."
+            ) from exc
     dataset = [CodeGenerationProblem(**p) for p in dataset]  # type: ignore
     if start_date is not None:
         p_start_date = datetime.strptime(start_date, "%Y-%m-%d")
@@ -164,6 +173,7 @@ def load_code_generation_dataset_not_fast(
     release_version="release_v1",
     dataset_path: str | None = None,
 ) -> list[CodeGenerationProblem]:
+    dataset_path = dataset_path or os.environ.get("DATASET_PATH") or None
     if dataset_path:
         try:
             dataset = load_from_disk(dataset_path)
@@ -172,7 +182,15 @@ def load_code_generation_dataset_not_fast(
         except Exception:
             dataset = load_dataset(dataset_path, split="test", trust_remote_code=True)
     else:
-        dataset = load_dataset("livecodebench/code_generation", split="test")
+        try:
+            dataset = load_dataset("livecodebench/code_generation", split="test")
+        except Exception as exc:
+            raise ConnectionError(
+                "Could not load 'livecodebench/code_generation' from the Hub. "
+                "If the server cannot reach Hugging Face, prepare a local dataset "
+                "directory with save_to_disk and rerun with --dataset_path <dir> "
+                "or export DATASET_PATH=<dir>."
+            ) from exc
     dataset = [CodeGenerationProblem(**p) for p in dataset]  # type: ignore
     print(f"Loaded {len(dataset)} problems")
     return dataset
