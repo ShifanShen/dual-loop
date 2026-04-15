@@ -49,6 +49,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--spec_precision_floor", type=int, default=85)
     parser.add_argument("--spec_max_rejected_refines", type=int, default=1)
     parser.add_argument(
+        "--adaptive_sal_threshold",
+        type=float,
+        default=0.0,
+        help="If > 0, skip SAL refinement when the initial SAS already reaches this threshold.",
+    )
+    parser.add_argument(
+        "--adaptive_ablation_threshold",
+        type=float,
+        default=85.0,
+        help="Threshold used only for the adaptive ablation config inside the suite runner.",
+    )
+    parser.add_argument(
         "--spec_skip_ambiguity_only",
         dest="spec_skip_ambiguity_only",
         action="store_true",
@@ -70,6 +82,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--include_pipeline_ablations", action="store_true")
     parser.add_argument("--include_repair_ablations", action="store_true")
     parser.add_argument("--include_budget_ablations", action="store_true")
+    parser.add_argument("--include_adaptive_ablations", action="store_true")
+    parser.add_argument(
+        "--attribution_mode",
+        type=str,
+        default="legacy",
+        choices=["legacy", "conservative"],
+        help="Failure attribution policy. Conservative mode abstains with unknown more often.",
+    )
+    parser.add_argument(
+        "--attribution_spec_margin",
+        type=int,
+        default=5,
+        help="Confidence margin used by conservative attribution around spec_score_threshold.",
+    )
     args = parser.parse_args()
     args.stop = args.stop.split(",")
     if args.local_model_path:
@@ -107,6 +133,7 @@ def main() -> None:
         include_pipeline_ablations=args.include_pipeline_ablations,
         include_repair_ablations=args.include_repair_ablations,
         include_budget_ablations=args.include_budget_ablations,
+        include_adaptive_ablations=args.include_adaptive_ablations,
     )
     rows = build_rq_csv_rows(run_results)
 
@@ -124,7 +151,12 @@ def main() -> None:
         "include_pipeline_ablations": args.include_pipeline_ablations,
         "include_repair_ablations": args.include_repair_ablations,
         "include_budget_ablations": args.include_budget_ablations,
+        "include_adaptive_ablations": args.include_adaptive_ablations,
         "codegen_num_candidates": args.codegen_num_candidates,
+        "adaptive_sal_threshold": args.adaptive_sal_threshold,
+        "adaptive_ablation_threshold": args.adaptive_ablation_threshold,
+        "attribution_mode": args.attribution_mode,
+        "attribution_spec_margin": args.attribution_spec_margin,
         "suite_dir": str(suite_dir),
         "csv_path": str(csv_path),
         "manifest_path": str(manifest_path),

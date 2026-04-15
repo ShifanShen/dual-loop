@@ -281,18 +281,36 @@ class DualLoopPipeline:
             trace, "spec_score_initial", getattr(initial_score, "_stage_time", 0.0)
         )
         if self.args.pipeline_mode in {"loop_b", "full"}:
-            spec, score_trace, refine_meta = self._refine_spec(problem, spec)
-            trace.spec_scores.extend(score_trace)
-            trace.loop_b_iterations = len(score_trace)
-            trace.raw_score_outputs.extend(refine_meta["raw_score_outputs"])
-            trace.raw_spec_outputs.extend(refine_meta["raw_spec_outputs"])
-            for usage in refine_meta["judge_usages"]:
-                self._record_usage(trace, usage, "judge")
-            for usage in refine_meta["spec_usages"]:
-                self._record_usage(trace, usage, "spec")
-            for stage_name, duration in refine_meta["stage_times"].items():
-                self._record_stage_time(trace, stage_name, duration)
-            trace.effectiveness["spec_refine_steps"] = refine_meta.get("effectiveness_steps", [])
+            should_run_sal, sal_reason = self._should_run_semantic_loop(initial_score)
+            if should_run_sal:
+                spec, score_trace, refine_meta = self._refine_spec(problem, spec)
+                trace.spec_scores.extend(score_trace)
+                trace.loop_b_iterations = len(score_trace)
+                trace.raw_score_outputs.extend(refine_meta["raw_score_outputs"])
+                trace.raw_spec_outputs.extend(refine_meta["raw_spec_outputs"])
+                for usage in refine_meta["judge_usages"]:
+                    self._record_usage(trace, usage, "judge")
+                for usage in refine_meta["spec_usages"]:
+                    self._record_usage(trace, usage, "spec")
+                for stage_name, duration in refine_meta["stage_times"].items():
+                    self._record_stage_time(trace, stage_name, duration)
+                trace.effectiveness["spec_refine_steps"] = refine_meta.get(
+                    "effectiveness_steps", []
+                )
+            else:
+                trace.effectiveness["spec_refine_steps"] = [
+                    self._build_spec_refine_effectiveness(
+                        previous_spec=spec,
+                        candidate_spec=spec,
+                        score_before=initial_score,
+                        candidate_score=None,
+                        attempt_index=0,
+                        effect="skipped",
+                        reason=sal_reason,
+                        accepted=False,
+                        patch_source="none",
+                    )
+                ]
         trace.spec_final = asdict(spec)
         final_score = self._score_spec(problem, spec)
         trace.final_spec_score = asdict(final_score)
@@ -413,6 +431,12 @@ class DualLoopPipeline:
         score._extra_usages = extra_usages
         score._stage_time = time.perf_counter() - started_at
         return score
+
+    def _should_run_semantic_loop(self, score: SpecScore) -> tuple[bool, str]:
+        adaptive_threshold = float(getattr(self.args, "adaptive_sal_threshold", 0.0) or 0.0)
+        if adaptive_threshold > 0 and score.parse_ok and score.overall >= adaptive_threshold:
+            return False, "adaptive_threshold_met"
+        return True, "enabled"
 
     def _should_attempt_spec_refine(self, score: SpecScore) -> tuple[bool, str]:
         if not score.parse_ok:
@@ -1569,6 +1593,13 @@ class DualLoopPipeline:
             "spec_skip_ambiguity_only": getattr(
                 self.args, "spec_skip_ambiguity_only", True
             ),
+            "adaptive_sal_threshold": float(
+                getattr(self.args, "adaptive_sal_threshold", 0.0) or 0.0
+            ),
+            "attribution_mode": str(getattr(self.args, "attribution_mode", "legacy")),
+            "attribution_spec_margin": int(
+                getattr(self.args, "attribution_spec_margin", 5) or 5
+            ),
             "codegen_num_candidates": int(getattr(self.args, "codegen_num_candidates", 1) or 1),
         }
 
@@ -1681,6 +1712,10 @@ class DualLoopPipeline:
                 reasons.append(last_feedback.get("error_type", "unknown_failure"))
             return "implementation_induced", reasons
 
+        attribution_mode = str(getattr(self.args, "attribution_mode", "legacy") or "legacy")
+        if attribution_mode == "conservative":
+            return self._attribute_failure_conservative(trace, final_sas=final_sas)
+
         if final_sas < self.args.spec_score_threshold:
             reasons.append("low_final_sas")
             if trace.spec_issue_types:
@@ -1691,6 +1726,43 @@ class DualLoopPipeline:
             last_feedback = trace.verifier_feedbacks[-1]
             reasons.append(last_feedback.get("error_type", "unknown_failure"))
         return "implementation_induced", reasons
+
+    def _attribute_failure_conservative(
+        self,
+        trace: ProblemTrace,
+        *,
+        final_sas: int,
+    ) -> tuple[str, list[str]]:
+        reasons: list[str] = []
+        threshold = int(getattr(self.args, "spec_score_threshold", 80) or 80)
+        margin = max(0, int(getattr(self.args, "attribution_spec_margin", 5) or 0))
+        low_confidence_cutoff = threshold - margin
+        high_confidence_cutoff = threshold + margin
+        has_spec_signal = bool(trace.spec_issue_types)
+        has_impl_signal = bool(trace.verifier_feedbacks)
+
+        if final_sas <= low_confidence_cutoff and has_spec_signal:
+            reasons.append("low_final_sas_strong")
+            reasons.extend(trace.spec_issue_types)
+            return "spec_induced", reasons
+
+        if final_sas >= high_confidence_cutoff and has_impl_signal:
+            last_feedback = trace.verifier_feedbacks[-1]
+            reasons.append(last_feedback.get("error_type", "unknown_failure"))
+            return "implementation_induced", reasons
+
+        if final_sas < threshold:
+            reasons.append("borderline_or_low_sas")
+        if has_spec_signal:
+            reasons.extend(trace.spec_issue_types)
+        if has_impl_signal:
+            last_feedback = trace.verifier_feedbacks[-1]
+            reasons.append(last_feedback.get("error_type", "unknown_failure"))
+        if has_spec_signal and has_impl_signal:
+            reasons.append("mixed_visible_signals")
+        elif not has_spec_signal and not has_impl_signal:
+            reasons.append("insufficient_visible_evidence")
+        return "unknown", reasons
 
     def _average_attr(self, traces: list[ProblemTrace], field_name: str) -> float:
         if not traces:

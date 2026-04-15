@@ -21,6 +21,9 @@ class SuiteRunConfig:
     spec_max_iters: int | None = None
     repair_max_iters: int | None = None
     spec_score_threshold: int | None = None
+    adaptive_sal_threshold: float | None = None
+    attribution_mode: str | None = None
+    attribution_spec_margin: int | None = None
 
 
 CORE_SUITE_NAME = "main_comparison"
@@ -31,6 +34,8 @@ def build_rq_suite_plan(
     include_pipeline_ablations: bool = False,
     include_repair_ablations: bool = False,
     include_budget_ablations: bool = False,
+    include_adaptive_ablations: bool = False,
+    adaptive_sal_threshold: float = 85.0,
 ) -> list[SuiteRunConfig]:
     plan = [
         SuiteRunConfig(CORE_SUITE_NAME, "baseline_direct", "baseline"),
@@ -105,6 +110,18 @@ def build_rq_suite_plan(
             ]
         )
 
+    if include_adaptive_ablations:
+        plan.extend(
+            [
+                SuiteRunConfig(
+                    "adaptive_ablations",
+                    "full_adaptive_sal",
+                    "full",
+                    adaptive_sal_threshold=adaptive_sal_threshold,
+                )
+            ]
+        )
+
     return plan
 
 
@@ -120,6 +137,12 @@ def apply_run_config(base_args: Namespace, config: SuiteRunConfig) -> Namespace:
         args.repair_max_iters = config.repair_max_iters
     if config.spec_score_threshold is not None:
         args.spec_score_threshold = config.spec_score_threshold
+    if config.adaptive_sal_threshold is not None:
+        args.adaptive_sal_threshold = config.adaptive_sal_threshold
+    if config.attribution_mode is not None:
+        args.attribution_mode = config.attribution_mode
+    if config.attribution_spec_margin is not None:
+        args.attribution_spec_margin = config.attribution_spec_margin
     suite_mirror_dir = getattr(base_args, "cwd_output_dir", None)
     if suite_mirror_dir:
         args.cwd_output_dir = str(Path(suite_mirror_dir) / config.run_name)
@@ -132,11 +155,17 @@ def run_rq_suite(
     include_pipeline_ablations: bool = False,
     include_repair_ablations: bool = False,
     include_budget_ablations: bool = False,
+    include_adaptive_ablations: bool = False,
 ) -> list[dict[str, Any]]:
+    adaptive_sal_threshold = float(
+        getattr(base_args, "adaptive_ablation_threshold", 85.0) or 85.0
+    )
     plan = build_rq_suite_plan(
         include_pipeline_ablations=include_pipeline_ablations,
         include_repair_ablations=include_repair_ablations,
         include_budget_ablations=include_budget_ablations,
+        include_adaptive_ablations=include_adaptive_ablations,
+        adaptive_sal_threshold=adaptive_sal_threshold,
     )
     shared_llm = LLMAdapter(base_args)
     bootstrap_pipeline = DualLoopPipeline(base_args, llm=shared_llm)
@@ -325,6 +354,9 @@ def _build_raw_row(run_result: dict[str, Any]) -> dict[str, Any]:
         "spec_precision_floor": summary.get("spec_precision_floor"),
         "spec_max_rejected_refines": summary.get("spec_max_rejected_refines"),
         "spec_skip_ambiguity_only": summary.get("spec_skip_ambiguity_only"),
+        "adaptive_sal_threshold": summary.get("adaptive_sal_threshold"),
+        "attribution_mode": summary.get("attribution_mode"),
+        "attribution_spec_margin": summary.get("attribution_spec_margin"),
         "codegen_num_candidates": summary.get("codegen_num_candidates"),
         "output_dir": summary.get("output_dir"),
         "pass_at_1": _round_metric(float(summary.get("pass_at_1", 0.0))),
@@ -494,6 +526,9 @@ def _ordered_csv_columns(rows: list[dict[str, Any]]) -> list[str]:
         "spec_precision_floor",
         "spec_max_rejected_refines",
         "spec_skip_ambiguity_only",
+        "adaptive_sal_threshold",
+        "attribution_mode",
+        "attribution_spec_margin",
         "codegen_num_candidates",
         "output_dir",
         "pass_at_1",
@@ -621,5 +656,6 @@ def _method_label(run_name: str) -> str:
         "full_repair_iter_1": "Full repair_max_iters=1",
         "full_threshold_70": "Full threshold=70",
         "full_threshold_90": "Full threshold=90",
+        "full_adaptive_sal": "Full Adaptive SAL",
     }
     return labels.get(run_name, run_name)
