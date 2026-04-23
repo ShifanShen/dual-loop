@@ -13,6 +13,8 @@ _SPEC_FIELD_NAMES = (
     "rules",
     "edge_cases",
     "checkable_properties",
+    "must_not_assume",
+    "corner_triggers",
     "tie_break",
     "reference_strategy",
     "algorithmic_notes",
@@ -39,6 +41,9 @@ _SPEC_SCORE_FIELD_ALIASES = {
     ],
     "ambiguities": ["ambiguities", "ambiguity", "歧义", "模糊点"],
     "requires_refine": ["requires_refine", "requires refine"],
+    "issue_types": ["issue_types", "issue types"],
+    "supporting_evidence": ["supporting_evidence", "supporting evidence", "evidence"],
+    "judge_confidence": ["judge_confidence", "judge confidence", "confidence"],
     "blocking_issues": ["blocking_issues", "blocking issues"],
     "target_fields": ["target_fields", "target fields"],
     "edit_plan": ["edit_plan", "edit plan"],
@@ -64,12 +69,27 @@ def _normalize_text(text: str) -> str:
 def _ensure_list(value: Any) -> list[str]:
     if value is None:
         return []
+    items: list[str]
     if isinstance(value, list):
-        return [str(item).strip() for item in value if str(item).strip()]
-    if isinstance(value, str):
+        items = [str(item).strip() for item in value if str(item).strip()]
+    elif isinstance(value, str):
         stripped = value.strip()
-        return [stripped] if stripped else []
-    return [str(value).strip()]
+        items = [stripped] if stripped else []
+    else:
+        items = [str(value).strip()]
+
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        compact = " ".join(item.split())
+        if not compact:
+            continue
+        signature = compact.lower()
+        if signature in seen:
+            continue
+        seen.add(signature)
+        normalized.append(compact)
+    return normalized
 
 
 def _ensure_patch_payload(value: Any) -> dict[str, Any]:
@@ -228,6 +248,8 @@ class StructuredSpec:
     rules: list[str] = field(default_factory=list)
     edge_cases: list[str] = field(default_factory=list)
     checkable_properties: list[str] = field(default_factory=list)
+    must_not_assume: list[str] = field(default_factory=list)
+    corner_triggers: list[str] = field(default_factory=list)
     tie_break: list[str] = field(default_factory=list)
     reference_strategy: str = "validator_only"
     algorithmic_notes: list[str] = field(default_factory=list)
@@ -247,6 +269,8 @@ class StructuredSpec:
             rules=_ensure_list(payload.get("rules")),
             edge_cases=_ensure_list(payload.get("edge_cases")),
             checkable_properties=_ensure_list(payload.get("checkable_properties")),
+            must_not_assume=_ensure_list(payload.get("must_not_assume")),
+            corner_triggers=_ensure_list(payload.get("corner_triggers")),
             tie_break=_ensure_list(payload.get("tie_break")),
             reference_strategy=str(
                 payload.get("reference_strategy", "validator_only")
@@ -270,6 +294,8 @@ class StructuredSpec:
             ("Rules", self.rules),
             ("Edge Cases", self.edge_cases),
             ("Checkable Properties", self.checkable_properties),
+            ("Must Not Assume", self.must_not_assume),
+            ("Corner Triggers", self.corner_triggers),
             ("Tie Break", self.tie_break),
             ("Reference Strategy", [self.reference_strategy]),
             ("Algorithmic Notes", self.algorithmic_notes),
@@ -294,6 +320,8 @@ class SpecPatch:
     rules: list[str] | None = None
     edge_cases: list[str] | None = None
     checkable_properties: list[str] | None = None
+    must_not_assume: list[str] | None = None
+    corner_triggers: list[str] | None = None
     tie_break: list[str] | None = None
     reference_strategy: str | None = None
     algorithmic_notes: list[str] | None = None
@@ -326,6 +354,8 @@ class SpecPatch:
             rules=list_or_none("rules"),
             edge_cases=list_or_none("edge_cases"),
             checkable_properties=list_or_none("checkable_properties"),
+            must_not_assume=list_or_none("must_not_assume"),
+            corner_triggers=list_or_none("corner_triggers"),
             tie_break=list_or_none("tie_break"),
             reference_strategy=string_or_none("reference_strategy"),
             algorithmic_notes=list_or_none("algorithmic_notes"),
@@ -369,6 +399,9 @@ class SpecScore:
     missing_constraints: list[str] = field(default_factory=list)
     unsupported_constraints: list[str] = field(default_factory=list)
     ambiguities: list[str] = field(default_factory=list)
+    issue_types: list[str] = field(default_factory=list)
+    supporting_evidence: list[str] = field(default_factory=list)
+    judge_confidence: int = 0
     requires_refine: bool = False
     blocking_issues: list[str] = field(default_factory=list)
     target_fields: list[str] = field(default_factory=list)
@@ -399,12 +432,15 @@ class SpecScore:
                     text, "unsupported_constraints"
                 ),
                 "ambiguities": _extract_list_field(text, "ambiguities"),
+                "issue_types": _extract_list_field(text, "issue_types"),
+                "supporting_evidence": _extract_list_field(text, "supporting_evidence"),
+                "judge_confidence": _extract_int_field(text, "judge_confidence"),
                 "requires_refine": _extract_bool_field(text, "requires_refine"),
                 "blocking_issues": _extract_list_field(text, "blocking_issues"),
                 "target_fields": _extract_list_field(text, "target_fields"),
                 "edit_plan": _extract_list_field(text, "edit_plan"),
                 "do_not_change": _extract_list_field(text, "do_not_change"),
-                "proposed_patch": _ensure_patch_payload(payload.get("proposed_patch")),
+                "proposed_patch": {},
                 "action": _extract_string_field(text, "action"),
             }
         parse_ok = any(
@@ -416,6 +452,9 @@ class SpecScore:
                 bool(_ensure_list(payload.get("missing_constraints"))),
                 bool(_ensure_list(payload.get("unsupported_constraints"))),
                 bool(_ensure_list(payload.get("ambiguities"))),
+                bool(_ensure_list(payload.get("issue_types"))),
+                bool(_ensure_list(payload.get("supporting_evidence"))),
+                _to_int_score(payload.get("judge_confidence", 0)),
                 _to_bool(payload.get("requires_refine", False)),
                 bool(_ensure_list(payload.get("blocking_issues"))),
                 bool(_ensure_list(payload.get("target_fields"))),
@@ -434,6 +473,9 @@ class SpecScore:
                 payload.get("unsupported_constraints")
             ),
             ambiguities=_ensure_list(payload.get("ambiguities")),
+            issue_types=_ensure_list(payload.get("issue_types")),
+            supporting_evidence=_ensure_list(payload.get("supporting_evidence")),
+            judge_confidence=_to_int_score(payload.get("judge_confidence", 0)),
             requires_refine=_to_bool(payload.get("requires_refine", False)),
             blocking_issues=_ensure_list(payload.get("blocking_issues")),
             target_fields=_ensure_list(payload.get("target_fields")),

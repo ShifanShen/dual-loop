@@ -443,6 +443,14 @@ class DualLoopPipeline:
             return False, "score_unavailable"
         if score.overall >= self.args.spec_score_threshold:
             return False, "threshold_met"
+        if not (
+            score.missing_constraints
+            or score.unsupported_constraints
+            or score.blocking_issues
+            or score.issue_types
+            or score.proposed_patch
+        ):
+            return False, "no_material_issue"
         if not score.requires_refine:
             return False, "judge_no_refine"
         if (
@@ -453,6 +461,10 @@ class DualLoopPipeline:
             and score.precision >= getattr(self.args, "spec_precision_floor", 85)
         ):
             return False, "ambiguity_only"
+        if score.judge_confidence and score.judge_confidence < 40 and not (
+            score.missing_constraints or score.unsupported_constraints or score.blocking_issues
+        ):
+            return False, "low_judge_confidence"
         if not score.target_fields or not score.edit_plan:
             return False, "no_edit_plan"
         return True, "eligible"
@@ -472,18 +484,39 @@ class DualLoopPipeline:
         if self._spec_core_payload(previous_spec) == self._spec_core_payload(candidate_spec):
             return False, "rejected_unchanged_candidate"
 
+        changed_fields = {
+            field_name
+            for field_name in self._spec_core_payload(previous_spec)
+            if self._spec_core_payload(previous_spec).get(field_name)
+            != self._spec_core_payload(candidate_spec).get(field_name)
+        }
+        if not changed_fields & set(self._material_spec_fields()):
+            return False, "rejected_non_material_change"
+
         previous_unsupported = len(previous_score.unsupported_constraints)
         candidate_unsupported = len(candidate_score.unsupported_constraints)
+        previous_missing = len(previous_score.missing_constraints)
+        candidate_missing = len(candidate_score.missing_constraints)
+        previous_blocking = len(previous_score.blocking_issues)
+        candidate_blocking = len(candidate_score.blocking_issues)
         if candidate_unsupported > previous_unsupported:
             return False, "rejected_unsupported_increase"
         if candidate_score.faithfulness < previous_score.faithfulness:
             return False, "rejected_faithfulness_drop"
         if candidate_score.overall < previous_score.overall:
             return False, "rejected_overall_drop"
+        if (
+            previous_score.judge_confidence
+            and candidate_score.judge_confidence
+            and candidate_score.judge_confidence + 10 < previous_score.judge_confidence
+        ):
+            return False, "rejected_confidence_drop"
 
         min_gain = int(getattr(self.args, "spec_min_improvement", 1))
         if candidate_score.overall >= previous_score.overall + min_gain:
             return True, "accepted_improved_overall"
+        if candidate_unsupported < previous_unsupported:
+            return True, "accepted_reduced_unsupported_constraints"
         if (
             candidate_score.precision > previous_score.precision
             and candidate_score.coverage >= previous_score.coverage
@@ -491,11 +524,23 @@ class DualLoopPipeline:
         ):
             return True, "accepted_precision_gain"
         if (
-            len(candidate_score.missing_constraints) < len(previous_score.missing_constraints)
+            candidate_missing < previous_missing
             and candidate_score.coverage >= previous_score.coverage
             and candidate_score.faithfulness >= previous_score.faithfulness
         ):
             return True, "accepted_reduced_missing_constraints"
+        if (
+            candidate_blocking < previous_blocking
+            and candidate_score.precision >= previous_score.precision
+            and candidate_score.faithfulness >= previous_score.faithfulness
+        ):
+            return True, "accepted_reduced_blocking_issues"
+        if (
+            self._semantic_item_count(candidate_spec) > self._semantic_item_count(previous_spec)
+            and candidate_score.precision > previous_score.precision
+            and candidate_score.faithfulness >= previous_score.faithfulness
+        ):
+            return True, "accepted_added_semantic_signal"
         return False, "rejected_no_gain"
 
     @staticmethod
@@ -520,6 +565,20 @@ class DualLoopPipeline:
         allowed_fields = set(score.target_fields)
         if not changed_fields.issubset(allowed_fields):
             return False, "rejected_out_of_scope_patch"
+
+        material_fields = {
+            "inputs",
+            "outputs",
+            "constraints",
+            "rules",
+            "edge_cases",
+            "checkable_properties",
+            "must_not_assume",
+            "corner_triggers",
+            "tie_break",
+        }
+        if not changed_fields & material_fields:
+            return False, "rejected_non_material_patch"
 
         return True, "patch_in_scope"
 
@@ -608,6 +667,7 @@ class DualLoopPipeline:
             patch_allowed = False
             accepted = False
             accept_reason = "rejected_parse_fail"
+            patch_reason = "rejected_parse_fail"
             if candidate_patch.parse_ok:
                 patch_allowed, patch_reason = self._validate_spec_patch_scope(
                     candidate_patch,
@@ -617,8 +677,45 @@ class DualLoopPipeline:
                 if patch_allowed:
                     candidate_spec = candidate_patch.apply(current)
                 else:
-                    accepted = False
-                    accept_reason = patch_reason
+                    if patch_source == "judge_proposed_patch":
+                        started_at = time.perf_counter()
+                        refine_output, patch_usage = self.llm.generate(
+                            build_spec_refine_prompt(problem, current, score),
+                            role="spec_refine",
+                            temperature=self.args.spec_temperature,
+                            max_tokens=self.args.spec_max_tokens,
+                        )
+                        fallback_patch, fallback_outputs, fallback_usages = (
+                            self._parse_spec_patch_output(refine_output)
+                        )
+                        refine_meta["raw_spec_outputs"].extend(fallback_outputs)
+                        if patch_usage is not None:
+                            refine_meta["spec_usages"].append(patch_usage)
+                        refine_meta["spec_usages"].extend(fallback_usages)
+                        refine_meta["stage_times"]["spec_refine"] = (
+                            refine_meta["stage_times"].get("spec_refine", 0.0)
+                            + (time.perf_counter() - started_at)
+                        )
+                        if fallback_patch.parse_ok:
+                            fallback_allowed, fallback_reason = self._validate_spec_patch_scope(
+                                fallback_patch,
+                                current,
+                                score,
+                            )
+                            if fallback_allowed:
+                                candidate_patch = fallback_patch
+                                patch_allowed = True
+                                patch_source = "refine_prompt_patch"
+                                candidate_spec = candidate_patch.apply(current)
+                            else:
+                                accepted = False
+                                accept_reason = fallback_reason
+                        else:
+                            accepted = False
+                            accept_reason = patch_reason
+                    else:
+                        accepted = False
+                        accept_reason = patch_reason
             else:
                 accepted = False
                 accept_reason = "rejected_parse_fail"
@@ -1172,6 +1269,26 @@ class DualLoopPipeline:
         payload.pop("parse_source", None)
         return payload
 
+    @staticmethod
+    def _material_spec_fields() -> tuple[str, ...]:
+        return (
+            "inputs",
+            "outputs",
+            "constraints",
+            "rules",
+            "edge_cases",
+            "checkable_properties",
+            "must_not_assume",
+            "corner_triggers",
+            "tie_break",
+        )
+
+    def _semantic_item_count(self, spec: StructuredSpec) -> int:
+        return sum(
+            len(getattr(spec, field_name, []) or [])
+            for field_name in self._material_spec_fields()
+        )
+
     def _build_spec_draft_effectiveness(self, spec: StructuredSpec) -> dict[str, Any]:
         payload = self._spec_core_payload(spec)
         nonempty_fields = sum(bool(value) for value in payload.values())
@@ -1179,6 +1296,7 @@ class DualLoopPipeline:
             "stage": "spec_draft",
             "parse_ok": spec.parse_ok,
             "nonempty_field_count": nonempty_fields,
+            "semantic_item_count": self._semantic_item_count(spec),
             "effect": "produced_parseable_spec" if spec.parse_ok else "no_effect",
         }
 
@@ -1200,6 +1318,13 @@ class DualLoopPipeline:
         return {
             "parse_ok": score.parse_ok,
             "overall": score.overall,
+            "judge_confidence": score.judge_confidence,
+            "issue_count": (
+                len(score.missing_constraints)
+                + len(score.unsupported_constraints)
+                + len(score.ambiguities)
+                + len(score.blocking_issues)
+            ),
             "delta_overall": delta_overall,
             "effect": effect,
         }
@@ -1223,6 +1348,10 @@ class DualLoopPipeline:
             "attempt_index": attempt_index,
             "score_before": score_before.overall,
             "score_after": candidate_score.overall if candidate_score is not None else None,
+            "judge_confidence_before": score_before.judge_confidence,
+            "judge_confidence_after": candidate_score.judge_confidence if candidate_score is not None else None,
+            "semantic_item_count_before": self._semantic_item_count(previous_spec),
+            "semantic_item_count_after": self._semantic_item_count(candidate_spec),
             "parse_ok": candidate_spec.parse_ok,
             "artifact_changed": artifact_changed,
             "accepted": accepted,
@@ -1805,14 +1934,14 @@ class DualLoopPipeline:
         return dict(counter)
 
     def _extract_spec_issue_types(self, score: SpecScore) -> list[str]:
-        issue_types: list[str] = []
+        issue_types: list[str] = list(score.issue_types)
         if score.missing_constraints:
             issue_types.append("missing_constraint")
         if score.unsupported_constraints:
-            issue_types.append("hallucinated_constraint")
+            issue_types.append("unsupported_assumption")
         if score.ambiguities:
             issue_types.append("ambiguity")
-        return issue_types
+        return sorted(set(issue_types))
 
     def _make_output_dir(self) -> str:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")

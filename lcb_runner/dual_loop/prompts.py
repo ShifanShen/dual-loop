@@ -14,6 +14,8 @@ SPEC_JSON_SCHEMA = """{
   "rules": ["core semantic rule", "special return rule"],
   "edge_cases": ["edge case 1", "edge case 2"],
   "checkable_properties": ["property that can be checked automatically"],
+  "must_not_assume": ["tempting but unsupported assumption to avoid"],
+  "corner_triggers": ["minimal condition that triggers a common semantic mistake"],
   "tie_break": ["rule for multiple valid outputs if applicable"],
   "reference_strategy": "validator_only or reference_solver",
   "algorithmic_notes": ["optional implementation hint grounded in the prompt"],
@@ -24,7 +26,9 @@ SPEC_JSON_SCHEMA = """{
 SPEC_PATCH_JSON_SCHEMA = """{
   "constraints": ["updated constraint if needed"],
   "rules": ["updated rule if needed"],
-  "edge_cases": ["updated edge case if needed"]
+  "edge_cases": ["updated edge case if needed"],
+  "must_not_assume": ["updated unsupported assumption guard if needed"],
+  "corner_triggers": ["updated trigger condition if needed"]
 }"""
 
 SPEC_PATCH_ALLOWED_FIELDS = (
@@ -35,6 +39,8 @@ SPEC_PATCH_ALLOWED_FIELDS = (
     "rules",
     "edge_cases",
     "checkable_properties",
+    "must_not_assume",
+    "corner_triggers",
     "tie_break",
     "reference_strategy",
     "algorithmic_notes",
@@ -52,9 +58,13 @@ Use this schema exactly:
 Guidelines:
 - Keep only requirements supported by the problem statement.
 - Put executable requirements under constraints, rules, edge_cases, and checkable_properties.
+- Use must_not_assume for tempting but unsupported assumptions that a solver might incorrectly introduce.
+- Use corner_triggers for concise trigger conditions that are likely to expose semantic mistakes.
 - If multiple valid outputs are allowed and no unique canonical answer is required, set reference_strategy to "validator_only".
 - If correctness depends on a unique optimal output that is hard to validate without solving the task, set reference_strategy to "reference_solver".
 - Do not invent complexity constraints unless the prompt explicitly states them.
+- Prefer concrete, checkable items over broad paraphrases.
+- Leave fields as [] when the problem statement does not justify them.
 
 Problem:
 {problem.question_content}
@@ -118,10 +128,13 @@ Return JSON only with the following schema:
   "missing_constraints": ["..."],
   "unsupported_constraints": ["..."],
   "ambiguities": ["..."],
+  "issue_types": ["missing_constraint"],
+  "supporting_evidence": ["quote or short evidence grounded in the problem statement"],
+  "judge_confidence": 0,
   "requires_refine": false,
   "blocking_issues": ["..."],
-  "target_fields": ["constraints", "rules"],
-  "edit_plan": ["Add one executable rule ...", "Clarify one missing constraint ..."],
+  "target_fields": ["constraints", "rules", "must_not_assume"],
+  "edit_plan": ["Add one executable rule ...", "Add one unsupported-assumption guard ..."],
   "do_not_change": ["task", "inputs", "outputs"],
   "proposed_patch": {{"rules": ["updated executable rule"], "constraints": ["updated constraint"]}},
   "action": "one short revision instruction"
@@ -138,12 +151,16 @@ Scoring rules:
 - faithfulness: whether the spec avoids unsupported assumptions
 - precision: whether the spec is clear enough to drive code generation
 - overall: rounded weighted score using 0.4 coverage, 0.4 faithfulness, 0.2 precision
+- issue_types: choose only from concrete semantic issues such as missing_constraint, unsupported_assumption, missing_edge_case, weak_output_protocol, weak_checkable_property, ambiguous_decision_rule
+- supporting_evidence: cite short evidence grounded in the problem statement; do not invent rationale that is not visible in the prompt
+- judge_confidence: confidence that the identified issues are truly grounded in the problem statement
 - requires_refine: true only if a revision is likely to improve downstream code generation
 - blocking_issues: concrete issues that materially block code generation
 - target_fields: list the fields that should be edited; keep the list minimal
 - edit_plan: provide concrete field-level edits; avoid generic advice like "clarify the spec"
 - do_not_change: fields that are already adequate and should be preserved verbatim
 - proposed_patch: provide a concrete candidate update for the target fields; address the blocking issues and omit unchanged fields
+- proposed_patch should add or remove semantic content, not merely paraphrase an existing line
 
 Decision rules:
 - If the spec only has minor wording ambiguity and no missing or unsupported constraints, set requires_refine to false.
@@ -152,6 +169,10 @@ Decision rules:
 - Keep the patch focused and avoid broad rewrites.
 - If multiple issues exist, leave lower-priority issues for later iterations.
 - Prefer local edits over full rewrites.
+- Prefer must_not_assume when the spec risks over-constraining the task.
+- Prefer corner_triggers when the spec misses concrete failure-trigger conditions.
+- If the only possible change is wording cleanup with no semantic delta, set requires_refine to false.
+- Keep target_fields to at most 3 fields.
 
 Problem:
 {problem.question_content}
@@ -189,10 +210,12 @@ Requirements:
 - Preserve supported constraints.
 - Add missing constraints.
 - Remove unsupported assumptions.
+- Prefer adding concrete items under constraints, rules, edge_cases, checkable_properties, must_not_assume, and corner_triggers.
 - Keep the spec concise and executable.
 - Do not rewrite the whole spec.
 - Do not introduce edits outside target_fields or broad wording-only rewrites.
 - Apply the edit_plan concretely and avoid generic wording-only changes.
+- If the safest possible change is only wording cleanup with no semantic gain, return {{}}.
 """
 
 
@@ -221,10 +244,13 @@ def build_spec_score_json_repair_prompt(raw_output: str) -> str:
   "missing_constraints": ["..."],
   "unsupported_constraints": ["..."],
   "ambiguities": ["..."],
+  "issue_types": ["missing_constraint"],
+  "supporting_evidence": ["quote or short evidence grounded in the problem statement"],
+  "judge_confidence": 0,
   "requires_refine": false,
   "blocking_issues": ["..."],
-  "target_fields": ["constraints", "rules"],
-  "edit_plan": ["Add one executable rule ...", "Clarify one missing constraint ..."],
+  "target_fields": ["constraints", "rules", "must_not_assume"],
+  "edit_plan": ["Add one executable rule ...", "Add one unsupported-assumption guard ..."],
   "do_not_change": ["task", "inputs", "outputs"],
   "proposed_patch": {{"rules": ["updated executable rule"], "constraints": ["updated constraint"]}},
   "action": "one short revision instruction"
@@ -292,6 +318,7 @@ Structured spec:
 {starter}
 Requirements:
 - Follow the stated input/output protocol.
+- Respect must_not_assume and corner_triggers when they are present in the structured spec.
 - Do not print extra text.
 - Prefer a direct, contest-style solution.
 """
