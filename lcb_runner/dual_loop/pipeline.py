@@ -38,6 +38,39 @@ if TYPE_CHECKING:
     from lcb_runner.benchmarks.code_generation import CodeGenerationProblem
 
 
+_SCHEMA_META_LITERALS = (
+    "edge_cases",
+    "corner_triggers",
+    "must_not_assume",
+    "checkable_properties",
+    "tie_break",
+    "reference_strategy",
+    "algorithmic_notes",
+    "non_checkable_notes",
+    "parse_ok",
+    "parse_source",
+)
+
+_SCHEMA_META_DISPLAY_TERMS = (
+    "corner triggers",
+    "must not assume",
+    "checkable properties",
+    "tie break",
+    "reference strategy",
+    "algorithmic notes",
+    "non-checkable notes",
+)
+
+_HARD_SPEC_ISSUE_TYPES = {
+    "missing_constraint",
+    "missing_edge_case",
+    "unsupported_assumption",
+    "weak_output_protocol",
+}
+
+_AMBIGUITY_SPEC_ISSUE_TYPES = {"ambiguity", "ambiguous_decision_rule"}
+
+
 @dataclass
 class ProblemTrace:
     question_id: str
@@ -425,11 +458,127 @@ class DualLoopPipeline:
             if repaired_score.parse_ok:
                 output = repair_output
                 score = repaired_score
+        score = self._sanitize_spec_score(score)
         score._raw_output = output
         score._raw_attempt_outputs = raw_attempt_outputs
         score._usage = usage
         score._extra_usages = extra_usages
         score._stage_time = time.perf_counter() - started_at
+        return score
+
+    @staticmethod
+    def _normalize_issue_type(issue_type: str) -> str:
+        return str(issue_type or "").strip().lower().replace(" ", "_").replace("-", "_")
+
+    @staticmethod
+    def _is_schema_meta_issue(text: str) -> bool:
+        lowered = str(text or "").lower()
+        if not lowered:
+            return False
+        if any(term in lowered for term in _SCHEMA_META_LITERALS):
+            return True
+        if any(term in lowered for term in _SCHEMA_META_DISPLAY_TERMS):
+            return True
+        if "edge case" in lowered or "edge cases" in lowered:
+            return (
+                "schema" in lowered
+                or "json" in lowered
+                or "field" in lowered
+                or "does not provide a clear definition" in lowered
+                or "not clearly defined" in lowered
+            )
+        return False
+
+    @classmethod
+    def _filter_schema_meta_items(cls, items: list[str]) -> list[str]:
+        return [item for item in items if not cls._is_schema_meta_issue(item)]
+
+    @classmethod
+    def _score_issue_types(cls, score: SpecScore) -> set[str]:
+        return {cls._normalize_issue_type(issue) for issue in score.issue_types}
+
+    @classmethod
+    def _has_hard_refine_signal(cls, score: SpecScore) -> bool:
+        issue_types = cls._score_issue_types(score)
+        if score.missing_constraints or score.unsupported_constraints:
+            return True
+        if issue_types & _HARD_SPEC_ISSUE_TYPES:
+            return True
+        for issue in score.blocking_issues:
+            lowered = str(issue).lower()
+            if any(
+                marker in lowered
+                for marker in (
+                    "missing",
+                    "unsupported",
+                    "must output",
+                    "output format",
+                    "return -1",
+                    "no solution",
+                    "edge",
+                    "corner",
+                )
+            ):
+                return True
+        return False
+
+    @classmethod
+    def _has_grounded_ambiguity_signal(cls, score: SpecScore) -> bool:
+        issue_types = cls._score_issue_types(score)
+        if not (score.ambiguities or issue_types & _AMBIGUITY_SPEC_ISSUE_TYPES):
+            return False
+        grounded_items = (
+            score.ambiguities
+            + score.blocking_issues
+            + score.supporting_evidence
+            + score.edit_plan
+        )
+        return any(
+            str(item).strip() and not cls._is_schema_meta_issue(str(item))
+            for item in grounded_items
+        )
+
+    @classmethod
+    def _semantic_issue_pressure(cls, score: SpecScore) -> int:
+        issue_types = cls._score_issue_types(score)
+        hard_type_count = len(issue_types & _HARD_SPEC_ISSUE_TYPES)
+        grounded_ambiguity = 1 if cls._has_grounded_ambiguity_signal(score) else 0
+        return (
+            len(score.missing_constraints)
+            + len(score.unsupported_constraints)
+            + len(score.blocking_issues)
+            + hard_type_count
+            + grounded_ambiguity
+        )
+
+    @classmethod
+    def _sanitize_spec_score(cls, score: SpecScore) -> SpecScore:
+        """Remove judge noise about the JSON schema before SAL decisions."""
+        if not score.parse_ok:
+            return score
+
+        score.missing_constraints = cls._filter_schema_meta_items(score.missing_constraints)
+        score.unsupported_constraints = cls._filter_schema_meta_items(score.unsupported_constraints)
+        score.ambiguities = cls._filter_schema_meta_items(score.ambiguities)
+        score.blocking_issues = cls._filter_schema_meta_items(score.blocking_issues)
+        score.supporting_evidence = cls._filter_schema_meta_items(score.supporting_evidence)
+
+        issue_types = []
+        for issue_type in score.issue_types:
+            normalized = cls._normalize_issue_type(issue_type)
+            if normalized in _AMBIGUITY_SPEC_ISSUE_TYPES and not score.ambiguities:
+                continue
+            issue_types.append(issue_type)
+        score.issue_types = issue_types
+
+        if not cls._has_hard_refine_signal(score) and not cls._has_grounded_ambiguity_signal(score):
+            score.requires_refine = False
+            score.target_fields = []
+            score.edit_plan = []
+            score.proposed_patch = {}
+            if not (score.missing_constraints or score.unsupported_constraints or score.ambiguities):
+                score.blocking_issues = []
+                score.action = ""
         return score
 
     def _should_run_semantic_loop(self, score: SpecScore) -> tuple[bool, str]:
@@ -446,6 +595,7 @@ class DualLoopPipeline:
         if not (
             score.missing_constraints
             or score.unsupported_constraints
+            or score.ambiguities
             or score.blocking_issues
             or score.issue_types
             or score.proposed_patch
@@ -453,6 +603,8 @@ class DualLoopPipeline:
             return False, "no_material_issue"
         if not score.requires_refine:
             return False, "judge_no_refine"
+        hard_signal = self._has_hard_refine_signal(score)
+        grounded_ambiguity = self._has_grounded_ambiguity_signal(score)
         if (
             getattr(self.args, "spec_skip_ambiguity_only", True)
             and not score.missing_constraints
@@ -461,10 +613,14 @@ class DualLoopPipeline:
             and score.precision >= getattr(self.args, "spec_precision_floor", 85)
         ):
             return False, "ambiguity_only"
+        if not hard_signal and not grounded_ambiguity:
+            return False, "no_grounded_semantic_issue"
         if score.judge_confidence and score.judge_confidence < 40 and not (
             score.missing_constraints or score.unsupported_constraints or score.blocking_issues
         ):
             return False, "low_judge_confidence"
+        if score.judge_confidence and score.judge_confidence < 60 and not hard_signal:
+            return False, "low_confidence_soft_issue"
         if not score.target_fields or not score.edit_plan:
             return False, "no_edit_plan"
         return True, "eligible"
@@ -499,8 +655,12 @@ class DualLoopPipeline:
         candidate_missing = len(candidate_score.missing_constraints)
         previous_blocking = len(previous_score.blocking_issues)
         candidate_blocking = len(candidate_score.blocking_issues)
+        previous_pressure = self._semantic_issue_pressure(previous_score)
+        candidate_pressure = self._semantic_issue_pressure(candidate_score)
         if candidate_unsupported > previous_unsupported:
             return False, "rejected_unsupported_increase"
+        if candidate_missing > previous_missing and candidate_score.coverage <= previous_score.coverage:
+            return False, "rejected_missing_issue_increase"
         if candidate_score.faithfulness < previous_score.faithfulness:
             return False, "rejected_faithfulness_drop"
         if candidate_score.overall < previous_score.overall:
@@ -513,14 +673,24 @@ class DualLoopPipeline:
             return False, "rejected_confidence_drop"
 
         min_gain = int(getattr(self.args, "spec_min_improvement", 1))
-        if candidate_score.overall >= previous_score.overall + min_gain:
+        if (
+            candidate_score.overall >= previous_score.overall + min_gain
+            and (
+                previous_pressure > 0
+                or self._has_hard_refine_signal(previous_score)
+                or self._has_grounded_ambiguity_signal(previous_score)
+            )
+        ):
             return True, "accepted_improved_overall"
         if candidate_unsupported < previous_unsupported:
             return True, "accepted_reduced_unsupported_constraints"
+        if candidate_pressure < previous_pressure and candidate_score.faithfulness >= previous_score.faithfulness:
+            return True, "accepted_reduced_semantic_issues"
         if (
             candidate_score.precision > previous_score.precision
             and candidate_score.coverage >= previous_score.coverage
             and candidate_score.faithfulness >= previous_score.faithfulness
+            and previous_pressure > 0
         ):
             return True, "accepted_precision_gain"
         if (
@@ -539,6 +709,7 @@ class DualLoopPipeline:
             self._semantic_item_count(candidate_spec) > self._semantic_item_count(previous_spec)
             and candidate_score.precision > previous_score.precision
             and candidate_score.faithfulness >= previous_score.faithfulness
+            and previous_pressure > 0
         ):
             return True, "accepted_added_semantic_signal"
         return False, "rejected_no_gain"
@@ -579,6 +750,10 @@ class DualLoopPipeline:
         }
         if not changed_fields & material_fields:
             return False, "rejected_non_material_patch"
+        if "must_not_assume" in changed_fields:
+            issue_types = DualLoopPipeline._score_issue_types(score)
+            if not score.unsupported_constraints and "unsupported_assumption" not in issue_types:
+                return False, "rejected_unjustified_must_not_assume_patch"
 
         return True, "patch_in_scope"
 
@@ -677,7 +852,14 @@ class DualLoopPipeline:
                 if patch_allowed:
                     candidate_spec = candidate_patch.apply(current)
                 else:
-                    if patch_source == "judge_proposed_patch":
+                    if (
+                        patch_source == "judge_proposed_patch"
+                        and patch_reason
+                        not in {
+                            "rejected_do_not_change_patch",
+                            "rejected_unjustified_must_not_assume_patch",
+                        }
+                    ):
                         started_at = time.perf_counter()
                         refine_output, patch_usage = self.llm.generate(
                             build_spec_refine_prompt(problem, current, score),

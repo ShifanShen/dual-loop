@@ -274,6 +274,31 @@ class SpecParsingTests(unittest.TestCase):
 
         self.assertEqual(feedbacks, [])
 
+    def test_yes_no_property_allows_one_answer_per_test_case(self):
+        spec = StructuredSpec(outputs=["Output YES or NO for each test case."])
+        clauses = compile_property_clauses(spec)
+
+        feedbacks = evaluate_property_clauses(
+            clauses,
+            actual_output="YES\nNO\nYES\n",
+            expected_output="YES\nNO\nYES\n",
+        )
+
+        self.assertEqual(feedbacks, [])
+
+    def test_yes_no_property_reports_count_mismatch(self):
+        spec = StructuredSpec(outputs=["Output YES or NO for each test case."])
+        clauses = compile_property_clauses(spec)
+
+        feedbacks = evaluate_property_clauses(
+            clauses,
+            actual_output="YES\nNO\n",
+            expected_output="YES\nNO\nYES\n",
+        )
+
+        self.assertEqual(len(feedbacks), 1)
+        self.assertIn("number of YES/NO outputs", feedbacks[0].message)
+
     def test_reliability_guard_restores_process_state(self):
         import os
         import shutil
@@ -719,6 +744,7 @@ class DualLoopPipelineTests(unittest.TestCase):
                         faithfulness=20,
                         precision=20,
                         overall=20,
+                        missing_constraints=["missing executable rule"],
                         parse_ok=True,
                         requires_refine=True,
                         target_fields=["rules"],
@@ -764,6 +790,77 @@ class DualLoopPipelineTests(unittest.TestCase):
             mock_generate.assert_not_called()
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_refine_spec_skips_schema_meta_ambiguity(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            mock_adapter_cls.return_value.model.model_repr = "fake-model"
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+            spec = StructuredSpec(task="solve", edge_cases=["empty input"])
+
+            score = SpecScore(
+                coverage=80,
+                faithfulness=90,
+                precision=75,
+                overall=79,
+                parse_ok=True,
+                ambiguities=["The term 'edge_cases' is not clearly defined."],
+                issue_types=["ambiguous_decision_rule"],
+                supporting_evidence=["The JSON field edge_cases is ambiguous."],
+                requires_refine=True,
+                blocking_issues=["The field edge_cases is ambiguous."],
+                target_fields=["edge_cases"],
+                edit_plan=["Clarify edge_cases"],
+                proposed_patch={"edge_cases": ["empty input", "single element"]},
+            )
+
+            with patch.object(
+                pipeline,
+                "_score_spec",
+                return_value=pipeline._sanitize_spec_score(score),
+            ), patch.object(pipeline.llm, "generate") as mock_generate:
+                refined, score_trace, refine_meta = pipeline._refine_spec(problem, spec)
+
+            self.assertEqual(refined.edge_cases, ["empty input"])
+            self.assertFalse(score_trace[0]["requires_refine"])
+            self.assertEqual(refine_meta["effectiveness_steps"][0]["reason"], "no_material_issue")
+            mock_generate.assert_not_called()
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_refine_spec_rejects_unjustified_must_not_assume_patch(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            mock_adapter_cls.return_value.model.model_repr = "fake-model"
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+            spec = StructuredSpec(task="solve", constraints=["values are distinct"])
+
+            with patch.object(
+                pipeline,
+                "_score_spec",
+                return_value=SpecScore(
+                    coverage=70,
+                    faithfulness=80,
+                    precision=70,
+                    overall=75,
+                    parse_ok=True,
+                    issue_types=["missing_constraint"],
+                    requires_refine=True,
+                    blocking_issues=["Missing executable condition"],
+                    target_fields=["must_not_assume"],
+                    edit_plan=["Add guard"],
+                    proposed_patch={"must_not_assume": ["values are distinct"]},
+                ),
+            ):
+                refined, score_trace, refine_meta = pipeline._refine_spec(problem, spec)
+
+            self.assertEqual(refined.must_not_assume, [])
+            self.assertEqual(
+                refine_meta["effectiveness_steps"][0]["reason"],
+                "rejected_unjustified_must_not_assume_patch",
+            )
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
     def test_refine_spec_rejects_candidate_without_gain(self, mock_adapter_cls):
         with tempfile.TemporaryDirectory() as tmpdir:
             args = self.make_args(tmpdir)
@@ -791,6 +888,7 @@ class DualLoopPipelineTests(unittest.TestCase):
                         faithfulness=80,
                         precision=70,
                         overall=75,
+                        missing_constraints=["missing executable rule"],
                         parse_ok=True,
                         requires_refine=True,
                         target_fields=["rules"],
@@ -801,6 +899,7 @@ class DualLoopPipelineTests(unittest.TestCase):
                         faithfulness=80,
                         precision=70,
                         overall=75,
+                        missing_constraints=["missing executable rule"],
                         parse_ok=True,
                     ),
                 ],
@@ -840,6 +939,7 @@ class DualLoopPipelineTests(unittest.TestCase):
                         faithfulness=80,
                         precision=70,
                         overall=75,
+                        missing_constraints=["missing executable rule"],
                         parse_ok=True,
                         requires_refine=True,
                         target_fields=["rules"],
@@ -886,6 +986,7 @@ class DualLoopPipelineTests(unittest.TestCase):
                         faithfulness=80,
                         precision=70,
                         overall=75,
+                        missing_constraints=["missing executable rule"],
                         parse_ok=True,
                         requires_refine=True,
                         target_fields=["rules"],

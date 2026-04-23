@@ -254,19 +254,41 @@ def _evaluate_clause(
 
     if property_type == "yes_no_output":
         tokens = _tokenize_scalars(actual_output)
-        if len(tokens) != 1:
+        expected_tokens = _tokenize_scalars(expected_output)
+        if not tokens:
             return PropertyFeedback(
                 property_type=property_type,
                 source_field=clause.source_field,
-                message="output is not a single YES/NO token",
+                message="output is empty but should contain YES/NO token(s)",
                 evidence={"actual_output": actual_output.strip()},
             )
-        if str(tokens[0]).upper() in {"YES", "NO"}:
+        invalid_tokens = [token for token in tokens if str(token).upper() not in {"YES", "NO"}]
+        if invalid_tokens:
+            return PropertyFeedback(
+                property_type=property_type,
+                source_field=clause.source_field,
+                message="output contains token(s) other than YES or NO",
+                evidence={"invalid_tokens": invalid_tokens[:20]},
+            )
+        expected_yes_no_tokens = [
+            token for token in expected_tokens if str(token).upper() in {"YES", "NO"}
+        ]
+        if expected_yes_no_tokens and len(tokens) != len(expected_yes_no_tokens):
+            return PropertyFeedback(
+                property_type=property_type,
+                source_field=clause.source_field,
+                message="number of YES/NO outputs differs from the expected answer",
+                evidence={
+                    "actual_count": len(tokens),
+                    "expected_count": len(expected_yes_no_tokens),
+                },
+            )
+        if not expected_yes_no_tokens or len(tokens) == len(expected_yes_no_tokens):
             return None
         return PropertyFeedback(
             property_type=property_type,
             source_field=clause.source_field,
-            message="output token is not YES or NO",
+            message="output does not satisfy the YES/NO protocol",
             evidence={"actual_output": actual_output.strip()},
         )
 

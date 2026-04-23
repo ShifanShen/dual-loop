@@ -59,6 +59,7 @@ Guidelines:
 - Keep only requirements supported by the problem statement.
 - Put executable requirements under constraints, rules, edge_cases, and checkable_properties.
 - Use must_not_assume for tempting but unsupported assumptions that a solver might incorrectly introduce.
+- Do not put guaranteed input facts in must_not_assume. For example, if the prompt says values are distinct, record that under constraints, not must_not_assume.
 - Use corner_triggers for concise trigger conditions that are likely to expose semantic mistakes.
 - If multiple valid outputs are allowed and no unique canonical answer is required, set reference_strategy to "validator_only".
 - If correctness depends on a unique optimal output that is hard to validate without solving the task, set reference_strategy to "reference_solver".
@@ -163,6 +164,10 @@ Scoring rules:
 - proposed_patch should add or remove semantic content, not merely paraphrase an existing line
 
 Decision rules:
+- Judge the problem requirements, not the JSON schema. Never flag field names such as edge_cases, corner_triggers, must_not_assume, checkable_properties, tie_break, reference_strategy, algorithmic_notes, or non_checkable_notes as ambiguous problem terms.
+- Do not call a spec ambiguous merely because a schema field name is abstract. Ambiguity must refer to a term, rule, or condition from the original problem statement.
+- If an issue is not grounded in the problem statement, do not include it in missing_constraints, unsupported_constraints, ambiguities, blocking_issues, or issue_types.
+- Set requires_refine to true only for hard semantic problems: a missing executable requirement, an unsupported assumption, a missing edge/corner condition, or an output protocol likely to produce wrong code.
 - If the spec only has minor wording ambiguity and no missing or unsupported constraints, set requires_refine to false.
 - If no revision is needed, return target_fields as [], edit_plan as [], and proposed_patch as {{}}.
 - If requires_refine is true, focus on the highest-priority blocking issues first.
@@ -170,6 +175,7 @@ Decision rules:
 - If multiple issues exist, leave lower-priority issues for later iterations.
 - Prefer local edits over full rewrites.
 - Prefer must_not_assume when the spec risks over-constraining the task.
+- Do not use must_not_assume to restate input guarantees that the prompt explicitly gives.
 - Prefer corner_triggers when the spec misses concrete failure-trigger conditions.
 - If the only possible change is wording cleanup with no semantic delta, set requires_refine to false.
 - Keep target_fields to at most 3 fields.
@@ -210,6 +216,8 @@ Requirements:
 - Preserve supported constraints.
 - Add missing constraints.
 - Remove unsupported assumptions.
+- Do not add problem guarantees to must_not_assume. must_not_assume is only for assumptions that are tempting but not supported by the original problem.
+- Do not edit a field just to rename, define, or clarify JSON schema labels such as edge_cases or corner_triggers.
 - Prefer adding concrete items under constraints, rules, edge_cases, checkable_properties, must_not_assume, and corner_triggers.
 - Keep the spec concise and executable.
 - Do not rewrite the whole spec.
@@ -264,6 +272,8 @@ Rules:
 - Keep target_fields minimal and focused on the blocking issues.
 - Keep edit_plan concrete and field-level.
 - Keep proposed_patch focused on targeted local updates rather than broad rewrites.
+- Do not introduce issues about JSON schema field names such as edge_cases, corner_triggers, must_not_assume, checkable_properties, tie_break, reference_strategy, algorithmic_notes, or non_checkable_notes.
+- requires_refine should be true only for a problem-grounded missing requirement, unsupported assumption, missing edge/corner condition, or output protocol issue.
 
 Response to normalize:
 {raw_output}
@@ -318,7 +328,9 @@ Structured spec:
 {starter}
 Requirements:
 - Follow the stated input/output protocol.
-- Respect must_not_assume and corner_triggers when they are present in the structured spec.
+- Treat must_not_assume as forbidden solver assumptions, not as guaranteed input facts.
+- Use corner_triggers as an internal checklist for cases your code must handle.
+- If the structured spec and original problem conflict, trust the original problem.
 - Do not print extra text.
 - Prefer a direct, contest-style solution.
 """
