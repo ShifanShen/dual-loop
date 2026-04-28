@@ -358,6 +358,11 @@ def _build_raw_row(run_result: dict[str, Any]) -> dict[str, Any]:
         "attribution_mode": summary.get("attribution_mode"),
         "attribution_spec_margin": summary.get("attribution_spec_margin"),
         "codegen_num_candidates": summary.get("codegen_num_candidates"),
+        "contract_search_population_size": summary.get("contract_search_population_size"),
+        "contract_search_rounds": summary.get("contract_search_rounds"),
+        "contract_search_top_k": summary.get("contract_search_top_k"),
+        "contract_search_codegen_top_k": summary.get("contract_search_codegen_top_k"),
+        "contract_search_temperature": summary.get("contract_search_temperature"),
         "output_dir": summary.get("output_dir"),
         "pass_at_1": _round_metric(float(summary.get("pass_at_1", 0.0))),
         "average_initial_sas": _round_metric(float(summary.get("average_initial_sas", 0.0))),
@@ -497,6 +502,12 @@ def _build_raw_row(run_result: dict[str, Any]) -> dict[str, Any]:
         "average_stage_time_spec_score_final": _round_metric(
             _safe_div(stage_time_sums.get("spec_score_final", 0.0), num_problems)
         ),
+        "average_stage_time_contract_search_score": _round_metric(
+            _safe_div(stage_time_sums.get("contract_search_score", 0.0), num_problems)
+        ),
+        "average_stage_time_contract_search_mutate": _round_metric(
+            _safe_div(stage_time_sums.get("contract_search_mutate", 0.0), num_problems)
+        ),
         "average_stage_time_codegen": _round_metric(
             _safe_div(stage_time_sums.get("codegen", 0.0), num_problems)
         ),
@@ -530,6 +541,11 @@ def _ordered_csv_columns(rows: list[dict[str, Any]]) -> list[str]:
         "attribution_mode",
         "attribution_spec_margin",
         "codegen_num_candidates",
+        "contract_search_population_size",
+        "contract_search_rounds",
+        "contract_search_top_k",
+        "contract_search_codegen_top_k",
+        "contract_search_temperature",
         "output_dir",
         "pass_at_1",
         "delta_pass_at_1_vs_baseline",
@@ -611,6 +627,8 @@ def _ordered_csv_columns(rows: list[dict[str, Any]]) -> list[str]:
         "average_stage_time_spec_score_refine",
         "average_stage_time_spec_refine",
         "average_stage_time_spec_score_final",
+        "average_stage_time_contract_search_score",
+        "average_stage_time_contract_search_mutate",
         "average_stage_time_codegen",
         "average_stage_time_repair",
     ]

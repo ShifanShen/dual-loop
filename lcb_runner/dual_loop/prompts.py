@@ -27,8 +27,11 @@ SPEC_PATCH_JSON_SCHEMA = """{
   "constraints": ["updated constraint if needed"],
   "rules": ["updated rule if needed"],
   "edge_cases": ["updated edge case if needed"],
+  "checkable_properties": ["updated checkable property if needed"],
   "must_not_assume": ["updated unsupported assumption guard if needed"],
-  "corner_triggers": ["updated trigger condition if needed"]
+  "corner_triggers": ["updated trigger condition if needed"],
+  "outputs": ["updated output protocol if needed"],
+  "tie_break": ["updated tie-breaking rule if needed"]
 }"""
 
 SPEC_PATCH_ALLOWED_FIELDS = (
@@ -224,6 +227,51 @@ Requirements:
 - Do not introduce edits outside target_fields or broad wording-only rewrites.
 - Apply the edit_plan concretely and avoid generic wording-only changes.
 - If the safest possible change is only wording cleanup with no semantic gain, return {{}}.
+"""
+
+
+def build_spec_search_mutation_prompt(
+    problem: "CodeGenerationProblem",
+    spec: StructuredSpec,
+    score: SpecScore,
+    *,
+    round_index: int,
+    candidate_index: int,
+) -> str:
+    return f"""Generate one local semantic mutation for a structured specification.
+Return JSON only. Return a JSON object that contains only the fields you want to update.
+Do not return the full spec. If no safe semantic mutation is possible, return {{}}.
+
+This is candidate {candidate_index} in search round {round_index}. Prefer a mutation that explores a different semantic emphasis from previous generic refinements.
+
+Allowed patch schema:
+{SPEC_PATCH_JSON_SCHEMA}
+
+Problem:
+{problem.question_content}
+
+Current spec:
+{spec.to_json()}
+
+Current semantic review:
+{score.to_json()}
+
+Mutation operators:
+- add_missing_constraint: add a problem-grounded numeric, logical, or validity constraint.
+- strengthen_output_protocol: make the required output shape or special return rule explicit.
+- add_corner_trigger: add a concrete condition likely to expose a wrong solution.
+- convert_rule_to_checkable_property: restate a supported obligation as a checkable property.
+- remove_unsupported_assumption: delete or guard an assumption not supported by the problem.
+- split_compound_rule: split a broad rule into smaller executable obligations.
+
+Rules:
+- The mutation must be grounded in the original problem statement.
+- Modify only constraints, rules, edge_cases, checkable_properties, must_not_assume, corner_triggers, outputs, or tie_break.
+- Do not edit schema labels, algorithmic_notes, non_checkable_notes, reference_strategy, parse_ok, or parse_source.
+- Do not put guaranteed input facts in must_not_assume.
+- Do not rewrite the whole spec.
+- Prefer one high-value semantic change over many broad edits.
+- If the mutation would only paraphrase existing content, return {{}}.
 """
 
 

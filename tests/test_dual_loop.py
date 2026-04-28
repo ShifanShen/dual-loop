@@ -390,6 +390,11 @@ class DualLoopPipelineTests(unittest.TestCase):
             judge_temperature=0.0,
             codegen_temperature=0.2,
             codegen_num_candidates=1,
+            contract_search_population_size=1,
+            contract_search_rounds=0,
+            contract_search_top_k=1,
+            contract_search_codegen_top_k=1,
+            contract_search_temperature=0.35,
             repair_temperature=0.1,
             spec_max_tokens=512,
             judge_max_tokens=512,
@@ -597,6 +602,59 @@ class DualLoopPipelineTests(unittest.TestCase):
             self.assertEqual(spec._last_codegen_selected_index, 2)
             self.assertEqual(len(spec._last_codegen_candidate_feedbacks), 2)
             self.assertEqual(spec._last_codegen_candidate_feedbacks[1]["error_type"], "accepted")
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_contract_search_selects_higher_fitness_mutation(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            args.contract_search_population_size = 2
+            args.contract_search_rounds = 1
+            mock_adapter = mock_adapter_cls.return_value
+            mock_adapter.model.model_repr = "fake-model"
+            mock_adapter.generate.return_value = (
+                json.dumps(
+                    {
+                        "checkable_properties": [
+                            "returned indices must sum to the target value"
+                        ]
+                    }
+                ),
+                {"prompt_chars": 1, "completion_chars": 1},
+            )
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+            seed_spec = StructuredSpec(task="solve", rules=["return valid indices"])
+
+            with patch.object(
+                pipeline,
+                "_score_spec",
+                side_effect=[
+                    SpecScore(
+                        coverage=70,
+                        faithfulness=85,
+                        precision=70,
+                        overall=75,
+                        missing_constraints=["missing target-sum property"],
+                    ),
+                    SpecScore(
+                        coverage=92,
+                        faithfulness=92,
+                        precision=90,
+                        overall=91,
+                    ),
+                ],
+            ):
+                selected_spec, candidates, meta = pipeline._search_contract_population(
+                    problem, seed_spec
+                )
+
+            self.assertIn(
+                "returned indices must sum to the target value",
+                selected_spec.checkable_properties,
+            )
+            self.assertEqual(len(candidates), 2)
+            self.assertEqual(len(meta["score_trace"]), 2)
+            self.assertEqual(meta["effectiveness"]["selected"]["source"], "mutation")
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
     def test_verify_attaches_property_feedback_for_spec_based_wrong_answer(self, mock_adapter_cls):

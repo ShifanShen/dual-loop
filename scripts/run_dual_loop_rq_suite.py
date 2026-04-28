@@ -75,6 +75,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--judge_temperature", type=float, default=0.0)
     parser.add_argument("--codegen_temperature", type=float, default=0.2)
     parser.add_argument("--codegen_num_candidates", type=int, default=1)
+    parser.add_argument("--contract_search_population_size", type=int, default=1)
+    parser.add_argument("--contract_search_rounds", type=int, default=0)
+    parser.add_argument("--contract_search_top_k", type=int, default=1)
+    parser.add_argument("--contract_search_codegen_top_k", type=int, default=1)
+    parser.add_argument("--contract_search_temperature", type=float, default=0.35)
     parser.add_argument("--repair_temperature", type=float, default=0.1)
     parser.add_argument("--spec_max_tokens", type=int, default=1400)
     parser.add_argument("--judge_max_tokens", type=int, default=1200)
@@ -153,6 +158,11 @@ def main() -> None:
         "include_budget_ablations": args.include_budget_ablations,
         "include_adaptive_ablations": args.include_adaptive_ablations,
         "codegen_num_candidates": args.codegen_num_candidates,
+        "contract_search_population_size": args.contract_search_population_size,
+        "contract_search_rounds": args.contract_search_rounds,
+        "contract_search_top_k": args.contract_search_top_k,
+        "contract_search_codegen_top_k": args.contract_search_codegen_top_k,
+        "contract_search_temperature": args.contract_search_temperature,
         "adaptive_sal_threshold": args.adaptive_sal_threshold,
         "adaptive_ablation_threshold": args.adaptive_ablation_threshold,
         "attribution_mode": args.attribution_mode,

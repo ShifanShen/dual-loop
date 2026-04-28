@@ -126,6 +126,36 @@ def get_args():
         default=1,
         help="Number of spec-conditioned code candidates to generate before selecting the best one.",
     )
+    parser.add_argument(
+        "--contract_search_population_size",
+        type=int,
+        default=1,
+        help="Number of semantic contract candidates retained during optional SAL candidate search.",
+    )
+    parser.add_argument(
+        "--contract_search_rounds",
+        type=int,
+        default=0,
+        help="Number of optional semantic contract mutation rounds after SAL.",
+    )
+    parser.add_argument(
+        "--contract_search_top_k",
+        type=int,
+        default=1,
+        help="Number of top contract candidates used as mutation parents in each search round.",
+    )
+    parser.add_argument(
+        "--contract_search_codegen_top_k",
+        type=int,
+        default=1,
+        help="Number of top contract candidates used for cross-spec code generation and verifier selection.",
+    )
+    parser.add_argument(
+        "--contract_search_temperature",
+        type=float,
+        default=0.35,
+        help="Sampling temperature for optional semantic contract mutations.",
+    )
     parser.add_argument("--repair_temperature", type=float, default=0.1)
     parser.add_argument("--spec_max_tokens", type=int, default=1400)
     parser.add_argument("--judge_max_tokens", type=int, default=1200)

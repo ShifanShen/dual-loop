@@ -21,6 +21,7 @@ from lcb_runner.dual_loop.prompts import (
     build_spec_patch_json_repair_prompt,
     build_self_refine_repair_prompt,
     build_spec_refine_prompt,
+    build_spec_search_mutation_prompt,
     build_spec_score_prompt,
     build_spec_score_json_repair_prompt,
 )
@@ -344,6 +345,34 @@ class DualLoopPipeline:
                         patch_source="none",
                     )
                 ]
+
+        contract_candidates: list[dict[str, Any]] = []
+        if self.args.pipeline_mode in {"loop_b", "full"} and self._contract_search_enabled():
+            spec, contract_candidates, search_meta = self._search_contract_population(
+                problem, spec
+            )
+            trace.spec_scores.extend(search_meta["score_trace"])
+            trace.raw_score_outputs.extend(search_meta["raw_score_outputs"])
+            trace.raw_spec_outputs.extend(search_meta["raw_spec_outputs"])
+            for usage in search_meta["judge_usages"]:
+                self._record_usage(trace, usage, "judge")
+            for usage in search_meta["spec_usages"]:
+                self._record_usage(trace, usage, "spec")
+            for stage_name, duration in search_meta["stage_times"].items():
+                self._record_stage_time(trace, stage_name, duration)
+            trace.effectiveness["contract_search"] = search_meta["effectiveness"]
+
+        precomputed_code: str | None = None
+        if (
+            self.args.pipeline_mode in {"decomposition", "loop_b", "loop_a", "full"}
+            and contract_candidates
+            and self._contract_codegen_top_k() > 1
+        ):
+            spec, precomputed_code, codegen_search_meta = (
+                self._generate_code_from_contract_candidates(problem, contract_candidates)
+            )
+            trace.effectiveness["contract_codegen_search"] = codegen_search_meta
+
         trace.spec_final = asdict(spec)
         final_score = self._score_spec(problem, spec)
         trace.final_spec_score = asdict(final_score)
@@ -369,7 +398,11 @@ class DualLoopPipeline:
             trace, "spec_score_final", getattr(final_score, "_stage_time", 0.0)
         )
 
-        code = self._generate_code_from_spec(problem, spec)
+        code = (
+            precomputed_code
+            if precomputed_code is not None
+            else self._generate_code_from_spec(problem, spec)
+        )
         trace.code_initial = code
         trace.raw_codegen_output = getattr(spec, "_last_codegen_output", "")
         trace.effectiveness["codegen"] = self._build_codegen_effectiveness(
@@ -967,6 +1000,250 @@ class DualLoopPipeline:
     def _codegen_candidate_count(self) -> int:
         return max(1, int(getattr(self.args, "codegen_num_candidates", 1) or 1))
 
+    def _contract_population_size(self) -> int:
+        return max(1, int(getattr(self.args, "contract_search_population_size", 1) or 1))
+
+    def _contract_search_rounds(self) -> int:
+        return max(0, int(getattr(self.args, "contract_search_rounds", 0) or 0))
+
+    def _contract_search_top_k(self) -> int:
+        return max(1, int(getattr(self.args, "contract_search_top_k", 1) or 1))
+
+    def _contract_codegen_top_k(self) -> int:
+        return max(1, int(getattr(self.args, "contract_search_codegen_top_k", 1) or 1))
+
+    def _contract_search_enabled(self) -> bool:
+        return self._contract_population_size() > 1 and self._contract_search_rounds() > 0
+
+    @staticmethod
+    def _contract_search_allowed_fields() -> set[str]:
+        return {
+            "outputs",
+            "constraints",
+            "rules",
+            "edge_cases",
+            "checkable_properties",
+            "must_not_assume",
+            "corner_triggers",
+            "tie_break",
+        }
+
+    def _contract_fitness(self, spec: StructuredSpec, score: SpecScore) -> float:
+        property_bonus = min(5, len(compile_property_clauses(spec)))
+        issue_penalty = (
+            3.0 * len(score.unsupported_constraints)
+            + 2.0 * len(score.missing_constraints)
+            + 1.5 * len(score.blocking_issues)
+            + 0.5 * len(score.ambiguities)
+        )
+        confidence_bonus = 0.02 * float(score.judge_confidence or 0)
+        return round(float(score.overall) + property_bonus + confidence_bonus - issue_penalty, 4)
+
+    def _validate_contract_search_patch(
+        self, patch: SpecPatch, current_spec: StructuredSpec
+    ) -> tuple[bool, str]:
+        if not patch.parse_ok:
+            return False, "rejected_parse_fail"
+        candidate_spec = patch.apply(current_spec)
+        changed_fields = {
+            field_name
+            for field_name in patch.touched_fields()
+            if getattr(current_spec, field_name) != getattr(candidate_spec, field_name)
+        }
+        if not changed_fields:
+            return False, "rejected_empty_patch"
+        if not changed_fields.issubset(self._contract_search_allowed_fields()):
+            return False, "rejected_out_of_scope_patch"
+        if not changed_fields & set(self._material_spec_fields()):
+            return False, "rejected_non_material_patch"
+        return True, "patch_in_scope"
+
+    def _make_contract_candidate_record(
+        self,
+        *,
+        spec: StructuredSpec,
+        score: SpecScore,
+        source: str,
+        round_index: int,
+        candidate_index: int,
+        patch_reason: str = "",
+    ) -> dict[str, Any]:
+        return {
+            "spec": spec,
+            "score": score,
+            "fitness": self._contract_fitness(spec, score),
+            "source": source,
+            "round_index": round_index,
+            "candidate_index": candidate_index,
+            "patch_reason": patch_reason,
+        }
+
+    @staticmethod
+    def _contract_candidate_effect_record(record: dict[str, Any]) -> dict[str, Any]:
+        score = record["score"]
+        spec = record["spec"]
+        return {
+            "source": record.get("source", ""),
+            "round_index": int(record.get("round_index", 0)),
+            "candidate_index": int(record.get("candidate_index", 0)),
+            "fitness": float(record.get("fitness", 0.0)),
+            "sas": int(score.overall),
+            "coverage": int(score.coverage),
+            "faithfulness": int(score.faithfulness),
+            "precision": int(score.precision),
+            "judge_confidence": int(score.judge_confidence),
+            "semantic_item_count": sum(
+                len(getattr(spec, field_name, []) or [])
+                for field_name in DualLoopPipeline._material_spec_fields()
+            ),
+            "property_clause_count": len(compile_property_clauses(spec)),
+            "missing_count": len(score.missing_constraints),
+            "unsupported_count": len(score.unsupported_constraints),
+            "blocking_count": len(score.blocking_issues),
+            "patch_reason": str(record.get("patch_reason", "")),
+        }
+
+    def _search_contract_population(
+        self, problem: "CodeGenerationProblem", seed_spec: StructuredSpec
+    ) -> tuple[StructuredSpec, list[dict[str, Any]], dict[str, Any]]:
+        population_size = self._contract_population_size()
+        search_rounds = self._contract_search_rounds()
+        top_k = self._contract_search_top_k()
+        meta = {
+            "raw_score_outputs": [],
+            "raw_spec_outputs": [],
+            "judge_usages": [],
+            "spec_usages": [],
+            "stage_times": {},
+            "score_trace": [],
+            "effectiveness": {
+                "enabled": True,
+                "population_size": population_size,
+                "search_rounds": search_rounds,
+                "top_k": top_k,
+                "candidates": [],
+                "selected": {},
+            },
+        }
+
+        started_at = time.perf_counter()
+        seed_score = self._score_spec(problem, seed_spec)
+        meta["raw_score_outputs"].extend(
+            getattr(seed_score, "_raw_attempt_outputs", [getattr(seed_score, "_raw_output", "")])
+        )
+        meta["judge_usages"].append(getattr(seed_score, "_usage", None))
+        meta["judge_usages"].extend(getattr(seed_score, "_extra_usages", []))
+        meta["stage_times"]["contract_search_score"] = (
+            meta["stage_times"].get("contract_search_score", 0.0)
+            + float(getattr(seed_score, "_stage_time", 0.0))
+        )
+        meta["score_trace"].append(asdict(seed_score))
+
+        population = [
+            self._make_contract_candidate_record(
+                spec=seed_spec,
+                score=seed_score,
+                source="seed",
+                round_index=0,
+                candidate_index=0,
+                patch_reason="seed_contract",
+            )
+        ]
+        generated_count = 0
+
+        for round_index in range(1, search_rounds + 1):
+            parents = sorted(population, key=lambda item: item["fitness"], reverse=True)[
+                : max(1, min(top_k, len(population)))
+            ]
+            for candidate_index in range(1, population_size):
+                parent = parents[(candidate_index - 1) % len(parents)]
+                parent_spec = parent["spec"]
+                parent_score = parent["score"]
+                mutation_started = time.perf_counter()
+                mutation_output, mutation_usage = self.llm.generate(
+                    build_spec_search_mutation_prompt(
+                        problem,
+                        parent_spec,
+                        parent_score,
+                        round_index=round_index,
+                        candidate_index=candidate_index,
+                    ),
+                    role="spec_search",
+                    temperature=float(
+                        getattr(self.args, "contract_search_temperature", 0.35) or 0.35
+                    ),
+                    max_tokens=self.args.spec_max_tokens,
+                )
+                patch, raw_outputs, extra_usages = self._parse_spec_patch_output(
+                    mutation_output
+                )
+                meta["raw_spec_outputs"].extend(raw_outputs)
+                meta["spec_usages"].append(mutation_usage)
+                meta["spec_usages"].extend(extra_usages)
+                meta["stage_times"]["contract_search_mutate"] = (
+                    meta["stage_times"].get("contract_search_mutate", 0.0)
+                    + (time.perf_counter() - mutation_started)
+                )
+                patch_allowed, patch_reason = self._validate_contract_search_patch(
+                    patch, parent_spec
+                )
+                if not patch_allowed:
+                    meta["effectiveness"]["candidates"].append(
+                        {
+                            "source": "mutation",
+                            "round_index": round_index,
+                            "candidate_index": candidate_index,
+                            "accepted_for_population": False,
+                            "patch_reason": patch_reason,
+                        }
+                    )
+                    continue
+
+                candidate_spec = patch.apply(parent_spec)
+                candidate_score = self._score_spec(problem, candidate_spec)
+                meta["raw_score_outputs"].extend(
+                    getattr(
+                        candidate_score,
+                        "_raw_attempt_outputs",
+                        [getattr(candidate_score, "_raw_output", "")],
+                    )
+                )
+                meta["judge_usages"].append(getattr(candidate_score, "_usage", None))
+                meta["judge_usages"].extend(getattr(candidate_score, "_extra_usages", []))
+                meta["stage_times"]["contract_search_score"] = (
+                    meta["stage_times"].get("contract_search_score", 0.0)
+                    + float(getattr(candidate_score, "_stage_time", 0.0))
+                )
+                meta["score_trace"].append(asdict(candidate_score))
+                generated_count += 1
+                record = self._make_contract_candidate_record(
+                    spec=candidate_spec,
+                    score=candidate_score,
+                    source="mutation",
+                    round_index=round_index,
+                    candidate_index=candidate_index,
+                    patch_reason=patch_reason,
+                )
+                population.append(record)
+                effect_record = self._contract_candidate_effect_record(record)
+                effect_record["accepted_for_population"] = True
+                meta["effectiveness"]["candidates"].append(effect_record)
+
+            population = sorted(
+                population, key=lambda item: item["fitness"], reverse=True
+            )[:population_size]
+
+        ranked_population = sorted(population, key=lambda item: item["fitness"], reverse=True)
+        selected = ranked_population[0]
+        meta["effectiveness"]["generated_candidate_count"] = generated_count
+        meta["effectiveness"]["elapsed_seconds"] = round(time.perf_counter() - started_at, 4)
+        meta["effectiveness"]["selected"] = self._contract_candidate_effect_record(selected)
+        meta["effectiveness"]["top_candidates"] = [
+            self._contract_candidate_effect_record(record)
+            for record in ranked_population[:top_k]
+        ]
+        return selected["spec"], ranked_population, meta
+
     @staticmethod
     def _invalid_codegen_feedback(message: str) -> VerifierFeedback:
         return VerifierFeedback(
@@ -1072,6 +1349,110 @@ class DualLoopPipeline:
             "stage_time": time.perf_counter() - total_started_at,
             "candidate_feedbacks": [asdict(record["feedback"]) for record in candidate_records],
         }
+
+    def _generate_code_from_contract_candidates(
+        self, problem: "CodeGenerationProblem", candidates: list[dict[str, Any]]
+    ) -> tuple[StructuredSpec, str, dict[str, Any]]:
+        top_k = min(self._contract_codegen_top_k(), len(candidates))
+        ranked_candidates = sorted(candidates, key=lambda item: item["fitness"], reverse=True)[
+            :top_k
+        ]
+        code_records: list[dict[str, Any]] = []
+        total_stage_time = 0.0
+
+        for contract_index, candidate in enumerate(ranked_candidates, start=1):
+            candidate_spec = candidate["spec"]
+            candidate_result = self._select_best_codegen_candidate(
+                problem,
+                prompt=build_code_from_spec_prompt(problem, candidate_spec),
+                spec=candidate_spec,
+            )
+            total_stage_time += float(candidate_result["stage_time"])
+            code_records.append(
+                {
+                    "contract_index": contract_index,
+                    "contract_fitness": float(candidate["fitness"]),
+                    "contract_sas": int(candidate["score"].overall),
+                    "contract_source": str(candidate.get("source", "")),
+                    "spec": candidate_spec,
+                    "score": candidate["score"],
+                    "code": candidate_result["code"],
+                    "raw_output": candidate_result["raw_output"],
+                    "usage": candidate_result["usage"],
+                    "extra_outputs": candidate_result["extra_outputs"],
+                    "extra_usages": candidate_result["extra_usages"],
+                    "feedback": candidate_result["feedback"],
+                    "candidate_count": candidate_result["candidate_count"],
+                    "selected_candidate_index": candidate_result["selected_candidate_index"],
+                    "candidate_feedbacks": candidate_result["candidate_feedbacks"],
+                }
+            )
+            if candidate_result["feedback"].passed:
+                break
+
+        best_record = min(
+            code_records,
+            key=lambda record: (
+                *self._candidate_feedback_rank(record["feedback"]),
+                -float(record["contract_fitness"]),
+            ),
+        )
+        selected_spec = best_record["spec"]
+        selected_code = str(best_record["code"])
+
+        extra_outputs: list[str] = []
+        extra_usages: list[dict[str, int | str]] = []
+        candidate_feedbacks: list[dict[str, Any]] = []
+        global_candidate_count = 0
+        selected_global_index = 1
+        for record in code_records:
+            start_index = global_candidate_count + 1
+            global_candidate_count += int(record["candidate_count"])
+            candidate_feedbacks.extend(record["candidate_feedbacks"])
+            if record is best_record:
+                selected_global_index = start_index + int(record["selected_candidate_index"]) - 1
+                extra_outputs.extend(record["extra_outputs"])
+                extra_usages.extend(record["extra_usages"])
+                continue
+            extra_outputs.append(str(record["raw_output"]))
+            extra_usages.append(record["usage"])
+            extra_outputs.extend(record["extra_outputs"])
+            extra_usages.extend(record["extra_usages"])
+
+        selected_spec._last_codegen_output = best_record["raw_output"]
+        selected_spec._last_codegen_usage = best_record["usage"]
+        selected_spec._last_codegen_stage_time = total_stage_time
+        selected_spec._last_codegen_extra_outputs = extra_outputs
+        selected_spec._last_codegen_extra_usages = extra_usages
+        selected_spec._last_codegen_candidate_count = global_candidate_count
+        selected_spec._last_codegen_selected_index = selected_global_index
+        selected_spec._last_codegen_candidate_feedbacks = candidate_feedbacks
+
+        meta = {
+            "enabled": True,
+            "top_k": top_k,
+            "evaluated_contract_count": len(code_records),
+            "total_codegen_candidates": global_candidate_count,
+            "selected_contract_index": int(best_record["contract_index"]),
+            "selected_contract_fitness": float(best_record["contract_fitness"]),
+            "selected_contract_sas": int(best_record["contract_sas"]),
+            "selected_candidate_index": selected_global_index,
+            "selected_error_type": best_record["feedback"].error_type,
+            "selected_passed": bool(best_record["feedback"].passed),
+            "contracts": [
+                {
+                    "contract_index": int(record["contract_index"]),
+                    "contract_fitness": float(record["contract_fitness"]),
+                    "contract_sas": int(record["contract_sas"]),
+                    "contract_source": str(record["contract_source"]),
+                    "passed": bool(record["feedback"].passed),
+                    "error_type": record["feedback"].error_type,
+                    "candidate_count": int(record["candidate_count"]),
+                }
+                for record in code_records
+            ],
+        }
+        return selected_spec, selected_code, meta
 
     def _generate_code_from_spec(
         self, problem: "CodeGenerationProblem", spec: StructuredSpec
@@ -1912,6 +2293,13 @@ class DualLoopPipeline:
                 getattr(self.args, "attribution_spec_margin", 5) or 5
             ),
             "codegen_num_candidates": int(getattr(self.args, "codegen_num_candidates", 1) or 1),
+            "contract_search_population_size": self._contract_population_size(),
+            "contract_search_rounds": self._contract_search_rounds(),
+            "contract_search_top_k": self._contract_search_top_k(),
+            "contract_search_codegen_top_k": self._contract_codegen_top_k(),
+            "contract_search_temperature": float(
+                getattr(self.args, "contract_search_temperature", 0.35) or 0.35
+            ),
         }
 
     def _write_outputs(self, summary: dict[str, Any], traces: list[ProblemTrace]) -> None:
