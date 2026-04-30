@@ -61,6 +61,36 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--judge_temperature", type=float, default=0.0)
     parser.add_argument("--codegen_temperature", type=float, default=0.2)
     parser.add_argument("--codegen_num_candidates", type=int, default=1)
+    parser.add_argument(
+        "--adaptive_sal_threshold",
+        type=float,
+        default=0.0,
+        help="Accepted for compatibility with shared suite arguments; unused in this study.",
+    )
+    parser.add_argument(
+        "--adaptive_ablation_threshold",
+        type=float,
+        default=85.0,
+        help="Accepted for compatibility with shared suite arguments; unused in this study.",
+    )
+    parser.add_argument("--contract_search_population_size", type=int, default=1)
+    parser.add_argument("--contract_search_rounds", type=int, default=0)
+    parser.add_argument("--contract_search_top_k", type=int, default=1)
+    parser.add_argument("--contract_search_codegen_top_k", type=int, default=1)
+    parser.add_argument("--contract_search_temperature", type=float, default=0.35)
+    parser.add_argument(
+        "--attribution_mode",
+        type=str,
+        default="legacy",
+        choices=["legacy", "conservative"],
+        help="Accepted for compatibility with shared suite arguments; unused in this study.",
+    )
+    parser.add_argument(
+        "--attribution_spec_margin",
+        type=int,
+        default=5,
+        help="Accepted for compatibility with shared suite arguments; unused in this study.",
+    )
     parser.add_argument("--repair_temperature", type=float, default=0.1)
     parser.add_argument("--spec_max_tokens", type=int, default=1400)
     parser.add_argument("--judge_max_tokens", type=int, default=1200)
@@ -280,6 +310,13 @@ def main() -> None:
         "max_problems": args.max_problems,
         "codegen_num_candidates": args.codegen_num_candidates,
         "codegen_temperature": args.codegen_temperature,
+        "contract_search_population_size": args.contract_search_population_size,
+        "contract_search_rounds": args.contract_search_rounds,
+        "contract_search_top_k": args.contract_search_top_k,
+        "contract_search_codegen_top_k": args.contract_search_codegen_top_k,
+        "contract_search_temperature": args.contract_search_temperature,
+        "attribution_mode": args.attribution_mode,
+        "attribution_spec_margin": args.attribution_spec_margin,
         "output_dir": str(output_dir),
         "results_csv": str(csv_path),
         "rows": rows,

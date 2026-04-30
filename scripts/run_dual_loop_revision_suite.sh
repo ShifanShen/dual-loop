@@ -73,8 +73,27 @@ COMMON_ARGS=(
   --attribution_spec_margin "$ATTRIBUTION_SPEC_MARGIN"
 )
 
+INTERMEDIATE_ARGS=(
+  --model "$MODEL_REPR"
+  --model_repr "$MODEL_REPR"
+  --model_style "$MODEL_STYLE"
+  --local_model_path "$LOCAL_MODEL_PATH"
+  --release_version "$RELEASE_VERSION"
+  --tensor_parallel_size 1
+  --dtype "$DTYPE"
+  --spec_max_iters "$SPEC_MAX_ITERS"
+  --repair_max_iters "$REPAIR_MAX_ITERS"
+  --spec_score_threshold "$SPEC_SCORE_THRESHOLD"
+  --spec_min_improvement "$SPEC_MIN_IMPROVEMENT"
+  --spec_precision_floor "$SPEC_PRECISION_FLOOR"
+  --spec_max_rejected_refines "$SPEC_MAX_REJECTED_REFINES"
+  --timeout "$TIMEOUT"
+  --codegen_num_candidates "$CODEGEN_NUM_CANDIDATES"
+)
+
 if [[ -n "$DATASET_PATH" ]]; then
   COMMON_ARGS+=(--dataset_path "$DATASET_PATH")
+  INTERMEDIATE_ARGS+=(--dataset_path "$DATASET_PATH")
 fi
 
 hash -r 2>/dev/null || true
@@ -143,7 +162,7 @@ if [[ "$RUN_INTERMEDIATE_REP_STUDY" == "1" ]]; then
   echo "[3/5] 50-problem Spec vs Plan/Pseudocode study"
   echo "============================================================"
   CUDA_VISIBLE_DEVICES="$GPU_ID" "$UV_BIN" run python scripts/run_intermediate_repr_study.py \
-    "${COMMON_ARGS[@]}" \
+    "${INTERMEDIATE_ARGS[@]}" \
     --max_problems "$INTERMEDIATE_STUDY_PROBLEMS" \
     --output_root output/intermediate_repr_study
 fi
