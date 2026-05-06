@@ -665,3 +665,35 @@ Counterexample:
 Verifier feedback:
 {feedback.to_json()}
 """
+
+
+def build_post_failure_spec_refine_prompt(
+    problem: "CodeGenerationProblem",
+    spec: StructuredSpec,
+    feedback: VerifierFeedback,
+) -> str:
+    return f"""Revise the structured spec only if the verifier failure exposes a missing or incorrect semantic obligation.
+Return JSON only. Return a JSON object that contains only the fields you want to update.
+Do not return the full spec. If the failure is likely an implementation bug rather than a spec problem, return {{}}.
+
+Allowed patch schema:
+{SPEC_PATCH_JSON_SCHEMA}
+
+Original problem:
+{problem.question_content}
+
+Current spec:
+{spec.to_json()}
+
+Verifier failure:
+{feedback.to_json()}
+
+Rules:
+- Ground every edit in the original problem and the concrete verifier failure.
+- Prefer adding executable obligations to constraints, rules, edge_cases, checkable_properties, corner_triggers, outputs, or tie_break.
+- Do not add broad algorithmic advice.
+- Do not change schema labels, reference_strategy, algorithmic_notes, or non_checkable_notes.
+- Do not put guaranteed input facts in must_not_assume.
+- Use a small local patch, not a rewrite.
+- If the patch would only paraphrase the current spec, return {{}}.
+"""

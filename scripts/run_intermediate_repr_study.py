@@ -62,6 +62,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--codegen_temperature", type=float, default=0.2)
     parser.add_argument("--codegen_num_candidates", type=int, default=1)
     parser.add_argument(
+        "--repair_num_candidates",
+        type=int,
+        default=1,
+        help="Accepted for compatibility with shared suite arguments; unused in this study.",
+    )
+    parser.add_argument(
+        "--post_failure_sal_max_iters",
+        type=int,
+        default=0,
+        help="Accepted for compatibility with shared suite arguments; unused in this study.",
+    )
+    parser.add_argument(
         "--adaptive_sal_threshold",
         type=float,
         default=0.0,
@@ -309,6 +321,8 @@ def main() -> None:
         "release_version": args.release_version,
         "max_problems": args.max_problems,
         "codegen_num_candidates": args.codegen_num_candidates,
+        "repair_num_candidates": args.repair_num_candidates,
+        "post_failure_sal_max_iters": args.post_failure_sal_max_iters,
         "codegen_temperature": args.codegen_temperature,
         "contract_search_population_size": args.contract_search_population_size,
         "contract_search_rounds": args.contract_search_rounds,

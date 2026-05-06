@@ -390,6 +390,8 @@ class DualLoopPipelineTests(unittest.TestCase):
             judge_temperature=0.0,
             codegen_temperature=0.2,
             codegen_num_candidates=1,
+            repair_num_candidates=1,
+            post_failure_sal_max_iters=0,
             contract_search_population_size=1,
             contract_search_rounds=0,
             contract_search_top_k=1,
@@ -1171,6 +1173,57 @@ class DualLoopPipelineTests(unittest.TestCase):
                 [step["effect"] for step in spec._repair_effectiveness],
                 ["no_effect", "solved"],
             )
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_repair_code_candidate_search_selects_passing_candidate(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            args.repair_num_candidates = 2
+            args.repair_max_iters = 1
+            mock_adapter = mock_adapter_cls.return_value
+            mock_adapter.model.model_repr = "fake-model"
+            mock_adapter.generate.side_effect = [
+                ("```python\nprint('bad')\n```", {"prompt_chars": 1, "completion_chars": 1}),
+                ("```python\nprint('fixed')\n```", {"prompt_chars": 1, "completion_chars": 1}),
+            ]
+            mock_adapter.extract_code.side_effect = (
+                lambda output: output.replace("```python", "").replace("```", "").strip()
+            )
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+            spec = StructuredSpec(task="solve")
+            feedbacks = [
+                VerifierFeedback(
+                    passed=False,
+                    error_type="wrong_answer",
+                    field="Rules",
+                    message="initial bad answer",
+                ),
+                VerifierFeedback(
+                    passed=False,
+                    error_type="wrong_answer",
+                    field="Rules",
+                    message="candidate one still bad",
+                ),
+                VerifierFeedback(
+                    passed=True,
+                    error_type="accepted",
+                    field="checkable_subset",
+                    message="ok",
+                ),
+            ]
+
+            with patch.object(pipeline, "_verify", side_effect=feedbacks):
+                final_code, feedback_trace = pipeline._repair_code(
+                    problem,
+                    spec,
+                    "print('start')",
+                )
+
+            self.assertEqual(final_code, "print('fixed')")
+            self.assertTrue(feedback_trace[-1]["passed"])
+            self.assertEqual(spec._repair_effectiveness[0]["candidate_count"], 2)
+            self.assertEqual(spec._repair_effectiveness[0]["selected_candidate_index"], 2)
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
     def test_repair_code_uses_counterexample_prompt_after_repeated_wrong_answers(self, mock_adapter_cls):

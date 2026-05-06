@@ -127,6 +127,18 @@ def get_args():
         help="Number of spec-conditioned code candidates to generate before selecting the best one.",
     )
     parser.add_argument(
+        "--repair_num_candidates",
+        type=int,
+        default=1,
+        help="Number of spec-guided repair candidates to generate and verify per repair iteration.",
+    )
+    parser.add_argument(
+        "--post_failure_sal_max_iters",
+        type=int,
+        default=0,
+        help="Optional verifier-triggered spec refinement/regeneration attempts after IRL fails.",
+    )
+    parser.add_argument(
         "--contract_search_population_size",
         type=int,
         default=1,

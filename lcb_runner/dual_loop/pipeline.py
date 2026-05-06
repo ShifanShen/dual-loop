@@ -16,6 +16,7 @@ from lcb_runner.dual_loop.prompts import (
     build_reflexion_prompt,
     build_reflexion_repair_prompt,
     build_rewrite_from_counterexample_prompt,
+    build_post_failure_spec_refine_prompt,
     build_spec_draft_prompt,
     build_spec_json_repair_prompt,
     build_spec_patch_json_repair_prompt,
@@ -426,8 +427,55 @@ class DualLoopPipeline:
 
         if self.args.pipeline_mode in {"loop_a", "full"}:
             code, feedback_trace = self._repair_code(problem, spec, code)
-            trace.repair_iterations = max(0, len(feedback_trace) - 1)
-            trace.loop_a_iterations = len(feedback_trace)
+            repair_feedback_count = len(feedback_trace)
+            if (
+                self.args.pipeline_mode == "full"
+                and feedback_trace
+                and not bool(feedback_trace[-1].get("passed", False))
+                and self._post_failure_sal_max_iters() > 0
+            ):
+                final_feedback = self._feedback_from_dict(feedback_trace[-1])
+                (
+                    post_spec,
+                    post_code,
+                    post_feedbacks,
+                    post_meta,
+                ) = self._post_failure_spec_regenerate(
+                    problem,
+                    spec,
+                    code,
+                    final_feedback,
+                    final_score,
+                )
+                trace.raw_spec_outputs.extend(post_meta["raw_spec_outputs"])
+                trace.raw_score_outputs.extend(post_meta["raw_score_outputs"])
+                trace.raw_codegen_output = post_meta.get(
+                    "raw_codegen_output",
+                    trace.raw_codegen_output,
+                )
+                for usage in post_meta["spec_usages"]:
+                    self._record_usage(trace, usage, "spec")
+                for usage in post_meta["judge_usages"]:
+                    self._record_usage(trace, usage, "judge")
+                for usage in post_meta["codegen_usages"]:
+                    self._record_usage(trace, usage, "codegen")
+                for stage_name, duration in post_meta["stage_times"].items():
+                    self._record_stage_time(trace, stage_name, duration)
+                trace.effectiveness["post_failure_sal"] = post_meta["effectiveness"]
+                if post_feedbacks and post_feedbacks[-1].passed:
+                    spec = post_spec
+                    code = post_code
+                    feedback_trace.extend(asdict(item) for item in post_feedbacks)
+                    trace.spec_final = asdict(spec)
+                    trace.final_spec_score = post_meta.get(
+                        "accepted_spec_score",
+                        trace.final_spec_score,
+                    )
+                    trace.property_clauses = [
+                        clause.to_dict() for clause in compile_property_clauses(spec)
+                    ]
+            trace.repair_iterations = max(0, repair_feedback_count - 1)
+            trace.loop_a_iterations = repair_feedback_count
             trace.verifier_feedbacks.extend(feedback_trace)
             trace.raw_repair_outputs.extend(getattr(spec, "_repair_outputs", []))
             for usage in getattr(spec, "_repair_usages", []):
@@ -1000,6 +1048,12 @@ class DualLoopPipeline:
     def _codegen_candidate_count(self) -> int:
         return max(1, int(getattr(self.args, "codegen_num_candidates", 1) or 1))
 
+    def _repair_candidate_count(self) -> int:
+        return max(1, int(getattr(self.args, "repair_num_candidates", 1) or 1))
+
+    def _post_failure_sal_max_iters(self) -> int:
+        return max(0, int(getattr(self.args, "post_failure_sal_max_iters", 0) or 0))
+
     def _contract_population_size(self) -> int:
         return max(1, int(getattr(self.args, "contract_search_population_size", 1) or 1))
 
@@ -1472,6 +1526,162 @@ class DualLoopPipeline:
         spec._last_codegen_candidate_feedbacks = candidate_result["candidate_feedbacks"]
         return candidate_result["code"]
 
+    @staticmethod
+    def _ensure_repair_buffers(spec: StructuredSpec) -> None:
+        if not hasattr(spec, "_repair_outputs"):
+            spec._repair_outputs = []
+        if not hasattr(spec, "_repair_usages"):
+            spec._repair_usages = []
+        if not hasattr(spec, "_repair_stage_times"):
+            spec._repair_stage_times = []
+
+    @staticmethod
+    def _feedback_from_dict(payload: dict[str, Any]) -> VerifierFeedback:
+        return VerifierFeedback(
+            passed=bool(payload.get("passed", False)),
+            error_type=str(payload.get("error_type", "unknown_failure")),
+            field=str(payload.get("field", "unknown")),
+            message=str(payload.get("message", "")),
+            input=str(payload.get("input", "")),
+            output=str(payload.get("output", "")),
+            expected=str(payload.get("expected", "")),
+            violated_spec_items=list(payload.get("violated_spec_items", []) or []),
+            property_feedbacks=list(payload.get("property_feedbacks", []) or []),
+            repair_hint=str(payload.get("repair_hint", "")),
+            raw_metadata=dict(payload.get("raw_metadata", {}) or {}),
+        )
+
+    @staticmethod
+    def _feedback_has_semantic_signal(feedback: VerifierFeedback) -> bool:
+        return bool(
+            feedback.error_type == "wrong_answer"
+            and (
+                feedback.property_feedbacks
+                or feedback.violated_spec_items
+                or (feedback.input and feedback.expected)
+            )
+        )
+
+    def _post_failure_spec_regenerate(
+        self,
+        problem: "CodeGenerationProblem",
+        spec: StructuredSpec,
+        code: str,
+        feedback: VerifierFeedback,
+        previous_score: SpecScore,
+    ) -> tuple[StructuredSpec, str, list[VerifierFeedback], dict[str, Any]]:
+        meta = {
+            "raw_spec_outputs": [],
+            "raw_score_outputs": [],
+            "spec_usages": [],
+            "judge_usages": [],
+            "codegen_usages": [],
+            "stage_times": {},
+            "raw_codegen_output": "",
+            "accepted_spec_score": {},
+            "effectiveness": {
+                "enabled": True,
+                "attempts": [],
+                "accepted": False,
+                "reason": "not_attempted",
+            },
+        }
+        if not self._feedback_has_semantic_signal(feedback):
+            meta["effectiveness"]["reason"] = "no_semantic_failure_signal"
+            return spec, code, [], meta
+
+        current_spec = spec
+        for attempt_index in range(1, self._post_failure_sal_max_iters() + 1):
+            started_at = time.perf_counter()
+            patch_output, patch_usage = self.llm.generate(
+                build_post_failure_spec_refine_prompt(problem, current_spec, feedback),
+                role="post_failure_spec_refine",
+                temperature=self.args.spec_temperature,
+                max_tokens=self.args.spec_max_tokens,
+            )
+            patch, raw_outputs, extra_usages = self._parse_spec_patch_output(patch_output)
+            meta["raw_spec_outputs"].extend(raw_outputs)
+            meta["spec_usages"].append(patch_usage)
+            meta["spec_usages"].extend(extra_usages)
+            meta["stage_times"]["post_failure_spec_refine"] = (
+                meta["stage_times"].get("post_failure_spec_refine", 0.0)
+                + (time.perf_counter() - started_at)
+            )
+            patch_allowed, patch_reason = self._validate_contract_search_patch(
+                patch,
+                current_spec,
+            )
+            attempt_record: dict[str, Any] = {
+                "attempt_index": attempt_index,
+                "patch_reason": patch_reason,
+                "accepted": False,
+            }
+            if not patch_allowed:
+                attempt_record["reason"] = patch_reason
+                meta["effectiveness"]["attempts"].append(attempt_record)
+                continue
+
+            candidate_spec = patch.apply(current_spec)
+            candidate_score = self._score_spec(problem, candidate_spec)
+            meta["raw_score_outputs"].extend(
+                getattr(
+                    candidate_score,
+                    "_raw_attempt_outputs",
+                    [getattr(candidate_score, "_raw_output", "")],
+                )
+            )
+            meta["judge_usages"].append(getattr(candidate_score, "_usage", None))
+            meta["judge_usages"].extend(getattr(candidate_score, "_extra_usages", []))
+            meta["stage_times"]["post_failure_spec_score"] = (
+                meta["stage_times"].get("post_failure_spec_score", 0.0)
+                + float(getattr(candidate_score, "_stage_time", 0.0))
+            )
+            attempt_record.update(
+                {
+                    "candidate_sas": int(candidate_score.overall),
+                    "candidate_faithfulness": int(candidate_score.faithfulness),
+                    "previous_sas": int(previous_score.overall),
+                }
+            )
+            if candidate_score.faithfulness + 2 < previous_score.faithfulness:
+                attempt_record["reason"] = "rejected_faithfulness_drop"
+                meta["effectiveness"]["attempts"].append(attempt_record)
+                continue
+
+            candidate_code = self._generate_code_from_spec(problem, candidate_spec)
+            regen_feedback = self._verify(problem, candidate_code, spec=candidate_spec)
+            meta["raw_codegen_output"] = getattr(candidate_spec, "_last_codegen_output", "")
+            meta["codegen_usages"].append(
+                getattr(candidate_spec, "_last_codegen_usage", None)
+            )
+            meta["codegen_usages"].extend(
+                getattr(candidate_spec, "_last_codegen_extra_usages", [])
+            )
+            meta["stage_times"]["post_failure_codegen"] = (
+                meta["stage_times"].get("post_failure_codegen", 0.0)
+                + float(getattr(candidate_spec, "_last_codegen_stage_time", 0.0))
+            )
+            attempt_record.update(
+                {
+                    "regenerated_error_type": regen_feedback.error_type,
+                    "regenerated_passed": bool(regen_feedback.passed),
+                    "reason": "regenerated_passed"
+                    if regen_feedback.passed
+                    else "regenerated_still_failing",
+                    "accepted": bool(regen_feedback.passed),
+                }
+            )
+            meta["effectiveness"]["attempts"].append(attempt_record)
+            if regen_feedback.passed:
+                meta["effectiveness"]["accepted"] = True
+                meta["effectiveness"]["reason"] = "regenerated_passed"
+                meta["accepted_spec_score"] = asdict(candidate_score)
+                return candidate_spec, candidate_code, [regen_feedback], meta
+            current_spec = candidate_spec
+
+        meta["effectiveness"]["reason"] = "no_regenerated_solution_passed"
+        return spec, code, [], meta
+
     def _repair_direct_code(
         self,
         problem: "CodeGenerationProblem",
@@ -1615,22 +1825,17 @@ class DualLoopPipeline:
         repair_effectiveness: list[dict[str, Any]] = []
         current_code = code
         stagnant_attempts = 0
-        pending_step: dict[str, Any] | None = None
+        cached_feedback: VerifierFeedback | None = None
         for attempt_idx in range(self.args.repair_max_iters):
-            feedback = self._verify(problem, current_code, spec=spec)
+            if cached_feedback is None:
+                feedback = self._verify(problem, current_code, spec=spec)
+            else:
+                feedback = cached_feedback
+                cached_feedback = None
             feedback_trace.append(asdict(feedback))
-            if pending_step is not None:
-                repair_effectiveness.append(
-                    self._finalize_repair_effectiveness(
-                        pending_step,
-                        after_feedback=feedback,
-                    )
-                )
-                pending_step = None
             if feedback.passed:
                 spec._repair_effectiveness = repair_effectiveness
                 return current_code, feedback_trace
-            started_at = time.perf_counter()
             counterexample = self._build_counterexample_summary(feedback)
             use_rewrite_fallback = (
                 not getattr(self.args, "disable_rewrite_repair", False)
@@ -1669,24 +1874,63 @@ class DualLoopPipeline:
                     counterexample,
                 )
                 role = "repair_counterexample"
-            repair_output, usage = self.llm.generate(
-                prompt,
-                role=role,
-                temperature=min(0.8, self.args.repair_temperature + 0.2 * stagnant_attempts),
-                max_tokens=self.args.codegen_max_tokens,
-            )
-            if not hasattr(spec, "_repair_outputs"):
-                spec._repair_outputs = []
-            if not hasattr(spec, "_repair_usages"):
-                spec._repair_usages = []
-            if not hasattr(spec, "_repair_stage_times"):
-                spec._repair_stage_times = []
-            spec._repair_outputs.append(repair_output)
-            spec._repair_usages.append(usage)
+
+            self._ensure_repair_buffers(spec)
+            candidate_records: list[dict[str, Any]] = []
+            started_at = time.perf_counter()
+            for candidate_index in range(self._repair_candidate_count()):
+                repair_output, usage = self.llm.generate(
+                    prompt,
+                    role=role,
+                    temperature=min(
+                        0.8,
+                        self.args.repair_temperature
+                        + 0.2 * stagnant_attempts
+                        + 0.05 * candidate_index,
+                    ),
+                    max_tokens=self.args.codegen_max_tokens,
+                )
+                spec._repair_outputs.append(repair_output)
+                spec._repair_usages.append(usage)
+                next_code, extra_outputs, extra_usages = self._extract_valid_code(
+                    repair_output
+                )
+                spec._repair_outputs.extend(extra_outputs)
+                spec._repair_usages.extend(extra_usages)
+                if not next_code:
+                    candidate_feedback = self._invalid_codegen_feedback(
+                        "Repair candidate could not be parsed into valid Python code."
+                    )
+                    candidate_reason = "invalid_candidate"
+                elif next_code == current_code:
+                    candidate_feedback = self._invalid_codegen_feedback(
+                        "Repair candidate repeated the current failing program."
+                    )
+                    candidate_reason = "unchanged_candidate"
+                else:
+                    candidate_feedback = self._verify(problem, next_code, spec=spec)
+                    candidate_reason = "candidate_changed"
+                candidate_records.append(
+                    {
+                        "candidate_index": candidate_index + 1,
+                        "raw_output": repair_output,
+                        "code": next_code,
+                        "feedback": candidate_feedback,
+                        "reason": candidate_reason,
+                    }
+                )
+                if candidate_feedback.passed:
+                    break
             spec._repair_stage_times.append(time.perf_counter() - started_at)
-            next_code, extra_outputs, extra_usages = self._extract_valid_code(repair_output)
-            spec._repair_outputs.extend(extra_outputs)
-            spec._repair_usages.extend(extra_usages)
+
+            selected_record = min(
+                candidate_records,
+                key=lambda record: self._candidate_feedback_rank(record["feedback"]),
+            )
+            next_code = str(selected_record["code"])
+            selected_feedback = selected_record["feedback"]
+            selected_reason = str(selected_record["reason"])
+
             if not next_code:
                 repair_effectiveness.append(
                     self._build_repair_effectiveness(
@@ -1715,7 +1959,8 @@ class DualLoopPipeline:
                 )
                 stagnant_attempts += 1
                 continue
-            pending_step = self._build_repair_effectiveness(
+
+            step = self._build_repair_effectiveness(
                 attempt_index=attempt_idx + 1,
                 strategy=role,
                 before_code=current_code,
@@ -1724,18 +1969,34 @@ class DualLoopPipeline:
                 effect="pending",
                 reason="awaiting_verifier",
             )
-            current_code = next_code
-            stagnant_attempts = 0
-
-        final_feedback = self._verify(problem, current_code, spec=spec)
-        feedback_trace.append(asdict(final_feedback))
-        if pending_step is not None:
+            step["candidate_count"] = len(candidate_records)
+            step["selected_candidate_index"] = int(selected_record["candidate_index"])
+            step["selected_error_type"] = str(selected_feedback.error_type)
+            step["candidate_feedbacks"] = [
+                {
+                    "candidate_index": int(record["candidate_index"]),
+                    "error_type": record["feedback"].error_type,
+                    "passed": bool(record["feedback"].passed),
+                    "reason": str(record["reason"]),
+                }
+                for record in candidate_records
+            ]
             repair_effectiveness.append(
                 self._finalize_repair_effectiveness(
-                    pending_step,
-                    after_feedback=final_feedback,
+                    step,
+                    after_feedback=selected_feedback,
                 )
             )
+            current_code = next_code
+            if selected_feedback.passed:
+                feedback_trace.append(asdict(selected_feedback))
+                spec._repair_effectiveness = repair_effectiveness
+                return current_code, feedback_trace
+            cached_feedback = selected_feedback
+            stagnant_attempts = 0 if selected_reason == "candidate_changed" else stagnant_attempts + 1
+
+        final_feedback = cached_feedback or self._verify(problem, current_code, spec=spec)
+        feedback_trace.append(asdict(final_feedback))
         spec._repair_effectiveness = repair_effectiveness
         return current_code, feedback_trace
 
@@ -2293,6 +2554,8 @@ class DualLoopPipeline:
                 getattr(self.args, "attribution_spec_margin", 5) or 5
             ),
             "codegen_num_candidates": int(getattr(self.args, "codegen_num_candidates", 1) or 1),
+            "repair_num_candidates": self._repair_candidate_count(),
+            "post_failure_sal_max_iters": self._post_failure_sal_max_iters(),
             "contract_search_population_size": self._contract_population_size(),
             "contract_search_rounds": self._contract_search_rounds(),
             "contract_search_top_k": self._contract_search_top_k(),
