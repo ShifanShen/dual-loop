@@ -189,6 +189,50 @@ def _clauses_from_text(text: str, source_field: str) -> list[PropertyClause]:
             )
         )
 
+    modulus = _extract_modulus(lowered)
+    if modulus is not None:
+        clauses.append(
+            PropertyClause(
+                property_type="modulo_output",
+                description=text,
+                source_field=source_field,
+                parameters={"modulus": modulus},
+            )
+        )
+
+    if _contains_any(
+        lowered,
+        (
+            "output an integer",
+            "output a single integer",
+            "print an integer",
+            "print a single integer",
+            "return an integer",
+            "single integer",
+            "output the number",
+            "return the number",
+            "number of",
+            "count of",
+            "the count",
+        ),
+    ):
+        clauses.append(
+            PropertyClause(
+                property_type="numeric_output",
+                description=text,
+                source_field=source_field,
+            )
+        )
+
+    if _contains_any(lowered, ("number of", "count of", "the count")):
+        clauses.append(
+            PropertyClause(
+                property_type="non_negative_output",
+                description=text,
+                source_field=source_field,
+            )
+        )
+
     return clauses
 
 
@@ -292,11 +336,108 @@ def _evaluate_clause(
             evidence={"actual_output": actual_output.strip()},
         )
 
+    if property_type == "modulo_output":
+        modulus = _positive_int(clause.parameters.get("modulus"))
+        if modulus is None:
+            return None
+        actual_numeric = _numeric_tokens(actual_output)
+        expected_numeric = _numeric_tokens(expected_output)
+        if not actual_numeric or not expected_numeric:
+            return None
+        if any(not isinstance(value, int) for value in actual_numeric + expected_numeric):
+            return None
+        if any(value < 0 or value >= modulus for value in expected_numeric):
+            return None
+        out_of_range = [value for value in actual_numeric if value < 0 or value >= modulus]
+        if not out_of_range:
+            return None
+        return PropertyFeedback(
+            property_type=property_type,
+            source_field=clause.source_field,
+            message=f"output contains value(s) outside the required modulo range [0, {modulus})",
+            evidence={
+                "modulus": modulus,
+                "out_of_range_values": out_of_range[:20],
+            },
+        )
+
+    if property_type == "numeric_output":
+        actual_tokens = _tokenize_scalars(actual_output)
+        expected_tokens = _tokenize_scalars(expected_output)
+        if not actual_tokens or not expected_tokens:
+            return None
+        if not all(isinstance(token, (int, float)) for token in expected_tokens):
+            return None
+        non_numeric = [
+            token for token in actual_tokens if not isinstance(token, (int, float))
+        ]
+        if not non_numeric and len(actual_tokens) == len(expected_tokens):
+            return None
+        evidence: dict[str, Any] = {
+            "actual_tokens": actual_tokens[:20],
+            "expected_numeric_count": len(expected_tokens),
+        }
+        if non_numeric:
+            evidence["non_numeric_tokens"] = non_numeric[:20]
+            message = "output contains non-numeric token(s) where numeric answer(s) are expected"
+        else:
+            message = "number of numeric output tokens differs from the expected answer"
+        return PropertyFeedback(
+            property_type=property_type,
+            source_field=clause.source_field,
+            message=message,
+            evidence=evidence,
+        )
+
+    if property_type == "non_negative_output":
+        actual_numeric = _numeric_tokens(actual_output)
+        expected_numeric = _numeric_tokens(expected_output)
+        if not actual_numeric or not expected_numeric:
+            return None
+        if any(value < 0 for value in expected_numeric):
+            return None
+        negative_values = [value for value in actual_numeric if value < 0]
+        if not negative_values:
+            return None
+        return PropertyFeedback(
+            property_type=property_type,
+            source_field=clause.source_field,
+            message="count-like output contains negative value(s)",
+            evidence={"negative_values": negative_values[:20]},
+        )
+
     return None
 
 
 def _contains_any(text: str, phrases: tuple[str, ...]) -> bool:
     return any(phrase in text for phrase in phrases)
+
+
+def _extract_modulus(text: str) -> int | None:
+    patterns = (
+        r"\bmod(?:ulo)?\s+(?:10\^9\s*\+\s*7|1e9\s*\+\s*7|1000000007)\b",
+        r"\bmod(?:ulo)?\s+(998244353)\b",
+        r"\bmod(?:ulo)?\s+(\d{5,})\b",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if not match:
+            continue
+        if match.groups():
+            return int(match.group(1))
+        return 1000000007
+    return None
+
+
+def _positive_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int) and value > 0:
+        return value
+    if isinstance(value, str) and re.fullmatch(r"\d+", value.strip()):
+        parsed = int(value)
+        return parsed if parsed > 0 else None
+    return None
 
 
 def _parse_sequence(text: str) -> list[Any]:
@@ -337,6 +478,15 @@ def _coerce_numeric_sequence(values: list[Any]) -> list[int | float]:
                 continue
         return []
     return coerced
+
+
+def _numeric_tokens(text: str) -> list[int | float]:
+    tokens = _tokenize_scalars(text)
+    if not tokens:
+        return []
+    if not all(isinstance(token, (int, float)) for token in tokens):
+        return []
+    return tokens
 
 
 def _tokenize_scalars(text: str) -> list[Any]:

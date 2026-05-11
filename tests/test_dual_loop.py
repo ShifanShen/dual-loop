@@ -299,6 +299,45 @@ class SpecParsingTests(unittest.TestCase):
         self.assertEqual(len(feedbacks), 1)
         self.assertIn("number of YES/NO outputs", feedbacks[0].message)
 
+    def test_modulo_property_reports_out_of_range_output(self):
+        spec = StructuredSpec(outputs=["Output the answer modulo 1000000007."])
+        clauses = compile_property_clauses(spec)
+
+        feedbacks = evaluate_property_clauses(
+            clauses,
+            actual_output="1000000008",
+            expected_output="1",
+        )
+
+        self.assertEqual(len(feedbacks), 1)
+        self.assertEqual(feedbacks[0].property_type, "modulo_output")
+
+    def test_numeric_property_reports_non_numeric_output(self):
+        spec = StructuredSpec(outputs=["Output a single integer."])
+        clauses = compile_property_clauses(spec)
+
+        feedbacks = evaluate_property_clauses(
+            clauses,
+            actual_output="YES",
+            expected_output="3",
+        )
+
+        self.assertEqual(len(feedbacks), 1)
+        self.assertEqual(feedbacks[0].property_type, "numeric_output")
+
+    def test_count_property_reports_negative_output(self):
+        spec = StructuredSpec(outputs=["Output the number of valid pairs."])
+        clauses = compile_property_clauses(spec)
+
+        feedbacks = evaluate_property_clauses(
+            clauses,
+            actual_output="-1",
+            expected_output="0",
+        )
+
+        property_types = {feedback.property_type for feedback in feedbacks}
+        self.assertIn("non_negative_output", property_types)
+
     def test_reliability_guard_restores_process_state(self):
         import os
         import shutil
@@ -690,6 +729,70 @@ class DualLoopPipelineTests(unittest.TestCase):
             self.assertEqual(
                 feedback.property_feedbacks[0]["property_type"],
                 "sorted_order",
+            )
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_verify_attaches_static_spec_feedback_for_forbidden_api(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            mock_adapter_cls.return_value.model.model_repr = "fake-model"
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+            spec = StructuredSpec(
+                task="sort numbers",
+                constraints=["Do not use sort or sorted."],
+            )
+
+            with patch(
+                "lcb_runner.evaluation.compute_code_generation_metrics.check_correctness",
+                return_value=(
+                    [-2],
+                    {
+                        "error_code": -2,
+                        "error_message": "Wrong answer",
+                        "inputs": "3 1 2",
+                        "output": "3 2 1",
+                        "expected": "1 2 3",
+                    },
+                ),
+            ):
+                feedback = pipeline._verify(problem, "print(sorted([3, 1, 2]))", spec=spec)
+
+            property_types = {
+                item["property_type"] for item in feedback.property_feedbacks
+            }
+            self.assertIn("forbidden_api_usage", property_types)
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_candidate_feedback_rank_penalizes_spec_property_violations(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            mock_adapter_cls.return_value.model.model_repr = "fake-model"
+            pipeline = DualLoopPipeline(args)
+            clean_feedback = VerifierFeedback(
+                passed=False,
+                error_type="wrong_answer",
+                field="Rules",
+                message="wrong",
+            )
+            violating_feedback = VerifierFeedback(
+                passed=False,
+                error_type="wrong_answer",
+                field="Rules",
+                message="wrong",
+                property_feedbacks=[
+                    {
+                        "property_type": "forbidden_api_usage",
+                        "source_field": "must_not_assume",
+                        "message": "used forbidden API",
+                        "evidence": {},
+                    }
+                ],
+            )
+
+            self.assertLess(
+                pipeline._candidate_feedback_rank(clean_feedback),
+                pipeline._candidate_feedback_rank(violating_feedback),
             )
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")

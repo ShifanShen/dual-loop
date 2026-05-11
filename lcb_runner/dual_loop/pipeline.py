@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import time
 import hashlib
 from collections import Counter
@@ -1321,9 +1322,27 @@ class DualLoopPipeline:
         return (
             0 if feedback.passed else 1,
             error_priority.get(feedback.error_type, 99),
-            len(feedback.property_feedbacks or []),
+            self._property_feedback_penalty(feedback),
             len(feedback.violated_spec_items or []),
             -self._matching_line_count(feedback),
+        )
+
+    @staticmethod
+    def _property_feedback_penalty(feedback: VerifierFeedback) -> int:
+        weights = {
+            "forbidden_api_usage": 8,
+            "missing_modulo_operation": 5,
+            "modulo_output": 5,
+            "yes_no_output": 4,
+            "numeric_output": 4,
+            "non_negative_output": 3,
+            "sorted_order": 3,
+            "same_multiset": 3,
+            "same_length": 2,
+        }
+        return sum(
+            weights.get(str(item.get("property_type", "unknown")), 2)
+            for item in (feedback.property_feedbacks or [])
         )
 
     def _select_best_codegen_candidate(
@@ -2320,6 +2339,117 @@ class DualLoopPipeline:
             return False
         return any(token in stripped for token in signal_tokens)
 
+    @staticmethod
+    def _static_spec_code_feedbacks(
+        spec: StructuredSpec | None, code: str
+    ) -> list[dict[str, Any]]:
+        if spec is None or not code.strip():
+            return []
+        spec_text = " ".join(
+            [
+                spec.task,
+                *spec.constraints,
+                *spec.rules,
+                *spec.checkable_properties,
+                *spec.must_not_assume,
+                *spec.edge_cases,
+                *spec.outputs,
+            ]
+        ).lower()
+        feedbacks: list[dict[str, Any]] = []
+
+        forbidden_patterns = {
+            "sort/sorted": (
+                ("sort", "sorted"),
+                (r"\bsorted\s*\(", r"\.sort\s*\("),
+            ),
+            "eval": (("eval",), (r"\beval\s*\(",)),
+            "exec": (("exec",), (r"\bexec\s*\(",)),
+        }
+        for api_name, (tokens, patterns) in forbidden_patterns.items():
+            if not any(
+                DualLoopPipeline._spec_forbids_token(spec_text, token)
+                for token in tokens
+            ):
+                continue
+            matched_pattern = next(
+                (pattern for pattern in patterns if re.search(pattern, code)),
+                "",
+            )
+            if not matched_pattern:
+                continue
+            feedbacks.append(
+                {
+                    "property_type": "forbidden_api_usage",
+                    "source_field": "must_not_assume",
+                    "message": f"code appears to use forbidden API or operation: {api_name}",
+                    "evidence": {"matched_pattern": matched_pattern},
+                }
+            )
+
+        if (
+            DualLoopPipeline._spec_requires_modulo(spec_text)
+            and "%" not in code
+            and "mod" not in code.lower()
+        ):
+            feedbacks.append(
+                {
+                    "property_type": "missing_modulo_operation",
+                    "source_field": "outputs",
+                    "message": "spec requires modulo output but code has no visible modulo operation",
+                    "evidence": {},
+                }
+            )
+
+        return DualLoopPipeline._dedupe_property_feedbacks(feedbacks)
+
+    @staticmethod
+    def _spec_forbids_token(spec_text: str, token: str) -> bool:
+        token = re.escape(token.lower())
+        patterns = (
+            rf"\bdo not use\s+{token}\b",
+            rf"\bdon't use\s+{token}\b",
+            rf"\bwithout using\s+{token}\b",
+            rf"\bmust not use\s+{token}\b",
+            rf"\bcannot use\s+{token}\b",
+            rf"\bnot use\s+{token}\b",
+            rf"\bno\s+{token}\b",
+        )
+        return any(re.search(pattern, spec_text) for pattern in patterns)
+
+    @staticmethod
+    def _spec_requires_modulo(spec_text: str) -> bool:
+        return bool(
+            re.search(
+                r"\bmod(?:ulo)?\s+(?:10\^9\s*\+\s*7|1e9\s*\+\s*7|1000000007|998244353|\d{5,})\b",
+                spec_text,
+                flags=re.IGNORECASE,
+            )
+        )
+
+    @staticmethod
+    def _dedupe_property_feedbacks(
+        feedbacks: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        deduped: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for feedback in feedbacks:
+            signature = json.dumps(
+                {
+                    "property_type": feedback.get("property_type", ""),
+                    "source_field": feedback.get("source_field", ""),
+                    "message": feedback.get("message", ""),
+                    "evidence": feedback.get("evidence", {}),
+                },
+                ensure_ascii=True,
+                sort_keys=True,
+            )
+            if signature in seen:
+                continue
+            seen.add(signature)
+            deduped.append(feedback)
+        return deduped
+
     def _verify(
         self, problem: "CodeGenerationProblem", code: str, spec: StructuredSpec | None = None
     ) -> VerifierFeedback:
@@ -2391,6 +2521,8 @@ class DualLoopPipeline:
                     raw_input=str(metadata.get("inputs", "")),
                 )
             ]
+            property_feedbacks.extend(self._static_spec_code_feedbacks(spec, code))
+            property_feedbacks = self._dedupe_property_feedbacks(property_feedbacks)
             for property_feedback in property_feedbacks:
                 violated_spec_items.append(
                     f"Property {property_feedback.get('property_type', 'unknown')}: "
