@@ -51,14 +51,14 @@ prepare_humaneval_plus() {
   fi
 
   local prepare_args=(--output_dir "$HUMANEVAL_DATASET_PATH")
-  if [[ "$FORCE_PREPARE_HUMANEVAL" == "1" || ! -d "$HUMANEVAL_DATASET_PATH" ]]; then
+  if [[ "$FORCE_PREPARE_HUMANEVAL" == "1" || ! -f "$HUMANEVAL_DATASET_PATH/dataset_dict.json" ]]; then
     prepare_args+=(--force)
   fi
   if [[ -n "$HUMANEVAL_SOURCE_JSON" ]]; then
     prepare_args+=(--source_json "$HUMANEVAL_SOURCE_JSON")
   fi
 
-  if [[ "$FORCE_PREPARE_HUMANEVAL" == "1" || ! -d "$HUMANEVAL_DATASET_PATH" ]]; then
+  if [[ "$FORCE_PREPARE_HUMANEVAL" == "1" || ! -f "$HUMANEVAL_DATASET_PATH/dataset_dict.json" ]]; then
     "$UV_BIN" run python scripts/prepare_humaneval_plus_dataset.py "${prepare_args[@]}"
   else
     echo "HumanEval+ dataset already exists: $HUMANEVAL_DATASET_PATH"

@@ -8,6 +8,9 @@ from typing import Any
 
 from datasets import Dataset, DatasetDict
 
+if hasattr(sys, "set_int_max_str_digits"):
+    sys.set_int_max_str_digits(0)
+
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -39,6 +42,30 @@ def parse_args() -> argparse.Namespace:
         "--force",
         action="store_true",
         help="Overwrite output_dir if it already exists.",
+    )
+    parser.add_argument(
+        "--max_public_tests",
+        type=int,
+        default=8,
+        help="Maximum number of base tests exposed as public tests per task.",
+    )
+    parser.add_argument(
+        "--max_private_tests",
+        type=int,
+        default=128,
+        help="Maximum number of hidden tests retained per task after filtering.",
+    )
+    parser.add_argument(
+        "--max_case_json_chars",
+        type=int,
+        default=20000,
+        help="Skip individual tests whose serialized input or output is longer than this.",
+    )
+    parser.add_argument(
+        "--max_int_digits",
+        type=int,
+        default=10000,
+        help="Skip individual tests containing integers with more than this many digits.",
     )
     return parser.parse_args()
 
@@ -89,6 +116,37 @@ def _jsonable(value: Any) -> Any:
     return value
 
 
+def _contains_oversized_int(value: Any, *, max_int_digits: int) -> bool:
+    if isinstance(value, bool):
+        return False
+    if isinstance(value, int):
+        return len(str(abs(value))) > max_int_digits
+    if isinstance(value, (tuple, list, set)):
+        return any(_contains_oversized_int(item, max_int_digits=max_int_digits) for item in value)
+    if isinstance(value, dict):
+        return any(
+            _contains_oversized_int(key, max_int_digits=max_int_digits)
+            or _contains_oversized_int(val, max_int_digits=max_int_digits)
+            for key, val in value.items()
+        )
+    return False
+
+
+def _safe_json_dumps(
+    value: Any,
+    *,
+    max_case_json_chars: int,
+    max_int_digits: int,
+) -> str | None:
+    jsonable = _jsonable(value)
+    if _contains_oversized_int(jsonable, max_int_digits=max_int_digits):
+        return None
+    encoded = json.dumps(jsonable)
+    if len(encoded) > max_case_json_chars:
+        return None
+    return encoded
+
+
 def _exec_solution(task: dict[str, Any]) -> Any:
     from lcb_runner.evaluation.testing_util import import_string
 
@@ -114,7 +172,14 @@ def _case_to_args(case: Any, num_params: int) -> tuple[Any, ...]:
     return (case,)
 
 
-def _make_tests(task: dict[str, Any], cases: list[Any]) -> list[dict[str, str]]:
+def _make_tests(
+    task: dict[str, Any],
+    cases: list[Any],
+    *,
+    max_tests: int,
+    max_case_json_chars: int,
+    max_int_digits: int,
+) -> list[dict[str, str]]:
     import inspect
 
     fn = _exec_solution(task)
@@ -122,28 +187,65 @@ def _make_tests(task: dict[str, Any], cases: list[Any]) -> list[dict[str, str]]:
     num_params = len(params)
     tests: list[dict[str, str]] = []
     for case in cases:
+        if len(tests) >= max_tests:
+            break
         args = _case_to_args(case, num_params)
+        input_lines: list[str] = []
+        skip_case = False
+        for arg in args:
+            encoded_arg = _safe_json_dumps(
+                arg,
+                max_case_json_chars=max_case_json_chars,
+                max_int_digits=max_int_digits,
+            )
+            if encoded_arg is None:
+                skip_case = True
+                break
+            input_lines.append(encoded_arg)
+        if skip_case:
+            continue
         safe_args = copy.deepcopy(args)
         output = fn(*safe_args)
+        encoded_output = _safe_json_dumps(
+            output,
+            max_case_json_chars=max_case_json_chars,
+            max_int_digits=max_int_digits,
+        )
+        if encoded_output is None:
+            continue
         tests.append(
             {
-                "input": "\n".join(json.dumps(_jsonable(arg)) for arg in args),
-                "output": json.dumps(_jsonable(output)),
+                "input": "\n".join(input_lines),
+                "output": encoded_output,
                 "testtype": "functional",
             }
         )
     return tests
 
 
-def _task_to_lcb_row(task_id: str, task: dict[str, Any]) -> dict[str, Any]:
+def _task_to_lcb_row(task_id: str, task: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
     base_cases = list(task.get("base_input") or task.get("base_inputs") or [])
     plus_cases = list(task.get("plus_input") or task.get("plus_inputs") or [])
     if not base_cases and not plus_cases:
         raise ValueError(f"Task {task_id} has no base_input/plus_input cases.")
-    public_tests = _make_tests(task, base_cases[: min(8, len(base_cases))])
-    private_tests = _make_tests(task, base_cases[min(8, len(base_cases)) :] + plus_cases)
+    public_tests = _make_tests(
+        task,
+        base_cases,
+        max_tests=args.max_public_tests,
+        max_case_json_chars=args.max_case_json_chars,
+        max_int_digits=args.max_int_digits,
+    )
+    private_tests = _make_tests(
+        task,
+        base_cases[args.max_public_tests :] + plus_cases,
+        max_tests=args.max_private_tests,
+        max_case_json_chars=args.max_case_json_chars,
+        max_int_digits=args.max_int_digits,
+    )
     if not private_tests:
         private_tests = public_tests
+    if not public_tests and not private_tests:
+        raise ValueError(f"Task {task_id} has no retained tests after filtering.")
     entry_point = str(task["entry_point"])
     prompt = str(task.get("prompt", "")).rstrip()
     question = (
@@ -168,6 +270,10 @@ def _task_to_lcb_row(task_id: str, task: dict[str, Any]) -> dict[str, Any]:
                 "original_task_id": task_id,
                 "num_base_tests": len(base_cases),
                 "num_plus_tests": len(plus_cases),
+                "retained_public_tests": len(public_tests),
+                "retained_private_tests": len(private_tests),
+                "max_case_json_chars": args.max_case_json_chars,
+                "max_int_digits": args.max_int_digits,
             }
         ),
     }
@@ -184,7 +290,13 @@ def main() -> None:
         shutil.rmtree(output_dir)
 
     tasks = _load_evalplus_tasks(args.source_json)
-    rows = [_task_to_lcb_row(task_id, task) for task_id, task in sorted(tasks.items())]
+    rows = []
+    skipped_tasks: list[str] = []
+    for task_id, task in sorted(tasks.items()):
+        try:
+            rows.append(_task_to_lcb_row(task_id, task, args))
+        except ValueError:
+            skipped_tasks.append(task_id)
     dataset = DatasetDict({"test": Dataset.from_list(rows)})
     output_dir.parent.mkdir(parents=True, exist_ok=True)
     dataset.save_to_disk(str(output_dir))
@@ -193,6 +305,8 @@ def main() -> None:
             {
                 "output_dir": str(output_dir),
                 "num_tasks": len(rows),
+                "skipped_tasks": skipped_tasks,
+                "num_skipped_tasks": len(skipped_tasks),
                 "format": "lcb_code_generation_compatible",
             },
             indent=2,
