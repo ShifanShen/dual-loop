@@ -31,6 +31,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--trust_remote_code", action="store_true")
     parser.add_argument("--dtype", type=str, default="bfloat16")
     parser.add_argument("--tensor_parallel_size", type=int, default=1)
+    parser.add_argument(
+        "--max_model_len",
+        type=int,
+        default=0,
+        help="Optional vLLM max_model_len override. Use this for long-context models on smaller GPUs.",
+    )
     parser.add_argument("--enable_prefix_caching", action="store_true")
     parser.add_argument("--use_cache", action="store_true")
     parser.add_argument("--cache_batch_size", type=int, default=32)

@@ -22,6 +22,7 @@ MAX_PROBLEMS="${MAX_PROBLEMS:-50}"
 GPU_ID="${GPU_ID:-0}"
 DTYPE="${DTYPE:-bfloat16}"
 TIMEOUT="${TIMEOUT:-6}"
+MAX_MODEL_LEN="${MAX_MODEL_LEN:-32768}"
 UV_BIN="${UV_BIN:-$(type -P uv || true)}"
 DATASET_PATH="${DATASET_PATH:-}"
 
@@ -51,6 +52,7 @@ COMMON_ARGS=(
   --release_version "$RELEASE_VERSION"
   --max_problems "$MAX_PROBLEMS"
   --tensor_parallel_size 1
+  --max_model_len "$MAX_MODEL_LEN"
   --dtype "$DTYPE"
   --spec_max_iters "$SPEC_MAX_ITERS"
   --repair_max_iters "$REPAIR_MAX_ITERS"

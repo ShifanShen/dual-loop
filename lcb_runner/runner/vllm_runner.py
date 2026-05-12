@@ -14,6 +14,10 @@ class VLLMRunner(BaseRunner):
         model_tokenizer_path = (
             model.model_name if args.local_model_path is None else args.local_model_path
         )
+        llm_kwargs = {}
+        max_model_len = int(getattr(args, "max_model_len", 0) or 0)
+        if max_model_len > 0:
+            llm_kwargs["max_model_len"] = max_model_len
         self.llm = LLM(
             model=model_tokenizer_path,
             tokenizer=model_tokenizer_path,
@@ -23,6 +27,7 @@ class VLLMRunner(BaseRunner):
             disable_custom_all_reduce=True,
             enable_prefix_caching=args.enable_prefix_caching,
             trust_remote_code=args.trust_remote_code,
+            **llm_kwargs,
         )
         self.sampling_params = SamplingParams(
             n=self.args.n,
