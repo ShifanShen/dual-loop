@@ -1,6 +1,5 @@
 import json
 import os
-import re
 import time
 import hashlib
 from collections import Counter
@@ -2361,19 +2360,17 @@ class DualLoopPipeline:
         forbidden_patterns = {
             "sort/sorted": (
                 ("sort", "sorted"),
-                (r"\bsorted\s*\(", r"\.sort\s*\("),
+                ("sorted(", ".sort("),
             ),
-            "eval": (("eval",), (r"\beval\s*\(",)),
-            "exec": (("exec",), (r"\bexec\s*\(",)),
+            "eval": (("eval",), ("eval(",)),
+            "exec": (("exec",), ("exec(",)),
         }
+        compact_code = code.replace(" ", "")
         for api_name, (tokens, patterns) in forbidden_patterns.items():
-            if not any(
-                DualLoopPipeline._spec_forbids_token(spec_text, token)
-                for token in tokens
-            ):
+            if not any(token in spec_text and "not use" in spec_text for token in tokens):
                 continue
             matched_pattern = next(
-                (pattern for pattern in patterns if re.search(pattern, code)),
+                (pattern for pattern in patterns if pattern in compact_code),
                 "",
             )
             if not matched_pattern:
@@ -2404,27 +2401,10 @@ class DualLoopPipeline:
         return DualLoopPipeline._dedupe_property_feedbacks(feedbacks)
 
     @staticmethod
-    def _spec_forbids_token(spec_text: str, token: str) -> bool:
-        token = re.escape(token.lower())
-        patterns = (
-            rf"\bdo not use\s+{token}\b",
-            rf"\bdon't use\s+{token}\b",
-            rf"\bwithout using\s+{token}\b",
-            rf"\bmust not use\s+{token}\b",
-            rf"\bcannot use\s+{token}\b",
-            rf"\bnot use\s+{token}\b",
-            rf"\bno\s+{token}\b",
-        )
-        return any(re.search(pattern, spec_text) for pattern in patterns)
-
-    @staticmethod
     def _spec_requires_modulo(spec_text: str) -> bool:
-        return bool(
-            re.search(
-                r"\bmod(?:ulo)?\s+(?:10\^9\s*\+\s*7|1e9\s*\+\s*7|1000000007|998244353|\d{5,})\b",
-                spec_text,
-                flags=re.IGNORECASE,
-            )
+        return any(
+            token in spec_text
+            for token in ("modulo 1000000007", "mod 1000000007", "modulo 998244353", "mod 998244353")
         )
 
     @staticmethod

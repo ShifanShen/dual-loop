@@ -246,6 +246,7 @@ class SpecParsingTests(unittest.TestCase):
         spec = StructuredSpec(
             task="sort numbers",
             checkable_properties=["output is sorted in ascending order"],
+            constraints=["Do not use sorted."],
         )
         clauses = compile_property_clauses(spec)
 
@@ -263,6 +264,7 @@ class SpecParsingTests(unittest.TestCase):
         spec = StructuredSpec(
             task="sort numbers",
             checkable_properties=["output is sorted in ascending order"],
+            constraints=["Do not use sorted."],
         )
         clauses = compile_property_clauses(spec)
 
