@@ -22,7 +22,7 @@ MAX_PROBLEMS="${MAX_PROBLEMS:-50}"
 GPU_ID="${GPU_ID:-0}"
 DTYPE="${DTYPE:-bfloat16}"
 TIMEOUT="${TIMEOUT:-6}"
-MAX_MODEL_LEN="${MAX_MODEL_LEN:-32768}"
+MAX_MODEL_LEN="${MAX_MODEL_LEN:-8192}"
 UV_BIN="${UV_BIN:-$(type -P uv || true)}"
 DATASET_PATH="${DATASET_PATH:-}"
 
@@ -91,7 +91,8 @@ for spec in "${SPECS[@]}"; do
   echo "============================================================"
   echo "Multi-model smoke: $MODEL_REPR"
   echo "============================================================"
-  CUDA_VISIBLE_DEVICES="$GPU_ID" "$UV_BIN" run python scripts/run_dual_loop_rq_suite.py \
+  CUDA_VISIBLE_DEVICES="$GPU_ID" PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+    "$UV_BIN" run python scripts/run_dual_loop_rq_suite.py \
     --local_model_path "$LOCAL_MODEL_PATH" \
     --model_style "$MODEL_STYLE" \
     --model "$MODEL_REPR" \

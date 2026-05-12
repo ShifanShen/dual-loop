@@ -16,6 +16,7 @@ DTYPE="${DTYPE:-bfloat16}"
 TIMEOUT="${TIMEOUT:-6}"
 UV_BIN="${UV_BIN:-}"
 DATASET_PATH="${DATASET_PATH:-}"
+MAX_MODEL_LEN="${MAX_MODEL_LEN:-0}"
 
 SPEC_MAX_ITERS="${SPEC_MAX_ITERS:-3}"
 REPAIR_MAX_ITERS="${REPAIR_MAX_ITERS:-3}"
@@ -57,6 +58,7 @@ COMMON_ARGS=(
   --release_version "$RELEASE_VERSION"
   --tensor_parallel_size 1
   --dtype "$DTYPE"
+  --max_model_len "$MAX_MODEL_LEN"
   --spec_max_iters "$SPEC_MAX_ITERS"
   --repair_max_iters "$REPAIR_MAX_ITERS"
   --spec_score_threshold "$SPEC_SCORE_THRESHOLD"
@@ -85,6 +87,7 @@ INTERMEDIATE_ARGS=(
   --release_version "$RELEASE_VERSION"
   --tensor_parallel_size 1
   --dtype "$DTYPE"
+  --max_model_len "$MAX_MODEL_LEN"
   --spec_max_iters "$SPEC_MAX_ITERS"
   --repair_max_iters "$REPAIR_MAX_ITERS"
   --spec_score_threshold "$SPEC_SCORE_THRESHOLD"
@@ -147,6 +150,9 @@ echo "  contract_search_top_k=$CONTRACT_SEARCH_TOP_K"
 echo "  contract_search_codegen_top_k=$CONTRACT_SEARCH_CODEGEN_TOP_K"
 echo "  contract_search_temperature=$CONTRACT_SEARCH_TEMPERATURE"
 echo "  uv_bin=$UV_BIN"
+if [[ "$MAX_MODEL_LEN" != "0" ]]; then
+  echo "  max_model_len=$MAX_MODEL_LEN"
+fi
 if [[ -n "$DATASET_PATH" ]]; then
   echo "  dataset_path=$DATASET_PATH"
 fi
