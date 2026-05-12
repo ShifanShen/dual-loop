@@ -5,13 +5,23 @@ MODEL_ROOT="${MODEL_ROOT:-/models}"
 DOWNLOAD_LLAMA="${DOWNLOAD_LLAMA:-1}"
 DOWNLOAD_DEEPSEEK="${DOWNLOAD_DEEPSEEK:-1}"
 DOWNLOAD_QWEN="${DOWNLOAD_QWEN:-0}"
+MODELSCOPE_BIN="${MODELSCOPE_BIN:-$(type -P modelscope || true)}"
+UV_BIN="${UV_BIN:-$(type -P uv || true)}"
+PYTHON_BIN="${PYTHON_BIN:-$(type -P python3 || type -P python || true)}"
 
-if ! command -v modelscope >/dev/null 2>&1; then
+if [[ -z "$MODELSCOPE_BIN" && -x ".venv/bin/modelscope" ]]; then
+  MODELSCOPE_BIN=".venv/bin/modelscope"
+fi
+
+if [[ -z "$MODELSCOPE_BIN" && -z "$UV_BIN" && -z "$PYTHON_BIN" ]]; then
   cat >&2 <<'EOF'
-Could not find the ModelScope CLI.
+Could not find a usable Python/uv/ModelScope command.
 
 Install it first:
-  python -m pip install -U modelscope
+  python3 -m pip install -U modelscope
+
+or inside this project:
+  uv pip install modelscope
 
 Then rerun this script.
 EOF
@@ -28,7 +38,23 @@ download_model() {
   echo "Downloading $model_id"
   echo "Target: $target_dir"
   echo "============================================================"
-  modelscope download --model "$model_id" --local_dir "$target_dir"
+  if [[ -n "$MODELSCOPE_BIN" ]]; then
+    "$MODELSCOPE_BIN" download --model "$model_id" --local_dir "$target_dir"
+  elif [[ -n "$UV_BIN" ]]; then
+    "$UV_BIN" run python - "$model_id" "$target_dir" <<'PY'
+import sys
+from modelscope import snapshot_download
+
+snapshot_download(sys.argv[1], local_dir=sys.argv[2])
+PY
+  else
+    "$PYTHON_BIN" - "$model_id" "$target_dir" <<'PY'
+import sys
+from modelscope import snapshot_download
+
+snapshot_download(sys.argv[1], local_dir=sys.argv[2])
+PY
+  fi
 }
 
 mkdir -p "$MODEL_ROOT"
