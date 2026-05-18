@@ -83,6 +83,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--codegen_num_candidates", type=int, default=1)
     parser.add_argument("--repair_num_candidates", type=int, default=1)
     parser.add_argument("--post_failure_sal_max_iters", type=int, default=0)
+    parser.add_argument(
+        "--post_failure_sal_trigger",
+        type=str,
+        default="attribution",
+        choices=["attribution", "semantic_signal"],
+        help=(
+            "Post-failure SAL re-entry trigger. Attribution mode only re-enters SAL "
+            "for pre-reentry spec-induced failures."
+        ),
+    )
     parser.add_argument("--contract_search_population_size", type=int, default=1)
     parser.add_argument("--contract_search_rounds", type=int, default=0)
     parser.add_argument("--contract_search_top_k", type=int, default=1)
@@ -168,6 +178,7 @@ def main() -> None:
         "codegen_num_candidates": args.codegen_num_candidates,
         "repair_num_candidates": args.repair_num_candidates,
         "post_failure_sal_max_iters": args.post_failure_sal_max_iters,
+        "post_failure_sal_trigger": args.post_failure_sal_trigger,
         "contract_search_population_size": args.contract_search_population_size,
         "contract_search_rounds": args.contract_search_rounds,
         "contract_search_top_k": args.contract_search_top_k,

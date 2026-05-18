@@ -139,6 +139,17 @@ def get_args():
         help="Optional verifier-triggered spec refinement/regeneration attempts after IRL fails.",
     )
     parser.add_argument(
+        "--post_failure_sal_trigger",
+        type=str,
+        default="attribution",
+        choices=["attribution", "semantic_signal"],
+        help=(
+            "Policy for post-failure SAL re-entry. 'attribution' routes back to SAL only "
+            "when the failed trace is attributed to spec-induced failure; "
+            "'semantic_signal' preserves the older verifier-signal trigger."
+        ),
+    )
+    parser.add_argument(
         "--contract_search_population_size",
         type=int,
         default=1,

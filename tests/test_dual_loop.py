@@ -5,6 +5,7 @@ import tempfile
 import types
 import unittest
 from argparse import Namespace
+from dataclasses import asdict
 from unittest.mock import patch
 
 if "datasets" not in sys.modules:
@@ -55,7 +56,7 @@ from lcb_runner.dual_loop.rq_suite import (
 from lcb_runner.dual_loop.model_download import infer_output_dir
 from lcb_runner.lm_styles import LMStyle, resolve_language_model
 from lcb_runner.dual_loop.pipeline import DualLoopPipeline, LLMAdapter, ProblemTrace
-from lcb_runner.dual_loop.spec import SpecScore, StructuredSpec, VerifierFeedback
+from lcb_runner.dual_loop.spec import SpecPatch, SpecScore, StructuredSpec, VerifierFeedback
 from lcb_runner.evaluation.testing_util import reliability_guard, restore_reliability_guard
 
 
@@ -433,6 +434,7 @@ class DualLoopPipelineTests(unittest.TestCase):
             codegen_num_candidates=1,
             repair_num_candidates=1,
             post_failure_sal_max_iters=0,
+            post_failure_sal_trigger="attribution",
             contract_search_population_size=1,
             contract_search_rounds=0,
             contract_search_top_k=1,
@@ -509,6 +511,127 @@ class DualLoopPipelineTests(unittest.TestCase):
             self.assertEqual(trace.failure_attribution, "solved")
             self.assertIn("spec_draft", trace.effectiveness)
             self.assertIn("codegen", trace.effectiveness)
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_attribution_guided_post_failure_sal_reenters_and_repairs(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            args.post_failure_sal_max_iters = 1
+            args.post_failure_sal_trigger = "attribution"
+            args.attribution_mode = "legacy"
+            args.spec_score_threshold = 90
+            mock_adapter = mock_adapter_cls.return_value
+            mock_adapter.model.model_repr = "fake-model"
+            mock_adapter.generate.return_value = (
+                '{"constraints": ["return ascending order"]}',
+                {"prompt_chars": 1, "completion_chars": 1},
+            )
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+
+            initial_spec = StructuredSpec(
+                task="sort",
+                constraints=["return sorted values"],
+                parse_ok=True,
+            )
+            refined_spec = StructuredSpec(
+                task="sort",
+                constraints=["return sorted values"],
+                checkable_properties=["ascending order"],
+                parse_ok=True,
+            )
+            initial_score = SpecScore(
+                coverage=70,
+                faithfulness=90,
+                precision=80,
+                overall=70,
+                missing_constraints=["ascending order is underspecified"],
+                requires_refine=True,
+                issue_types=["missing_constraint"],
+                parse_ok=True,
+            )
+            final_score = initial_score
+            reentry_score = SpecScore(
+                coverage=95,
+                faithfulness=95,
+                precision=95,
+                overall=95,
+                parse_ok=True,
+            )
+            failed_feedback = VerifierFeedback(
+                passed=False,
+                error_type="wrong_answer",
+                field="checkable_subset",
+                message="descending output",
+                input="[3,1,2]",
+                output="[3,2,1]",
+                expected="[1,2,3]",
+            )
+            passed_feedback = VerifierFeedback(
+                passed=True,
+                error_type="accepted",
+                field="checkable_subset",
+                message="ok",
+            )
+
+            with patch.object(pipeline, "_draft_spec", return_value=initial_spec), patch.object(
+                pipeline,
+                "_score_spec",
+                side_effect=[initial_score, final_score, reentry_score],
+            ), patch.object(
+                pipeline,
+                "_refine_spec",
+                return_value=(
+                    initial_spec,
+                    [],
+                    {
+                        "raw_score_outputs": [],
+                        "raw_spec_outputs": [],
+                        "judge_usages": [],
+                        "spec_usages": [],
+                        "stage_times": {},
+                        "effectiveness_steps": [],
+                    },
+                ),
+            ), patch.object(
+                pipeline,
+                "_generate_code_from_spec",
+                side_effect=["print('initial')", "print('regenerated')"],
+            ), patch.object(
+                pipeline,
+                "_repair_code",
+                side_effect=[
+                    ("print('still_bad')", [asdict(failed_feedback)]),
+                    ("print('fixed')", [asdict(failed_feedback), asdict(passed_feedback)]),
+                ],
+            ), patch.object(
+                pipeline,
+                "_parse_spec_patch_output",
+                return_value=(
+                    SpecPatch(checkable_properties=["ascending order"], parse_ok=True),
+                    ['{"checkable_properties": ["ascending order"]}'],
+                    [],
+                ),
+            ), patch.object(
+                pipeline,
+                "_verify",
+                return_value=failed_feedback,
+            ):
+                trace = pipeline._run_problem(problem)
+
+            self.assertTrue(trace.passed)
+            self.assertEqual(trace.final_code, "print('fixed')")
+            self.assertEqual(trace.spec_final["checkable_properties"], ["ascending order"])
+            self.assertEqual(trace.effectiveness["post_failure_sal"]["trigger_policy"], "attribution")
+            self.assertEqual(
+                trace.effectiveness["post_failure_sal"]["pre_reentry_attribution"],
+                "spec_induced",
+            )
+            self.assertTrue(trace.effectiveness["post_failure_sal"]["accepted"])
+            self.assertEqual(
+                trace.effectiveness["post_failure_sal"]["reason"],
+                "reentry_repair_passed",
+            )
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
     def test_run_problem_self_refine_uses_direct_repair_branch(self, mock_adapter_cls):

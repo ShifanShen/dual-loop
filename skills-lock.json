@@ -5,6 +5,12 @@
       "source": "ailabs-393/ai-labs-claude-skills",
       "sourceType": "github",
       "computedHash": "d91e792b4946cc65014786e0032e8a63e0eaee17cd3c2fc5bc392d6fcb3a1cd6"
+    },
+    "scientific-writing": {
+      "source": "K-Dense-AI/claude-scientific-skills",
+      "sourceType": "github",
+      "skillPath": "scientific-skills/scientific-writing/SKILL.md",
+      "computedHash": "c402452909f1fc3060cd8ac167523c2d4c43cd56573530ee3c22eb063692f4e5"
     }
   }
 }
