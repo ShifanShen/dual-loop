@@ -56,6 +56,7 @@ from lcb_runner.dual_loop.rq_suite import (
 from lcb_runner.dual_loop.model_download import infer_output_dir
 from lcb_runner.lm_styles import LMStyle, resolve_language_model
 from lcb_runner.dual_loop.pipeline import DualLoopPipeline, LLMAdapter, ProblemTrace
+from lcb_runner.dual_loop.prompts import build_code_from_spec_prompt
 from lcb_runner.dual_loop.spec import SpecPatch, SpecScore, StructuredSpec, VerifierFeedback
 from lcb_runner.evaluation.testing_util import reliability_guard, restore_reliability_guard
 
@@ -130,6 +131,41 @@ class SpecParsingTests(unittest.TestCase):
         self.assertEqual(spec.task, "solve the task")
         self.assertEqual(spec.reference_strategy, "reference_solver")
         self.assertIn("duplicates", spec.edge_cases)
+
+    def test_structured_spec_v2_codegen_contract_excludes_alignment_evidence(self):
+        text = json.dumps(
+            {
+                "task": "sort numbers",
+                "interface": {"execution_mode": "function", "signature": "sort(nums)"},
+                "input_model": {"variables": [{"name": "nums", "type": "List[int]"}]},
+                "output_model": {"type": "List[int]"},
+                "semantic_contract": {"postconditions": ["result is nondecreasing"]},
+                "alignment_evidence": {
+                    "source_quotes": ["Return the numbers in ascending order."]
+                },
+            }
+        )
+        spec = StructuredSpec.from_llm_output(text)
+        contract = spec.to_codegen_contract()
+        self.assertIn("semantic_contract", contract)
+        self.assertNotIn("alignment_evidence", contract)
+        self.assertNotIn("Return the numbers in ascending order.", contract)
+
+    def test_sealed_codegen_prompt_omits_original_problem(self):
+        problem = make_problem()
+        spec = StructuredSpec(
+            task="two sum",
+            interface={"execution_mode": "stdin"},
+            input_model={"variables": [{"name": "nums", "type": "List[int]"}]},
+            output_model={"type": "indices"},
+            semantic_contract={"core_rules": ["return two indices whose values sum to target"]},
+            alignment_evidence={"source_quotes": [problem.question_content]},
+            parse_ok=True,
+        )
+        prompt = build_code_from_spec_prompt(problem, spec, contract_mode="sealed")
+        self.assertIn("Sealed semantic contract", prompt)
+        self.assertNotIn("Original problem", prompt)
+        self.assertNotIn(problem.question_content, prompt)
 
     def test_spec_score_parses_fields(self):
         text = json.dumps(
@@ -432,9 +468,13 @@ class DualLoopPipelineTests(unittest.TestCase):
             judge_temperature=0.0,
             codegen_temperature=0.2,
             codegen_num_candidates=1,
+            codegen_contract_mode="open",
             repair_num_candidates=1,
             post_failure_sal_max_iters=0,
             post_failure_sal_trigger="attribution",
+            attribution_mode="legacy",
+            attribution_spec_margin=5,
+            attribution_reentry_confidence_threshold=0.6,
             contract_search_population_size=1,
             contract_search_rounds=0,
             contract_search_top_k=1,
@@ -632,6 +672,59 @@ class DualLoopPipelineTests(unittest.TestCase):
                 trace.effectiveness["post_failure_sal"]["reason"],
                 "reentry_repair_passed",
             )
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_evidence_attribution_requires_hard_spec_signal(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            args.attribution_mode = "evidence"
+            args.spec_score_threshold = 90
+            mock_adapter_cls.return_value.model.model_repr = "fake-model"
+            pipeline = DualLoopPipeline(args)
+            trace = ProblemTrace(
+                question_id="q",
+                question_title="q",
+                pipeline_mode="full",
+                raw_problem="problem",
+                final_spec_score={"overall": 88},
+                spec_issue_types=[],
+                verifier_feedbacks=[{"passed": False, "error_type": "wrong_answer"}],
+                passed=False,
+            )
+            decision = pipeline._attribute_failure_detail(trace)
+            self.assertEqual(decision["attribution"], "unknown")
+
+            trace.spec_issue_types = ["missing_constraint"]
+            decision = pipeline._attribute_failure_detail(trace)
+            self.assertEqual(decision["attribution"], "spec_induced")
+            self.assertGreaterEqual(decision["confidence"], 0.75)
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_evidence_attribution_detects_mixed_signals(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            args.attribution_mode = "evidence"
+            args.spec_score_threshold = 90
+            mock_adapter_cls.return_value.model.model_repr = "fake-model"
+            pipeline = DualLoopPipeline(args)
+            trace = ProblemTrace(
+                question_id="q",
+                question_title="q",
+                pipeline_mode="full",
+                raw_problem="problem",
+                final_spec_score={"overall": 80},
+                spec_issue_types=["missing_constraint"],
+                verifier_feedbacks=[
+                    {
+                        "passed": False,
+                        "error_type": "wrong_answer",
+                        "property_feedbacks": [{"property_type": "sorted_order"}],
+                    }
+                ],
+                passed=False,
+            )
+            decision = pipeline._attribute_failure_detail(trace)
+            self.assertEqual(decision["attribution"], "mixed")
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
     def test_run_problem_self_refine_uses_direct_repair_branch(self, mock_adapter_cls):

@@ -127,6 +127,16 @@ def get_args():
         help="Number of spec-conditioned code candidates to generate before selecting the best one.",
     )
     parser.add_argument(
+        "--codegen_contract_mode",
+        type=str,
+        default="open",
+        choices=["open", "sealed"],
+        help=(
+            "Whether spec-conditioned code generation sees the original problem plus spec "
+            "('open') or only the sealed structured contract ('sealed')."
+        ),
+    )
+    parser.add_argument(
         "--repair_num_candidates",
         type=int,
         default=1,
@@ -148,6 +158,28 @@ def get_args():
             "when the failed trace is attributed to spec-induced failure; "
             "'semantic_signal' preserves the older verifier-signal trigger."
         ),
+    )
+    parser.add_argument(
+        "--attribution_mode",
+        type=str,
+        default="legacy",
+        choices=["legacy", "conservative", "evidence"],
+        help=(
+            "Failure attribution policy. 'evidence' fuses SAS, hard spec issues, "
+            "sealed-contract completeness, and verifier/property evidence."
+        ),
+    )
+    parser.add_argument(
+        "--attribution_spec_margin",
+        type=int,
+        default=5,
+        help="Confidence margin used by conservative/evidence attribution.",
+    )
+    parser.add_argument(
+        "--attribution_reentry_confidence_threshold",
+        type=float,
+        default=0.6,
+        help="Minimum attribution confidence required for attribution-guided SAL re-entry.",
     )
     parser.add_argument(
         "--contract_search_population_size",

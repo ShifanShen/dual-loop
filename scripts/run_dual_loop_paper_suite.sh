@@ -15,6 +15,7 @@ GPU_ID="${GPU_ID:-0}"
 DTYPE="${DTYPE:-bfloat16}"
 TIMEOUT="${TIMEOUT:-6}"
 CODEGEN_NUM_CANDIDATES="${CODEGEN_NUM_CANDIDATES:-1}"
+CODEGEN_CONTRACT_MODE="${CODEGEN_CONTRACT_MODE:-open}"
 UV_BIN="${UV_BIN:-}"
 DATASET_PATH="${DATASET_PATH:-}"
 
@@ -62,6 +63,7 @@ COMMON_ARGS=(
   --spec_max_rejected_refines "$SPEC_MAX_REJECTED_REFINES"
   --timeout "$TIMEOUT"
   --codegen_num_candidates "$CODEGEN_NUM_CANDIDATES"
+  --codegen_contract_mode "$CODEGEN_CONTRACT_MODE"
 )
 
 if [[ -n "$DATASET_PATH" ]]; then
@@ -108,6 +110,7 @@ echo "  spec_min_improvement=$SPEC_MIN_IMPROVEMENT"
 echo "  spec_precision_floor=$SPEC_PRECISION_FLOOR"
 echo "  spec_max_rejected_refines=$SPEC_MAX_REJECTED_REFINES"
 echo "  codegen_num_candidates=$CODEGEN_NUM_CANDIDATES"
+echo "  codegen_contract_mode=$CODEGEN_CONTRACT_MODE"
 echo "  gpu_id=$GPU_ID"
 echo "  uv_bin=$UV_BIN"
 if [[ -n "$DATASET_PATH" ]]; then

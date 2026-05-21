@@ -81,6 +81,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--judge_temperature", type=float, default=0.0)
     parser.add_argument("--codegen_temperature", type=float, default=0.2)
     parser.add_argument("--codegen_num_candidates", type=int, default=1)
+    parser.add_argument(
+        "--codegen_contract_mode",
+        type=str,
+        default="open",
+        choices=["open", "sealed"],
+    )
     parser.add_argument("--repair_num_candidates", type=int, default=1)
     parser.add_argument("--post_failure_sal_max_iters", type=int, default=0)
     parser.add_argument(
@@ -110,7 +116,7 @@ def parse_args() -> argparse.Namespace:
         "--attribution_mode",
         type=str,
         default="legacy",
-        choices=["legacy", "conservative"],
+        choices=["legacy", "conservative", "evidence"],
         help="Failure attribution policy. Conservative mode abstains with unknown more often.",
     )
     parser.add_argument(
@@ -118,6 +124,12 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=5,
         help="Confidence margin used by conservative attribution around spec_score_threshold.",
+    )
+    parser.add_argument(
+        "--attribution_reentry_confidence_threshold",
+        type=float,
+        default=0.6,
+        help="Minimum attribution confidence required for attribution-guided SAL re-entry.",
     )
     args = parser.parse_args()
     args.stop = args.stop.split(",")
@@ -175,6 +187,7 @@ def main() -> None:
         "include_repair_ablations": args.include_repair_ablations,
         "include_budget_ablations": args.include_budget_ablations,
         "include_adaptive_ablations": args.include_adaptive_ablations,
+        "codegen_contract_mode": args.codegen_contract_mode,
         "codegen_num_candidates": args.codegen_num_candidates,
         "repair_num_candidates": args.repair_num_candidates,
         "post_failure_sal_max_iters": args.post_failure_sal_max_iters,
@@ -188,6 +201,9 @@ def main() -> None:
         "adaptive_ablation_threshold": args.adaptive_ablation_threshold,
         "attribution_mode": args.attribution_mode,
         "attribution_spec_margin": args.attribution_spec_margin,
+        "attribution_reentry_confidence_threshold": (
+            args.attribution_reentry_confidence_threshold
+        ),
         "suite_dir": str(suite_dir),
         "csv_path": str(csv_path),
         "manifest_path": str(manifest_path),

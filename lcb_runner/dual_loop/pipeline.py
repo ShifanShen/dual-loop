@@ -91,6 +91,8 @@ class ProblemTrace:
     verifier_feedbacks: list[dict[str, Any]] = field(default_factory=list)
     failure_attribution: str = "unknown"
     failure_reason_tags: list[str] = field(default_factory=list)
+    failure_attribution_confidence: float = 0.0
+    failure_attribution_evidence: list[str] = field(default_factory=list)
     llm_calls: int = 0
     spec_calls: int = 0
     judge_calls: int = 0
@@ -1079,6 +1081,19 @@ class DualLoopPipeline:
             return "attribution"
         return trigger
 
+    def _codegen_contract_mode(self) -> str:
+        mode = str(getattr(self.args, "codegen_contract_mode", "open") or "open").lower()
+        if mode not in {"open", "sealed"}:
+            return "open"
+        return mode
+
+    def _attribution_reentry_confidence_threshold(self) -> float:
+        value = getattr(self.args, "attribution_reentry_confidence_threshold", 0.6)
+        try:
+            return max(0.0, min(1.0, float(value)))
+        except (TypeError, ValueError):
+            return 0.6
+
     def _contract_population_size(self) -> int:
         return max(1, int(getattr(self.args, "contract_search_population_size", 1) or 1))
 
@@ -1461,7 +1476,11 @@ class DualLoopPipeline:
             candidate_spec = candidate["spec"]
             candidate_result = self._select_best_codegen_candidate(
                 problem,
-                prompt=build_code_from_spec_prompt(problem, candidate_spec),
+                prompt=build_code_from_spec_prompt(
+                    problem,
+                    candidate_spec,
+                    contract_mode=self._codegen_contract_mode(),
+                ),
                 spec=candidate_spec,
             )
             total_stage_time += float(candidate_result["stage_time"])
@@ -1556,7 +1575,11 @@ class DualLoopPipeline:
     ) -> str:
         candidate_result = self._select_best_codegen_candidate(
             problem,
-            prompt=build_code_from_spec_prompt(problem, spec),
+            prompt=build_code_from_spec_prompt(
+                problem,
+                spec,
+                contract_mode=self._codegen_contract_mode(),
+            ),
             spec=spec,
         )
         spec._last_codegen_output = candidate_result["raw_output"]
@@ -1668,10 +1691,17 @@ class DualLoopPipeline:
             passed=False,
             repair_iterations=max(0, len(feedback_trace) - 1),
         )
-        attribution, reason_tags = self._attribute_failure(preview_trace)
+        decision = self._attribute_failure_detail(preview_trace)
+        attribution = str(decision["attribution"])
+        reason_tags = list(decision["reason_tags"])
         metadata["pre_reentry_attribution"] = attribution
         metadata["pre_reentry_reason_tags"] = reason_tags
-        if attribution == "spec_induced":
+        metadata["pre_reentry_attribution_confidence"] = decision["confidence"]
+        metadata["pre_reentry_attribution_evidence"] = decision["evidence"]
+        if (
+            attribution in {"spec_induced", "mixed"}
+            and float(decision["confidence"]) >= self._attribution_reentry_confidence_threshold()
+        ):
             metadata["reason"] = "attribution_spec_induced"
             return True, metadata
         metadata["reason"] = f"attribution_{attribution}"
@@ -2003,6 +2033,7 @@ class DualLoopPipeline:
                 current_code,
                 feedback,
                 require_change=stagnant_attempts > 0,
+                contract_mode=self._codegen_contract_mode(),
             )
             role = "repair"
             if use_rewrite_fallback:
@@ -2011,6 +2042,7 @@ class DualLoopPipeline:
                     spec,
                     feedback,
                     counterexample,
+                    contract_mode=self._codegen_contract_mode(),
                 )
                 role = "repair_rewrite"
             elif use_counterexample_fallback:
@@ -2020,6 +2052,7 @@ class DualLoopPipeline:
                     current_code,
                     feedback,
                     counterexample,
+                    contract_mode=self._codegen_contract_mode(),
                 )
                 role = "repair_counterexample"
 
@@ -2795,6 +2828,10 @@ class DualLoopPipeline:
             "attribution_spec_margin": int(
                 getattr(self.args, "attribution_spec_margin", 5) or 5
             ),
+            "attribution_reentry_confidence_threshold": (
+                self._attribution_reentry_confidence_threshold()
+            ),
+            "codegen_contract_mode": self._codegen_contract_mode(),
             "codegen_num_candidates": int(getattr(self.args, "codegen_num_candidates", 1) or 1),
             "repair_num_candidates": self._repair_candidate_count(),
             "post_failure_sal_max_iters": self._post_failure_sal_max_iters(),
@@ -2847,7 +2884,11 @@ class DualLoopPipeline:
     def _finalize_trace(self, trace: ProblemTrace) -> None:
         trace.spec_issue_types = sorted(set(trace.spec_issue_types))
         self._populate_trace_counters(trace)
-        trace.failure_attribution, trace.failure_reason_tags = self._attribute_failure(trace)
+        decision = self._attribute_failure_detail(trace)
+        trace.failure_attribution = str(decision["attribution"])
+        trace.failure_reason_tags = list(decision["reason_tags"])
+        trace.failure_attribution_confidence = float(decision["confidence"])
+        trace.failure_attribution_evidence = list(decision["evidence"])
 
     def _populate_trace_counters(self, trace: ProblemTrace) -> None:
         trace.spec_calls = max(trace.spec_calls, len(trace.raw_spec_outputs))
@@ -2894,50 +2935,82 @@ class DualLoopPipeline:
         trace.stage_times[stage] = trace.stage_times.get(stage, 0.0) + float(duration)
 
     def _attribute_failure(self, trace: ProblemTrace) -> tuple[str, list[str]]:
-        reasons: list[str] = []
-        initial_score = trace.initial_spec_score or {}
-        final_score = trace.final_spec_score or initial_score
-        initial_sas = int(initial_score.get("overall", 0) or 0)
+        decision = self._attribute_failure_detail(trace)
+        return str(decision["attribution"]), list(decision["reason_tags"])
+
+    def _attribute_failure_detail(self, trace: ProblemTrace) -> dict[str, Any]:
+        final_score = trace.final_spec_score or trace.initial_spec_score or {}
         final_sas = int(final_score.get("overall", 0) or 0)
 
         if trace.passed:
-            if final_sas > initial_sas and trace.repair_iterations > 0:
-                reasons.extend(["resolved_by_loop_b", "resolved_by_loop_a"])
-            elif final_sas > initial_sas:
-                reasons.append("resolved_by_loop_b")
-            elif trace.repair_iterations > 0:
-                reasons.append("resolved_by_loop_a")
-            else:
-                reasons.append("solved_without_loops")
-            return "solved", reasons
+            return self._attribution_decision(
+                "solved",
+                ["solved"],
+                confidence=1.0,
+                evidence=["final verifier passed; no failure attribution assigned"],
+            )
 
         if trace.pipeline_mode in {"baseline", "self_refine", "reflexion"}:
+            reasons = []
             if trace.verifier_feedbacks:
-                last_feedback = trace.verifier_feedbacks[-1]
-                reasons.append(last_feedback.get("error_type", "unknown_failure"))
-            return "implementation_induced", reasons
+                reasons.append(trace.verifier_feedbacks[-1].get("error_type", "unknown_failure"))
+            return self._attribution_decision(
+                "implementation_induced",
+                reasons or ["verifier_failure"],
+                confidence=0.75,
+                evidence=["baseline-style pipeline has no accepted semantic contract to blame"],
+            )
 
         attribution_mode = str(getattr(self.args, "attribution_mode", "legacy") or "legacy")
         if attribution_mode == "conservative":
             return self._attribute_failure_conservative(trace, final_sas=final_sas)
+        if attribution_mode == "evidence":
+            return self._attribute_failure_evidence(trace, final_sas=final_sas)
 
+        reasons: list[str] = []
         if final_sas < self.args.spec_score_threshold:
             reasons.append("low_final_sas")
             if trace.spec_issue_types:
                 reasons.extend(trace.spec_issue_types)
-            return "spec_induced", reasons
+            return self._attribution_decision(
+                "spec_induced",
+                reasons,
+                confidence=0.65,
+                evidence=[
+                    f"final SAS {final_sas} below threshold {self.args.spec_score_threshold}"
+                ],
+            )
 
         if trace.verifier_feedbacks:
-            last_feedback = trace.verifier_feedbacks[-1]
-            reasons.append(last_feedback.get("error_type", "unknown_failure"))
-        return "implementation_induced", reasons
+            reasons.append(trace.verifier_feedbacks[-1].get("error_type", "unknown_failure"))
+        return self._attribution_decision(
+            "implementation_induced",
+            reasons or ["verifier_failure"],
+            confidence=0.65,
+            evidence=[f"final SAS {final_sas} meets threshold {self.args.spec_score_threshold}"],
+        )
+
+    @staticmethod
+    def _attribution_decision(
+        attribution: str,
+        reason_tags: list[str],
+        *,
+        confidence: float,
+        evidence: list[str],
+    ) -> dict[str, Any]:
+        return {
+            "attribution": attribution,
+            "reason_tags": sorted(set(reason_tags)),
+            "confidence": round(max(0.0, min(1.0, confidence)), 3),
+            "evidence": evidence,
+        }
 
     def _attribute_failure_conservative(
         self,
         trace: ProblemTrace,
         *,
         final_sas: int,
-    ) -> tuple[str, list[str]]:
+    ) -> dict[str, Any]:
         reasons: list[str] = []
         threshold = int(getattr(self.args, "spec_score_threshold", 80) or 80)
         margin = max(0, int(getattr(self.args, "attribution_spec_margin", 5) or 0))
@@ -2949,25 +3022,132 @@ class DualLoopPipeline:
         if final_sas <= low_confidence_cutoff and has_spec_signal:
             reasons.append("low_final_sas_strong")
             reasons.extend(trace.spec_issue_types)
-            return "spec_induced", reasons
+            return self._attribution_decision(
+                "spec_induced",
+                reasons,
+                confidence=0.75,
+                evidence=[
+                    f"final SAS {final_sas} <= low cutoff {low_confidence_cutoff}",
+                    "spec-side issue signal is present",
+                ],
+            )
 
         if final_sas >= high_confidence_cutoff and has_impl_signal:
-            last_feedback = trace.verifier_feedbacks[-1]
-            reasons.append(last_feedback.get("error_type", "unknown_failure"))
-            return "implementation_induced", reasons
+            reasons.append(trace.verifier_feedbacks[-1].get("error_type", "unknown_failure"))
+            return self._attribution_decision(
+                "implementation_induced",
+                reasons,
+                confidence=0.75,
+                evidence=[
+                    f"final SAS {final_sas} >= high cutoff {high_confidence_cutoff}",
+                    "verifier failure remains after implementation attempt",
+                ],
+            )
 
         if final_sas < threshold:
             reasons.append("borderline_or_low_sas")
         if has_spec_signal:
             reasons.extend(trace.spec_issue_types)
         if has_impl_signal:
-            last_feedback = trace.verifier_feedbacks[-1]
-            reasons.append(last_feedback.get("error_type", "unknown_failure"))
+            reasons.append(trace.verifier_feedbacks[-1].get("error_type", "unknown_failure"))
         if has_spec_signal and has_impl_signal:
             reasons.append("mixed_visible_signals")
-        elif not has_spec_signal and not has_impl_signal:
+            return self._attribution_decision(
+                "mixed",
+                reasons,
+                confidence=0.55,
+                evidence=["spec-side and implementation-side signals are both visible"],
+            )
+        if not has_spec_signal and not has_impl_signal:
             reasons.append("insufficient_visible_evidence")
-        return "unknown", reasons
+        return self._attribution_decision(
+            "unknown",
+            reasons,
+            confidence=0.4,
+            evidence=["conservative attribution found insufficient evidence"],
+        )
+
+    def _attribute_failure_evidence(
+        self,
+        trace: ProblemTrace,
+        *,
+        final_sas: int,
+    ) -> dict[str, Any]:
+        threshold = int(getattr(self.args, "spec_score_threshold", 80) or 80)
+        margin = max(0, int(getattr(self.args, "attribution_spec_margin", 5) or 0))
+        spec_points = 0
+        impl_points = 0
+        reasons: list[str] = []
+        evidence: list[str] = []
+
+        issue_types = set(trace.spec_issue_types)
+        hard_issues = issue_types & _HARD_SPEC_ISSUE_TYPES
+        if final_sas <= threshold - margin:
+            spec_points += 2
+            reasons.append("low_final_sas_strong")
+            evidence.append(f"final SAS {final_sas} is at least {margin} below threshold {threshold}")
+        elif final_sas < threshold:
+            spec_points += 1
+            reasons.append("low_final_sas_borderline")
+            evidence.append(f"final SAS {final_sas} is below threshold {threshold}")
+
+        if hard_issues:
+            spec_points += 2
+            reasons.extend(sorted(hard_issues))
+            evidence.append("SAS reported hard spec issues: " + ", ".join(sorted(hard_issues)))
+
+        missing_fields = self._missing_codegen_contract_fields(trace.spec_final or {})
+        if self._codegen_contract_mode() == "sealed" and missing_fields:
+            spec_points += 2
+            reasons.append("incomplete_sealed_contract")
+            evidence.append("sealed contract is missing: " + ", ".join(missing_fields))
+
+        last_feedback = trace.verifier_feedbacks[-1] if trace.verifier_feedbacks else {}
+        error_type = str(last_feedback.get("error_type", "unknown_failure"))
+        property_feedbacks = list(last_feedback.get("property_feedbacks", []) or [])
+        violated_items = list(last_feedback.get("violated_spec_items", []) or [])
+        if trace.verifier_feedbacks:
+            impl_points += 1
+            reasons.append(error_type)
+            evidence.append(f"verifier still reports {error_type}")
+        if final_sas >= threshold + margin and trace.verifier_feedbacks:
+            impl_points += 2
+            evidence.append(f"final SAS {final_sas} is at least {margin} above threshold {threshold}")
+        if property_feedbacks or violated_items:
+            impl_points += 2
+            reasons.append("violates_existing_contract")
+            evidence.append("program violates existing property/spec feedback")
+        if error_type in {"runtime_error", "compile_error", "time_limit_exceeded"}:
+            impl_points += 1
+            evidence.append(f"{error_type} is more implementation-facing than semantic-facing")
+
+        if spec_points >= 3 and impl_points >= 3:
+            return self._attribution_decision("mixed", reasons, confidence=0.65, evidence=evidence)
+        if spec_points >= 3 and impl_points < 3:
+            return self._attribution_decision(
+                "spec_induced", reasons, confidence=0.75, evidence=evidence
+            )
+        if impl_points >= 3 and spec_points <= 1:
+            return self._attribution_decision(
+                "implementation_induced", reasons, confidence=0.75, evidence=evidence
+            )
+        if spec_points >= 2 and impl_points >= 2:
+            return self._attribution_decision("mixed", reasons, confidence=0.55, evidence=evidence)
+        return self._attribution_decision(
+            "unknown",
+            reasons or ["insufficient_visible_evidence"],
+            confidence=0.4,
+            evidence=evidence or ["no strong attribution evidence"],
+        )
+
+    @staticmethod
+    def _missing_codegen_contract_fields(spec_payload: dict[str, Any]) -> list[str]:
+        missing = []
+        for field_name in ("interface", "input_model", "output_model", "semantic_contract"):
+            value = spec_payload.get(field_name)
+            if not isinstance(value, dict) or not value:
+                missing.append(field_name)
+        return missing
 
     def _average_attr(self, traces: list[ProblemTrace], field_name: str) -> float:
         if not traces:

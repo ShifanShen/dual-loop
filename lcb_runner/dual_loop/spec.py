@@ -19,6 +19,13 @@ _SPEC_FIELD_NAMES = (
     "reference_strategy",
     "algorithmic_notes",
     "non_checkable_notes",
+    "interface",
+    "input_model",
+    "output_model",
+    "semantic_contract",
+    "implementation_contract",
+    "oracle_contract",
+    "alignment_evidence",
 )
 
 
@@ -90,6 +97,12 @@ def _ensure_list(value: Any) -> list[str]:
         seen.add(signature)
         normalized.append(compact)
     return normalized
+
+
+def _ensure_dict(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    return {}
 
 
 def _ensure_patch_payload(value: Any) -> dict[str, Any]:
@@ -254,6 +267,13 @@ class StructuredSpec:
     reference_strategy: str = "validator_only"
     algorithmic_notes: list[str] = field(default_factory=list)
     non_checkable_notes: list[str] = field(default_factory=list)
+    interface: dict[str, Any] = field(default_factory=dict)
+    input_model: dict[str, Any] = field(default_factory=dict)
+    output_model: dict[str, Any] = field(default_factory=dict)
+    semantic_contract: dict[str, Any] = field(default_factory=dict)
+    implementation_contract: dict[str, Any] = field(default_factory=dict)
+    oracle_contract: dict[str, Any] = field(default_factory=dict)
+    alignment_evidence: dict[str, Any] = field(default_factory=dict)
     parse_ok: bool = False
     parse_source: str = "default"
 
@@ -278,12 +298,29 @@ class StructuredSpec:
             or "validator_only",
             algorithmic_notes=_ensure_list(payload.get("algorithmic_notes")),
             non_checkable_notes=_ensure_list(payload.get("non_checkable_notes")),
+            interface=_ensure_dict(payload.get("interface")),
+            input_model=_ensure_dict(payload.get("input_model")),
+            output_model=_ensure_dict(payload.get("output_model")),
+            semantic_contract=_ensure_dict(payload.get("semantic_contract")),
+            implementation_contract=_ensure_dict(payload.get("implementation_contract")),
+            oracle_contract=_ensure_dict(payload.get("oracle_contract")),
+            alignment_evidence=_ensure_dict(payload.get("alignment_evidence")),
             parse_ok=parse_ok,
             parse_source="json" if parse_ok else "default",
         )
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), ensure_ascii=True, indent=2)
+
+    def to_alignment_json(self) -> str:
+        return self.to_json()
+
+    def to_codegen_contract(self) -> str:
+        payload = asdict(self)
+        payload.pop("alignment_evidence", None)
+        payload.pop("parse_ok", None)
+        payload.pop("parse_source", None)
+        return json.dumps(payload, ensure_ascii=True, indent=2)
 
     def to_text(self) -> str:
         sections = [
@@ -300,6 +337,22 @@ class StructuredSpec:
             ("Reference Strategy", [self.reference_strategy]),
             ("Algorithmic Notes", self.algorithmic_notes),
             ("Non-checkable Notes", self.non_checkable_notes),
+            ("Interface", [json.dumps(self.interface, ensure_ascii=True)] if self.interface else []),
+            ("Input Model", [json.dumps(self.input_model, ensure_ascii=True)] if self.input_model else []),
+            ("Output Model", [json.dumps(self.output_model, ensure_ascii=True)] if self.output_model else []),
+            (
+                "Semantic Contract",
+                [json.dumps(self.semantic_contract, ensure_ascii=True)]
+                if self.semantic_contract
+                else [],
+            ),
+            (
+                "Implementation Contract",
+                [json.dumps(self.implementation_contract, ensure_ascii=True)]
+                if self.implementation_contract
+                else [],
+            ),
+            ("Oracle Contract", [json.dumps(self.oracle_contract, ensure_ascii=True)] if self.oracle_contract else []),
         ]
         chunks = []
         for title, values in sections:
@@ -326,6 +379,13 @@ class SpecPatch:
     reference_strategy: str | None = None
     algorithmic_notes: list[str] | None = None
     non_checkable_notes: list[str] | None = None
+    interface: dict[str, Any] | None = None
+    input_model: dict[str, Any] | None = None
+    output_model: dict[str, Any] | None = None
+    semantic_contract: dict[str, Any] | None = None
+    implementation_contract: dict[str, Any] | None = None
+    oracle_contract: dict[str, Any] | None = None
+    alignment_evidence: dict[str, Any] | None = None
     parse_ok: bool = False
     parse_source: str = "default"
 
@@ -346,6 +406,11 @@ class SpecPatch:
                 return None
             return str(payload.get(field, "")).strip()
 
+        def dict_or_none(field: str) -> dict[str, Any] | None:
+            if field not in payload:
+                return None
+            return _ensure_dict(payload.get(field))
+
         return cls(
             task=string_or_none("task"),
             inputs=list_or_none("inputs"),
@@ -360,6 +425,13 @@ class SpecPatch:
             reference_strategy=string_or_none("reference_strategy"),
             algorithmic_notes=list_or_none("algorithmic_notes"),
             non_checkable_notes=list_or_none("non_checkable_notes"),
+            interface=dict_or_none("interface"),
+            input_model=dict_or_none("input_model"),
+            output_model=dict_or_none("output_model"),
+            semantic_contract=dict_or_none("semantic_contract"),
+            implementation_contract=dict_or_none("implementation_contract"),
+            oracle_contract=dict_or_none("oracle_contract"),
+            alignment_evidence=dict_or_none("alignment_evidence"),
             parse_ok=True,
             parse_source="json",
         )

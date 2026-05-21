@@ -376,6 +376,10 @@ def _build_raw_row(run_result: dict[str, Any]) -> dict[str, Any]:
         "adaptive_sal_threshold": summary.get("adaptive_sal_threshold"),
         "attribution_mode": summary.get("attribution_mode"),
         "attribution_spec_margin": summary.get("attribution_spec_margin"),
+        "attribution_reentry_confidence_threshold": summary.get(
+            "attribution_reentry_confidence_threshold"
+        ),
+        "codegen_contract_mode": summary.get("codegen_contract_mode"),
         "codegen_num_candidates": summary.get("codegen_num_candidates"),
         "repair_num_candidates": summary.get("repair_num_candidates"),
         "post_failure_sal_max_iters": summary.get("post_failure_sal_max_iters"),
@@ -567,6 +571,8 @@ def _ordered_csv_columns(rows: list[dict[str, Any]]) -> list[str]:
         "adaptive_sal_threshold",
         "attribution_mode",
         "attribution_spec_margin",
+        "attribution_reentry_confidence_threshold",
+        "codegen_contract_mode",
         "codegen_num_candidates",
         "repair_num_candidates",
         "post_failure_sal_max_iters",
