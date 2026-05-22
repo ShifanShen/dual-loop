@@ -865,3 +865,59 @@ Rules:
 - Use a small local patch, not a rewrite.
 - If the patch would only paraphrase the current spec, return {{}}.
 """
+
+
+def build_failure_to_spec_gap_prompt(
+    problem: "CodeGenerationProblem",
+    spec: StructuredSpec,
+    code: str,
+    feedback: VerifierFeedback,
+    attribution_metadata: dict | None = None,
+) -> str:
+    metadata = attribution_metadata or {}
+    return f"""You are judging whether a failed program exposes a gap in the structured spec or only an implementation bug.
+Return JSON only. Do not include markdown, prose, or code fences.
+
+Schema:
+{{
+  "failure_source": "spec_gap | implementation_bug | mixed | unknown",
+  "confidence": 0,
+  "spec_gap": "one concrete missing, wrong, or underspecified semantic obligation; empty if none",
+  "implementation_bug": "one concrete implementation defect if visible; empty if none",
+  "why_code_repair_is_insufficient": "why repairing code under the current spec may be insufficient; empty if not applicable",
+  "minimal_spec_patch": {{}},
+  "evidence": ["short problem/spec/feedback-grounded evidence"]
+}}
+
+Allowed minimal_spec_patch fields:
+{SPEC_PATCH_JSON_SCHEMA}
+
+Decision rules:
+- Choose spec_gap only when the current spec is missing, contradicting, or underspecifying a requirement needed to explain the failure.
+- Choose implementation_bug when the current spec already contains the needed obligation and the code violates it.
+- Choose mixed when both a real spec gap and a code bug are visible.
+- Choose unknown when the evidence is too weak.
+- Do not infer a spec gap merely because the program failed.
+- Do not propose broad algorithmic advice as a spec patch.
+- The patch must be a small local semantic edit grounded in the original problem and the failing feedback.
+- If failure_source is implementation_bug or unknown, minimal_spec_patch must be {{}}.
+- If confidence is below 70, minimal_spec_patch must be {{}}.
+- Prefer patching semantic_contract, output_model, interface, constraints, rules, edge_cases, checkable_properties, corner_triggers, outputs, or tie_break.
+
+Original problem:
+{problem.question_content}
+
+Current structured spec:
+{spec.to_alignment_json()}
+
+Current code:
+```python
+{code}
+```
+
+Verifier feedback:
+{feedback.to_json()}
+
+Preliminary attribution metadata:
+{metadata}
+"""

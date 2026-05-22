@@ -4,6 +4,7 @@ set -euo pipefail
 RELEASE_VERSION="${RELEASE_VERSION:-release_v6}"
 MAX_PROBLEMS="${MAX_PROBLEMS:-50}"
 GPU_ID="${GPU_ID:-0}"
+VLLM_TARGET_DEVICE="${VLLM_TARGET_DEVICE:-cuda}"
 DTYPE="${DTYPE:-bfloat16}"
 TIMEOUT="${TIMEOUT:-6}"
 MAX_MODEL_LEN="${MAX_MODEL_LEN:-8192}"
@@ -32,6 +33,8 @@ CONTRACT_SEARCH_TEMPERATURE="${CONTRACT_SEARCH_TEMPERATURE:-0.35}"
 ATTRIBUTION_MODE="${ATTRIBUTION_MODE:-evidence}"
 ATTRIBUTION_SPEC_MARGIN="${ATTRIBUTION_SPEC_MARGIN:-3}"
 ATTRIBUTION_REENTRY_CONFIDENCE_THRESHOLD="${ATTRIBUTION_REENTRY_CONFIDENCE_THRESHOLD:-0.6}"
+FAILURE_GAP_CONFIDENCE_THRESHOLD="${FAILURE_GAP_CONFIDENCE_THRESHOLD:-70}"
+DISABLE_FAILURE_GAP_JUDGE="${DISABLE_FAILURE_GAP_JUDGE:-0}"
 TRUST_REMOTE_CODE="${TRUST_REMOTE_CODE:-0}"
 
 if [[ -z "$UV_BIN" || ! -x "$UV_BIN" ]]; then
@@ -77,6 +80,7 @@ COMMON_ARGS=(
   --attribution_mode "$ATTRIBUTION_MODE"
   --attribution_spec_margin "$ATTRIBUTION_SPEC_MARGIN"
   --attribution_reentry_confidence_threshold "$ATTRIBUTION_REENTRY_CONFIDENCE_THRESHOLD"
+  --failure_gap_confidence_threshold "$FAILURE_GAP_CONFIDENCE_THRESHOLD"
   --include_pipeline_ablations
   --suite_output_root output/dual_loop_multimodel_smoke
   --output_root output/dual_loop_multimodel_raw
@@ -89,6 +93,9 @@ fi
 if [[ "$TRUST_REMOTE_CODE" == "1" ]]; then
   COMMON_ARGS+=(--trust_remote_code)
 fi
+if [[ "$DISABLE_FAILURE_GAP_JUDGE" == "1" ]]; then
+  COMMON_ARGS+=(--disable_failure_gap_judge)
+fi
 
 run_model() {
   local local_model_path="$1"
@@ -99,7 +106,8 @@ run_model() {
   echo "============================================================"
   echo "Multi-model smoke: $model_repr"
   echo "============================================================"
-  CUDA_VISIBLE_DEVICES="$GPU_ID" PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+  CUDA_VISIBLE_DEVICES="$GPU_ID" VLLM_TARGET_DEVICE="$VLLM_TARGET_DEVICE" \
+    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
     "$UV_BIN" run python scripts/run_dual_loop_rq_suite.py \
       --local_model_path "$local_model_path" \
       --model_style "$model_style" \

@@ -68,6 +68,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--codegen_temperature", type=float, default=0.2)
     parser.add_argument("--codegen_num_candidates", type=int, default=1)
     parser.add_argument(
+        "--codegen_contract_mode",
+        type=str,
+        default="open",
+        choices=["open", "sealed"],
+        help="Whether spec-to-code uses the original problem plus spec or only the sealed spec.",
+    )
+    parser.add_argument(
         "--repair_num_candidates",
         type=int,
         default=1,
@@ -100,13 +107,27 @@ def parse_args() -> argparse.Namespace:
         "--attribution_mode",
         type=str,
         default="legacy",
-        choices=["legacy", "conservative"],
+        choices=["legacy", "conservative", "evidence"],
         help="Accepted for compatibility with shared suite arguments; unused in this study.",
     )
     parser.add_argument(
         "--attribution_spec_margin",
         type=int,
         default=5,
+        help="Accepted for compatibility with shared suite arguments; unused in this study.",
+    )
+    parser.add_argument(
+        "--attribution_reentry_confidence_threshold",
+        type=float,
+        default=0.6,
+        help="Accepted for compatibility with shared suite arguments; unused in this study.",
+    )
+    parser.add_argument("--disable_failure_gap_judge", dest="failure_gap_judge_enabled", action="store_false")
+    parser.set_defaults(failure_gap_judge_enabled=True)
+    parser.add_argument(
+        "--failure_gap_confidence_threshold",
+        type=int,
+        default=70,
         help="Accepted for compatibility with shared suite arguments; unused in this study.",
     )
     parser.add_argument("--repair_temperature", type=float, default=0.1)
@@ -327,6 +348,7 @@ def main() -> None:
         "release_version": args.release_version,
         "max_problems": args.max_problems,
         "codegen_num_candidates": args.codegen_num_candidates,
+        "codegen_contract_mode": args.codegen_contract_mode,
         "repair_num_candidates": args.repair_num_candidates,
         "post_failure_sal_max_iters": args.post_failure_sal_max_iters,
         "codegen_temperature": args.codegen_temperature,
@@ -337,6 +359,11 @@ def main() -> None:
         "contract_search_temperature": args.contract_search_temperature,
         "attribution_mode": args.attribution_mode,
         "attribution_spec_margin": args.attribution_spec_margin,
+        "attribution_reentry_confidence_threshold": (
+            args.attribution_reentry_confidence_threshold
+        ),
+        "failure_gap_judge_enabled": args.failure_gap_judge_enabled,
+        "failure_gap_confidence_threshold": args.failure_gap_confidence_threshold,
         "output_dir": str(output_dir),
         "results_csv": str(csv_path),
         "rows": rows,

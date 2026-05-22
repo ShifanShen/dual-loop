@@ -379,6 +379,8 @@ def _build_raw_row(run_result: dict[str, Any]) -> dict[str, Any]:
         "attribution_reentry_confidence_threshold": summary.get(
             "attribution_reentry_confidence_threshold"
         ),
+        "failure_gap_judge_enabled": summary.get("failure_gap_judge_enabled"),
+        "failure_gap_confidence_threshold": summary.get("failure_gap_confidence_threshold"),
         "codegen_contract_mode": summary.get("codegen_contract_mode"),
         "codegen_num_candidates": summary.get("codegen_num_candidates"),
         "repair_num_candidates": summary.get("repair_num_candidates"),
@@ -572,6 +574,8 @@ def _ordered_csv_columns(rows: list[dict[str, Any]]) -> list[str]:
         "attribution_mode",
         "attribution_spec_margin",
         "attribution_reentry_confidence_threshold",
+        "failure_gap_judge_enabled",
+        "failure_gap_confidence_threshold",
         "codegen_contract_mode",
         "codegen_num_candidates",
         "repair_num_candidates",

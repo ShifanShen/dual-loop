@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import time
 import hashlib
 from collections import Counter
@@ -12,6 +13,7 @@ from lcb_runner.dual_loop.prompts import (
     build_code_from_spec_prompt,
     build_counterexample_repair_prompt,
     build_direct_codegen_prompt,
+    build_failure_to_spec_gap_prompt,
     build_repair_prompt,
     build_reflexion_prompt,
     build_reflexion_repair_prompt,
@@ -1094,6 +1096,16 @@ class DualLoopPipeline:
         except (TypeError, ValueError):
             return 0.6
 
+    def _failure_gap_judge_enabled(self) -> bool:
+        return bool(getattr(self.args, "failure_gap_judge_enabled", True))
+
+    def _failure_gap_confidence_threshold(self) -> int:
+        value = getattr(self.args, "failure_gap_confidence_threshold", 70)
+        try:
+            return max(0, min(100, int(value)))
+        except (TypeError, ValueError):
+            return 70
+
     def _contract_population_size(self) -> int:
         return max(1, int(getattr(self.args, "contract_search_population_size", 1) or 1))
 
@@ -1120,6 +1132,12 @@ class DualLoopPipeline:
             "must_not_assume",
             "corner_triggers",
             "tie_break",
+            "interface",
+            "input_model",
+            "output_model",
+            "semantic_contract",
+            "implementation_contract",
+            "oracle_contract",
         }
 
     def _contract_fitness(self, spec: StructuredSpec, score: SpecScore) -> float:
@@ -1628,6 +1646,52 @@ class DualLoopPipeline:
             )
         )
 
+    @staticmethod
+    def _extract_json_payload(text: str) -> dict[str, Any]:
+        candidates = []
+        fenced = re.findall(r"```(?:json)?\s*(\{.*?\})\s*```", text, flags=re.DOTALL)
+        candidates.extend(fenced)
+        candidates.extend(re.findall(r"(\{.*\})", text, flags=re.DOTALL))
+        for candidate in candidates:
+            try:
+                payload = json.loads(candidate)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(payload, dict):
+                return payload
+        return {}
+
+    def _parse_failure_gap_judge_output(self, output: str) -> tuple[dict[str, Any], SpecPatch]:
+        payload = self._extract_json_payload(output)
+        source = str(payload.get("failure_source", "unknown") or "unknown").strip()
+        if source not in {"spec_gap", "implementation_bug", "mixed", "unknown"}:
+            source = "unknown"
+        try:
+            confidence = int(payload.get("confidence", 0) or 0)
+        except (TypeError, ValueError):
+            confidence = 0
+        confidence = max(0, min(100, confidence))
+        patch_payload = payload.get("minimal_spec_patch") if isinstance(payload, dict) else {}
+        if not isinstance(patch_payload, dict):
+            patch_payload = {}
+        if source not in {"spec_gap", "mixed"} or confidence < self._failure_gap_confidence_threshold():
+            patch_payload = {}
+        patch = SpecPatch.from_llm_output(json.dumps(patch_payload, ensure_ascii=True))
+        decision = {
+            "failure_source": source,
+            "confidence": confidence,
+            "spec_gap": str(payload.get("spec_gap", "") or ""),
+            "implementation_bug": str(payload.get("implementation_bug", "") or ""),
+            "why_code_repair_is_insufficient": str(
+                payload.get("why_code_repair_is_insufficient", "") or ""
+            ),
+            "evidence": list(payload.get("evidence", []) or [])
+            if isinstance(payload.get("evidence", []), list)
+            else [],
+            "patch_fields": patch.touched_fields() if patch.parse_ok else [],
+        }
+        return decision, patch
+
     def _empty_post_failure_sal_meta(
         self, trigger_metadata: dict[str, Any]
     ) -> dict[str, Any]:
@@ -1740,29 +1804,76 @@ class DualLoopPipeline:
             return spec, code, [], meta
 
         current_spec = spec
-        for attempt_index in range(1, self._post_failure_sal_max_iters() + 1):
+        seed_patch: SpecPatch | None = None
+        if self._failure_gap_judge_enabled():
             started_at = time.perf_counter()
-            patch_output, patch_usage = self.llm.generate(
-                build_post_failure_spec_refine_prompt(problem, current_spec, feedback),
-                role="post_failure_spec_refine",
-                temperature=self.args.spec_temperature,
-                max_tokens=self.args.spec_max_tokens,
+            gap_output, gap_usage = self.llm.generate(
+                build_failure_to_spec_gap_prompt(
+                    problem,
+                    current_spec,
+                    code,
+                    feedback,
+                    trigger_metadata,
+                ),
+                role="failure_gap_judge",
+                temperature=self.args.judge_temperature,
+                max_tokens=self.args.judge_max_tokens,
             )
-            patch, raw_outputs, extra_usages = self._parse_spec_patch_output(patch_output)
-            meta["raw_spec_outputs"].extend(raw_outputs)
-            meta["spec_usages"].append(patch_usage)
-            meta["spec_usages"].extend(extra_usages)
-            meta["stage_times"]["post_failure_spec_refine"] = (
-                meta["stage_times"].get("post_failure_spec_refine", 0.0)
+            gap_decision, gap_patch = self._parse_failure_gap_judge_output(gap_output)
+            meta["raw_score_outputs"].append(gap_output)
+            meta["judge_usages"].append(gap_usage)
+            meta["stage_times"]["failure_gap_judge"] = (
+                meta["stage_times"].get("failure_gap_judge", 0.0)
                 + (time.perf_counter() - started_at)
             )
+            meta["effectiveness"]["failure_gap_judge"] = gap_decision
+            failure_source = str(gap_decision.get("failure_source", "unknown"))
+            confidence = int(gap_decision.get("confidence", 0) or 0)
+            if failure_source not in {"spec_gap", "mixed"}:
+                meta["effectiveness"]["reason"] = f"gap_judge_{failure_source}"
+                return spec, code, [], meta
+            if confidence < self._failure_gap_confidence_threshold():
+                meta["effectiveness"]["reason"] = "gap_judge_low_confidence"
+                return spec, code, [], meta
+            if not gap_patch.parse_ok or not gap_patch.touched_fields():
+                meta["effectiveness"]["reason"] = "gap_judge_no_patch"
+                return spec, code, [], meta
+            seed_patch = gap_patch
+
+        for attempt_index in range(1, self._post_failure_sal_max_iters() + 1):
+            started_at = time.perf_counter()
+            if attempt_index == 1 and seed_patch is not None:
+                patch = seed_patch
+                meta["stage_times"]["post_failure_spec_refine"] = (
+                    meta["stage_times"].get("post_failure_spec_refine", 0.0)
+                    + (time.perf_counter() - started_at)
+                )
+                patch_source = "failure_gap_judge"
+            else:
+                patch_output, patch_usage = self.llm.generate(
+                    build_post_failure_spec_refine_prompt(problem, current_spec, feedback),
+                    role="post_failure_spec_refine",
+                    temperature=self.args.spec_temperature,
+                    max_tokens=self.args.spec_max_tokens,
+                )
+                patch, raw_outputs, extra_usages = self._parse_spec_patch_output(patch_output)
+                meta["raw_spec_outputs"].extend(raw_outputs)
+                meta["spec_usages"].append(patch_usage)
+                meta["spec_usages"].extend(extra_usages)
+                meta["stage_times"]["post_failure_spec_refine"] = (
+                    meta["stage_times"].get("post_failure_spec_refine", 0.0)
+                    + (time.perf_counter() - started_at)
+                )
+                patch_source = "post_failure_refine"
             patch_allowed, patch_reason = self._validate_contract_search_patch(
                 patch,
                 current_spec,
             )
             attempt_record: dict[str, Any] = {
                 "attempt_index": attempt_index,
+                "patch_source": patch_source,
                 "patch_reason": patch_reason,
+                "touched_fields": patch.touched_fields(),
                 "accepted": False,
             }
             if not patch_allowed:
@@ -2286,6 +2397,12 @@ class DualLoopPipeline:
             "must_not_assume",
             "corner_triggers",
             "tie_break",
+            "interface",
+            "input_model",
+            "output_model",
+            "semantic_contract",
+            "implementation_contract",
+            "oracle_contract",
         )
 
     def _semantic_item_count(self, spec: StructuredSpec) -> int:
@@ -2831,6 +2948,8 @@ class DualLoopPipeline:
             "attribution_reentry_confidence_threshold": (
                 self._attribution_reentry_confidence_threshold()
             ),
+            "failure_gap_judge_enabled": self._failure_gap_judge_enabled(),
+            "failure_gap_confidence_threshold": self._failure_gap_confidence_threshold(),
             "codegen_contract_mode": self._codegen_contract_mode(),
             "codegen_num_candidates": int(getattr(self.args, "codegen_num_candidates", 1) or 1),
             "repair_num_candidates": self._repair_candidate_count(),

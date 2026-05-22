@@ -182,6 +182,19 @@ def get_args():
         help="Minimum attribution confidence required for attribution-guided SAL re-entry.",
     )
     parser.add_argument(
+        "--disable_failure_gap_judge",
+        dest="failure_gap_judge_enabled",
+        action="store_false",
+        help="Disable the post-IRL failure-to-spec-gap judge before SAL re-entry.",
+    )
+    parser.set_defaults(failure_gap_judge_enabled=True)
+    parser.add_argument(
+        "--failure_gap_confidence_threshold",
+        type=int,
+        default=70,
+        help="Minimum failure-gap judge confidence required to use its spec patch.",
+    )
+    parser.add_argument(
         "--contract_search_population_size",
         type=int,
         default=1,

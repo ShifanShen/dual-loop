@@ -475,6 +475,8 @@ class DualLoopPipelineTests(unittest.TestCase):
             attribution_mode="legacy",
             attribution_spec_margin=5,
             attribution_reentry_confidence_threshold=0.6,
+            failure_gap_judge_enabled=True,
+            failure_gap_confidence_threshold=70,
             contract_search_population_size=1,
             contract_search_rounds=0,
             contract_search_top_k=1,
@@ -563,7 +565,19 @@ class DualLoopPipelineTests(unittest.TestCase):
             mock_adapter = mock_adapter_cls.return_value
             mock_adapter.model.model_repr = "fake-model"
             mock_adapter.generate.return_value = (
-                '{"constraints": ["return ascending order"]}',
+                json.dumps(
+                    {
+                        "failure_source": "spec_gap",
+                        "confidence": 90,
+                        "spec_gap": "ascending order is missing as a checkable obligation",
+                        "implementation_bug": "",
+                        "why_code_repair_is_insufficient": "the contract does not expose ascending order",
+                        "minimal_spec_patch": {
+                            "checkable_properties": ["ascending order"]
+                        },
+                        "evidence": ["output is descending but expected ascending"],
+                    }
+                ),
                 {"prompt_chars": 1, "completion_chars": 1},
             )
             pipeline = DualLoopPipeline(args)
@@ -666,6 +680,12 @@ class DualLoopPipelineTests(unittest.TestCase):
             self.assertEqual(
                 trace.effectiveness["post_failure_sal"]["pre_reentry_attribution"],
                 "spec_induced",
+            )
+            self.assertEqual(
+                trace.effectiveness["post_failure_sal"]["failure_gap_judge"][
+                    "failure_source"
+                ],
+                "spec_gap",
             )
             self.assertTrue(trace.effectiveness["post_failure_sal"]["accepted"])
             self.assertEqual(

@@ -12,10 +12,13 @@ MODEL_STYLE="${2:-CodeQwenInstruct}"
 MODEL_REPR="${MODEL_REPR:-$(basename "$LOCAL_MODEL_PATH")}"
 RELEASE_VERSION="${RELEASE_VERSION:-release_v6}"
 GPU_ID="${GPU_ID:-0}"
+VLLM_TARGET_DEVICE="${VLLM_TARGET_DEVICE:-cuda}"
 DTYPE="${DTYPE:-bfloat16}"
 TIMEOUT="${TIMEOUT:-6}"
 CODEGEN_NUM_CANDIDATES="${CODEGEN_NUM_CANDIDATES:-1}"
 CODEGEN_CONTRACT_MODE="${CODEGEN_CONTRACT_MODE:-open}"
+FAILURE_GAP_CONFIDENCE_THRESHOLD="${FAILURE_GAP_CONFIDENCE_THRESHOLD:-70}"
+DISABLE_FAILURE_GAP_JUDGE="${DISABLE_FAILURE_GAP_JUDGE:-0}"
 UV_BIN="${UV_BIN:-}"
 DATASET_PATH="${DATASET_PATH:-}"
 
@@ -64,10 +67,14 @@ COMMON_ARGS=(
   --timeout "$TIMEOUT"
   --codegen_num_candidates "$CODEGEN_NUM_CANDIDATES"
   --codegen_contract_mode "$CODEGEN_CONTRACT_MODE"
+  --failure_gap_confidence_threshold "$FAILURE_GAP_CONFIDENCE_THRESHOLD"
 )
 
 if [[ -n "$DATASET_PATH" ]]; then
   COMMON_ARGS+=(--dataset_path "$DATASET_PATH")
+fi
+if [[ "$DISABLE_FAILURE_GAP_JUDGE" == "1" ]]; then
+  COMMON_ARGS+=(--disable_failure_gap_judge)
 fi
 
 run_suite() {
@@ -77,7 +84,9 @@ run_suite() {
   echo "============================================================"
   echo "$label"
   echo "============================================================"
-  CUDA_VISIBLE_DEVICES="$GPU_ID" "$UV_BIN" run python scripts/run_dual_loop_rq_suite.py \
+  CUDA_VISIBLE_DEVICES="$GPU_ID" VLLM_TARGET_DEVICE="$VLLM_TARGET_DEVICE" \
+    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+    "$UV_BIN" run python scripts/run_dual_loop_rq_suite.py \
     "${COMMON_ARGS[@]}" \
     "$@"
 }
@@ -112,6 +121,7 @@ echo "  spec_max_rejected_refines=$SPEC_MAX_REJECTED_REFINES"
 echo "  codegen_num_candidates=$CODEGEN_NUM_CANDIDATES"
 echo "  codegen_contract_mode=$CODEGEN_CONTRACT_MODE"
 echo "  gpu_id=$GPU_ID"
+echo "  vllm_target_device=$VLLM_TARGET_DEVICE"
 echo "  uv_bin=$UV_BIN"
 if [[ -n "$DATASET_PATH" ]]; then
   echo "  dataset_path=$DATASET_PATH"
