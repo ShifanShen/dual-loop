@@ -58,6 +58,7 @@ COMMON_ARGS=(
   --release_version "$RELEASE_VERSION"
   --max_problems "$MAX_PROBLEMS"
   --tensor_parallel_size 1
+  --vllm_device "$VLLM_TARGET_DEVICE"
   --max_model_len "$MAX_MODEL_LEN"
   --dtype "$DTYPE"
   --spec_max_iters "$SPEC_MAX_ITERS"

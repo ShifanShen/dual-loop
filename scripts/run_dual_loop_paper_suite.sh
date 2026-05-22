@@ -57,6 +57,7 @@ COMMON_ARGS=(
   --local_model_path "$LOCAL_MODEL_PATH"
   --release_version "$RELEASE_VERSION"
   --tensor_parallel_size 1
+  --vllm_device "$VLLM_TARGET_DEVICE"
   --dtype "$DTYPE"
   --spec_max_iters "$SPEC_MAX_ITERS"
   --repair_max_iters "$REPAIR_MAX_ITERS"

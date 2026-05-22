@@ -41,6 +41,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dtype", type=str, default="bfloat16")
     parser.add_argument("--tensor_parallel_size", type=int, default=1)
     parser.add_argument(
+        "--vllm_device",
+        type=str,
+        default=None,
+        help="Optional vLLM device override, e.g. cuda, cpu, or auto.",
+    )
+    parser.add_argument(
         "--max_model_len",
         type=int,
         default=0,

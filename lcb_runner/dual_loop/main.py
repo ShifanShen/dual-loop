@@ -79,6 +79,12 @@ def get_args():
     parser.add_argument("--trust_remote_code", action="store_true")
     parser.add_argument("--dtype", type=str, default="bfloat16")
     parser.add_argument("--tensor_parallel_size", type=int, default=1)
+    parser.add_argument(
+        "--vllm_device",
+        type=str,
+        default=None,
+        help="Optional vLLM device override, e.g. cuda, cpu, or auto.",
+    )
     parser.add_argument("--enable_prefix_caching", action="store_true")
     parser.add_argument("--use_cache", action="store_true")
     parser.add_argument("--cache_batch_size", type=int, default=32)

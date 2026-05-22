@@ -63,6 +63,7 @@ COMMON_ARGS=(
   --local_model_path "$LOCAL_MODEL_PATH"
   --release_version "$RELEASE_VERSION"
   --tensor_parallel_size 1
+  --vllm_device "$VLLM_TARGET_DEVICE"
   --dtype "$DTYPE"
   --max_model_len "$MAX_MODEL_LEN"
   --spec_max_iters "$SPEC_MAX_ITERS"
@@ -96,6 +97,7 @@ INTERMEDIATE_ARGS=(
   --local_model_path "$LOCAL_MODEL_PATH"
   --release_version "$RELEASE_VERSION"
   --tensor_parallel_size 1
+  --vllm_device "$VLLM_TARGET_DEVICE"
   --dtype "$DTYPE"
   --max_model_len "$MAX_MODEL_LEN"
   --spec_max_iters "$SPEC_MAX_ITERS"
