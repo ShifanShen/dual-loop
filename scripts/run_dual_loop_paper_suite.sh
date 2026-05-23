@@ -13,6 +13,7 @@ MODEL_REPR="${MODEL_REPR:-$(basename "$LOCAL_MODEL_PATH")}"
 RELEASE_VERSION="${RELEASE_VERSION:-release_v6}"
 GPU_ID="${GPU_ID:-0}"
 VLLM_TARGET_DEVICE="${VLLM_TARGET_DEVICE:-cuda}"
+VLLM_DEVICE="${VLLM_DEVICE:-}"
 DTYPE="${DTYPE:-bfloat16}"
 TIMEOUT="${TIMEOUT:-6}"
 CODEGEN_NUM_CANDIDATES="${CODEGEN_NUM_CANDIDATES:-1}"
@@ -57,7 +58,6 @@ COMMON_ARGS=(
   --local_model_path "$LOCAL_MODEL_PATH"
   --release_version "$RELEASE_VERSION"
   --tensor_parallel_size 1
-  --vllm_device "$VLLM_TARGET_DEVICE"
   --dtype "$DTYPE"
   --spec_max_iters "$SPEC_MAX_ITERS"
   --repair_max_iters "$REPAIR_MAX_ITERS"
@@ -73,6 +73,10 @@ COMMON_ARGS=(
 
 if [[ -n "$DATASET_PATH" ]]; then
   COMMON_ARGS+=(--dataset_path "$DATASET_PATH")
+fi
+
+if [[ -n "$VLLM_DEVICE" ]]; then
+  COMMON_ARGS+=(--vllm_device "$VLLM_DEVICE")
 fi
 if [[ "$DISABLE_FAILURE_GAP_JUDGE" == "1" ]]; then
   COMMON_ARGS+=(--disable_failure_gap_judge)
@@ -123,6 +127,9 @@ echo "  codegen_num_candidates=$CODEGEN_NUM_CANDIDATES"
 echo "  codegen_contract_mode=$CODEGEN_CONTRACT_MODE"
 echo "  gpu_id=$GPU_ID"
 echo "  vllm_target_device=$VLLM_TARGET_DEVICE"
+if [[ -n "$VLLM_DEVICE" ]]; then
+  echo "  vllm_device=$VLLM_DEVICE"
+fi
 echo "  uv_bin=$UV_BIN"
 if [[ -n "$DATASET_PATH" ]]; then
   echo "  dataset_path=$DATASET_PATH"

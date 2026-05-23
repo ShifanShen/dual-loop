@@ -13,6 +13,7 @@ MODEL_REPR="${MODEL_REPR:-$(basename "$LOCAL_MODEL_PATH")}"
 RELEASE_VERSION="${RELEASE_VERSION:-release_v6}"
 GPU_ID="${GPU_ID:-0}"
 VLLM_TARGET_DEVICE="${VLLM_TARGET_DEVICE:-cuda}"
+VLLM_DEVICE="${VLLM_DEVICE:-}"
 DTYPE="${DTYPE:-bfloat16}"
 TIMEOUT="${TIMEOUT:-6}"
 UV_BIN="${UV_BIN:-}"
@@ -63,7 +64,6 @@ COMMON_ARGS=(
   --local_model_path "$LOCAL_MODEL_PATH"
   --release_version "$RELEASE_VERSION"
   --tensor_parallel_size 1
-  --vllm_device "$VLLM_TARGET_DEVICE"
   --dtype "$DTYPE"
   --max_model_len "$MAX_MODEL_LEN"
   --spec_max_iters "$SPEC_MAX_ITERS"
@@ -97,7 +97,6 @@ INTERMEDIATE_ARGS=(
   --local_model_path "$LOCAL_MODEL_PATH"
   --release_version "$RELEASE_VERSION"
   --tensor_parallel_size 1
-  --vllm_device "$VLLM_TARGET_DEVICE"
   --dtype "$DTYPE"
   --max_model_len "$MAX_MODEL_LEN"
   --spec_max_iters "$SPEC_MAX_ITERS"
@@ -120,6 +119,11 @@ INTERMEDIATE_ARGS=(
 if [[ "$DISABLE_FAILURE_GAP_JUDGE" == "1" ]]; then
   COMMON_ARGS+=(--disable_failure_gap_judge)
   INTERMEDIATE_ARGS+=(--disable_failure_gap_judge)
+fi
+
+if [[ -n "$VLLM_DEVICE" ]]; then
+  COMMON_ARGS+=(--vllm_device "$VLLM_DEVICE")
+  INTERMEDIATE_ARGS+=(--vllm_device "$VLLM_DEVICE")
 fi
 
 if [[ -n "$DATASET_PATH" ]]; then
@@ -179,6 +183,9 @@ echo "  contract_search_codegen_top_k=$CONTRACT_SEARCH_CODEGEN_TOP_K"
 echo "  contract_search_temperature=$CONTRACT_SEARCH_TEMPERATURE"
 echo "  uv_bin=$UV_BIN"
 echo "  vllm_target_device=$VLLM_TARGET_DEVICE"
+if [[ -n "$VLLM_DEVICE" ]]; then
+  echo "  vllm_device=$VLLM_DEVICE"
+fi
 if [[ "$MAX_MODEL_LEN" != "0" ]]; then
   echo "  max_model_len=$MAX_MODEL_LEN"
 fi

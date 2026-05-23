@@ -21,6 +21,7 @@ RELEASE_VERSION="${RELEASE_VERSION:-release_v6}"
 MAX_PROBLEMS="${MAX_PROBLEMS:-50}"
 GPU_ID="${GPU_ID:-0}"
 VLLM_TARGET_DEVICE="${VLLM_TARGET_DEVICE:-cuda}"
+VLLM_DEVICE="${VLLM_DEVICE:-}"
 DTYPE="${DTYPE:-bfloat16}"
 TIMEOUT="${TIMEOUT:-6}"
 MAX_MODEL_LEN="${MAX_MODEL_LEN:-8192}"
@@ -58,7 +59,6 @@ COMMON_ARGS=(
   --release_version "$RELEASE_VERSION"
   --max_problems "$MAX_PROBLEMS"
   --tensor_parallel_size 1
-  --vllm_device "$VLLM_TARGET_DEVICE"
   --max_model_len "$MAX_MODEL_LEN"
   --dtype "$DTYPE"
   --spec_max_iters "$SPEC_MAX_ITERS"
@@ -87,6 +87,9 @@ COMMON_ARGS=(
 
 if [[ -n "$DATASET_PATH" ]]; then
   COMMON_ARGS+=(--dataset_path "$DATASET_PATH")
+fi
+if [[ -n "$VLLM_DEVICE" ]]; then
+  COMMON_ARGS+=(--vllm_device "$VLLM_DEVICE")
 fi
 if [[ "$DISABLE_FAILURE_GAP_JUDGE" == "1" ]]; then
   COMMON_ARGS+=(--disable_failure_gap_judge)

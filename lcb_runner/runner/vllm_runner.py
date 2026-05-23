@@ -1,5 +1,7 @@
 import os
 
+os.environ.setdefault("VLLM_USE_V1", "0")
+
 try:
     from transformers import AutoTokenizer
     from vllm import LLM, SamplingParams
@@ -20,12 +22,10 @@ class VLLMRunner(BaseRunner):
         max_model_len = int(getattr(args, "max_model_len", 0) or 0)
         if max_model_len > 0:
             llm_kwargs["max_model_len"] = max_model_len
-        vllm_device = (
-            getattr(args, "vllm_device", None)
-            or os.environ.get("VLLM_TARGET_DEVICE")
-            or "cuda"
-        )
-        llm_kwargs["device"] = vllm_device
+        llm_kwargs["disable_async_output_proc"] = True
+        vllm_device = getattr(args, "vllm_device", None) or os.environ.get("VLLM_DEVICE")
+        if vllm_device and str(vllm_device).lower() not in {"auto", "none"}:
+            llm_kwargs["device"] = vllm_device
         self.llm = LLM(
             model=model_tokenizer_path,
             tokenizer=model_tokenizer_path,
