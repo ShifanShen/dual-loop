@@ -12,13 +12,10 @@ MODEL_STYLE="${2:-CodeQwenInstruct}"
 MODEL_REPR="${MODEL_REPR:-$(basename "$LOCAL_MODEL_PATH")}"
 RELEASE_VERSION="${RELEASE_VERSION:-release_v6}"
 GPU_ID="${GPU_ID:-0}"
-VLLM_TARGET_DEVICE="${VLLM_TARGET_DEVICE:-cuda}"
-VLLM_DEVICE="${VLLM_DEVICE:-}"
 DTYPE="${DTYPE:-bfloat16}"
 TIMEOUT="${TIMEOUT:-6}"
 UV_BIN="${UV_BIN:-}"
 DATASET_PATH="${DATASET_PATH:-}"
-MAX_MODEL_LEN="${MAX_MODEL_LEN:-0}"
 
 SPEC_MAX_ITERS="${SPEC_MAX_ITERS:-3}"
 REPAIR_MAX_ITERS="${REPAIR_MAX_ITERS:-3}"
@@ -26,22 +23,17 @@ SPEC_SCORE_THRESHOLD="${SPEC_SCORE_THRESHOLD:-90}"
 SPEC_MIN_IMPROVEMENT="${SPEC_MIN_IMPROVEMENT:-1}"
 SPEC_PRECISION_FLOOR="${SPEC_PRECISION_FLOOR:-85}"
 SPEC_MAX_REJECTED_REFINES="${SPEC_MAX_REJECTED_REFINES:-1}"
-CODEGEN_NUM_CANDIDATES="${CODEGEN_NUM_CANDIDATES:-1}"
-CODEGEN_CONTRACT_MODE="${CODEGEN_CONTRACT_MODE:-open}"
-REPAIR_NUM_CANDIDATES="${REPAIR_NUM_CANDIDATES:-1}"
-POST_FAILURE_SAL_MAX_ITERS="${POST_FAILURE_SAL_MAX_ITERS:-0}"
-POST_FAILURE_SAL_TRIGGER="${POST_FAILURE_SAL_TRIGGER:-attribution}"
-CONTRACT_SEARCH_POPULATION_SIZE="${CONTRACT_SEARCH_POPULATION_SIZE:-1}"
-CONTRACT_SEARCH_ROUNDS="${CONTRACT_SEARCH_ROUNDS:-0}"
-CONTRACT_SEARCH_TOP_K="${CONTRACT_SEARCH_TOP_K:-1}"
-CONTRACT_SEARCH_CODEGEN_TOP_K="${CONTRACT_SEARCH_CODEGEN_TOP_K:-1}"
+CODEGEN_NUM_CANDIDATES="${CODEGEN_NUM_CANDIDATES:-2}"
+REPAIR_NUM_CANDIDATES="${REPAIR_NUM_CANDIDATES:-3}"
+POST_FAILURE_SAL_MAX_ITERS="${POST_FAILURE_SAL_MAX_ITERS:-1}"
+CONTRACT_SEARCH_POPULATION_SIZE="${CONTRACT_SEARCH_POPULATION_SIZE:-4}"
+CONTRACT_SEARCH_ROUNDS="${CONTRACT_SEARCH_ROUNDS:-2}"
+CONTRACT_SEARCH_TOP_K="${CONTRACT_SEARCH_TOP_K:-2}"
+CONTRACT_SEARCH_CODEGEN_TOP_K="${CONTRACT_SEARCH_CODEGEN_TOP_K:-2}"
 CONTRACT_SEARCH_TEMPERATURE="${CONTRACT_SEARCH_TEMPERATURE:-0.35}"
 
-ATTRIBUTION_MODE="${ATTRIBUTION_MODE:-evidence}"
+ATTRIBUTION_MODE="${ATTRIBUTION_MODE:-conservative}"
 ATTRIBUTION_SPEC_MARGIN="${ATTRIBUTION_SPEC_MARGIN:-3}"
-ATTRIBUTION_REENTRY_CONFIDENCE_THRESHOLD="${ATTRIBUTION_REENTRY_CONFIDENCE_THRESHOLD:-0.6}"
-FAILURE_GAP_CONFIDENCE_THRESHOLD="${FAILURE_GAP_CONFIDENCE_THRESHOLD:-70}"
-DISABLE_FAILURE_GAP_JUDGE="${DISABLE_FAILURE_GAP_JUDGE:-0}"
 ADAPTIVE_SAL_THRESHOLD="${ADAPTIVE_SAL_THRESHOLD:-85}"
 
 MEDIUM_PIPELINE_PROBLEMS="${MEDIUM_PIPELINE_PROBLEMS:-200}"
@@ -65,7 +57,6 @@ COMMON_ARGS=(
   --release_version "$RELEASE_VERSION"
   --tensor_parallel_size 1
   --dtype "$DTYPE"
-  --max_model_len "$MAX_MODEL_LEN"
   --spec_max_iters "$SPEC_MAX_ITERS"
   --repair_max_iters "$REPAIR_MAX_ITERS"
   --spec_score_threshold "$SPEC_SCORE_THRESHOLD"
@@ -75,10 +66,8 @@ COMMON_ARGS=(
   --adaptive_ablation_threshold "$ADAPTIVE_SAL_THRESHOLD"
   --timeout "$TIMEOUT"
   --codegen_num_candidates "$CODEGEN_NUM_CANDIDATES"
-  --codegen_contract_mode "$CODEGEN_CONTRACT_MODE"
   --repair_num_candidates "$REPAIR_NUM_CANDIDATES"
   --post_failure_sal_max_iters "$POST_FAILURE_SAL_MAX_ITERS"
-  --post_failure_sal_trigger "$POST_FAILURE_SAL_TRIGGER"
   --contract_search_population_size "$CONTRACT_SEARCH_POPULATION_SIZE"
   --contract_search_rounds "$CONTRACT_SEARCH_ROUNDS"
   --contract_search_top_k "$CONTRACT_SEARCH_TOP_K"
@@ -86,8 +75,6 @@ COMMON_ARGS=(
   --contract_search_temperature "$CONTRACT_SEARCH_TEMPERATURE"
   --attribution_mode "$ATTRIBUTION_MODE"
   --attribution_spec_margin "$ATTRIBUTION_SPEC_MARGIN"
-  --attribution_reentry_confidence_threshold "$ATTRIBUTION_REENTRY_CONFIDENCE_THRESHOLD"
-  --failure_gap_confidence_threshold "$FAILURE_GAP_CONFIDENCE_THRESHOLD"
 )
 
 INTERMEDIATE_ARGS=(
@@ -98,7 +85,6 @@ INTERMEDIATE_ARGS=(
   --release_version "$RELEASE_VERSION"
   --tensor_parallel_size 1
   --dtype "$DTYPE"
-  --max_model_len "$MAX_MODEL_LEN"
   --spec_max_iters "$SPEC_MAX_ITERS"
   --repair_max_iters "$REPAIR_MAX_ITERS"
   --spec_score_threshold "$SPEC_SCORE_THRESHOLD"
@@ -107,24 +93,9 @@ INTERMEDIATE_ARGS=(
   --spec_max_rejected_refines "$SPEC_MAX_REJECTED_REFINES"
   --timeout "$TIMEOUT"
   --codegen_num_candidates "$CODEGEN_NUM_CANDIDATES"
-  --codegen_contract_mode "$CODEGEN_CONTRACT_MODE"
   --repair_num_candidates "$REPAIR_NUM_CANDIDATES"
   --post_failure_sal_max_iters "$POST_FAILURE_SAL_MAX_ITERS"
-  --attribution_mode "$ATTRIBUTION_MODE"
-  --attribution_spec_margin "$ATTRIBUTION_SPEC_MARGIN"
-  --attribution_reentry_confidence_threshold "$ATTRIBUTION_REENTRY_CONFIDENCE_THRESHOLD"
-  --failure_gap_confidence_threshold "$FAILURE_GAP_CONFIDENCE_THRESHOLD"
 )
-
-if [[ "$DISABLE_FAILURE_GAP_JUDGE" == "1" ]]; then
-  COMMON_ARGS+=(--disable_failure_gap_judge)
-  INTERMEDIATE_ARGS+=(--disable_failure_gap_judge)
-fi
-
-if [[ -n "$VLLM_DEVICE" ]]; then
-  COMMON_ARGS+=(--vllm_device "$VLLM_DEVICE")
-  INTERMEDIATE_ARGS+=(--vllm_device "$VLLM_DEVICE")
-fi
 
 if [[ -n "$DATASET_PATH" ]]; then
   COMMON_ARGS+=(--dataset_path "$DATASET_PATH")
@@ -155,9 +126,7 @@ run_suite() {
   echo "============================================================"
   echo "$label"
   echo "============================================================"
-  CUDA_VISIBLE_DEVICES="$GPU_ID" VLLM_TARGET_DEVICE="$VLLM_TARGET_DEVICE" \
-    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
-    "$UV_BIN" run python scripts/run_dual_loop_rq_suite.py \
+  CUDA_VISIBLE_DEVICES="$GPU_ID" "$UV_BIN" run python scripts/run_dual_loop_rq_suite.py \
     "${COMMON_ARGS[@]}" \
     "$@"
 }
@@ -168,27 +137,16 @@ echo "  model_style=$MODEL_STYLE"
 echo "  release_version=$RELEASE_VERSION"
 echo "  attribution_mode=$ATTRIBUTION_MODE"
 echo "  attribution_spec_margin=$ATTRIBUTION_SPEC_MARGIN"
-echo "  failure_gap_confidence_threshold=$FAILURE_GAP_CONFIDENCE_THRESHOLD"
-echo "  disable_failure_gap_judge=$DISABLE_FAILURE_GAP_JUDGE"
 echo "  adaptive_sal_threshold=$ADAPTIVE_SAL_THRESHOLD"
 echo "  codegen_num_candidates=$CODEGEN_NUM_CANDIDATES"
-echo "  codegen_contract_mode=$CODEGEN_CONTRACT_MODE"
 echo "  repair_num_candidates=$REPAIR_NUM_CANDIDATES"
 echo "  post_failure_sal_max_iters=$POST_FAILURE_SAL_MAX_ITERS"
-echo "  post_failure_sal_trigger=$POST_FAILURE_SAL_TRIGGER"
 echo "  contract_search_population_size=$CONTRACT_SEARCH_POPULATION_SIZE"
 echo "  contract_search_rounds=$CONTRACT_SEARCH_ROUNDS"
 echo "  contract_search_top_k=$CONTRACT_SEARCH_TOP_K"
 echo "  contract_search_codegen_top_k=$CONTRACT_SEARCH_CODEGEN_TOP_K"
 echo "  contract_search_temperature=$CONTRACT_SEARCH_TEMPERATURE"
 echo "  uv_bin=$UV_BIN"
-echo "  vllm_target_device=$VLLM_TARGET_DEVICE"
-if [[ -n "$VLLM_DEVICE" ]]; then
-  echo "  vllm_device=$VLLM_DEVICE"
-fi
-if [[ "$MAX_MODEL_LEN" != "0" ]]; then
-  echo "  max_model_len=$MAX_MODEL_LEN"
-fi
 if [[ -n "$DATASET_PATH" ]]; then
   echo "  dataset_path=$DATASET_PATH"
 fi
@@ -211,9 +169,7 @@ if [[ "$RUN_INTERMEDIATE_REP_STUDY" == "1" ]]; then
   echo "============================================================"
   echo "[3/5] 50-problem Spec vs Plan/Pseudocode study"
   echo "============================================================"
-  CUDA_VISIBLE_DEVICES="$GPU_ID" VLLM_TARGET_DEVICE="$VLLM_TARGET_DEVICE" \
-    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
-    "$UV_BIN" run python scripts/run_intermediate_repr_study.py \
+  CUDA_VISIBLE_DEVICES="$GPU_ID" "$UV_BIN" run python scripts/run_intermediate_repr_study.py \
     "${INTERMEDIATE_ARGS[@]}" \
     --max_problems "$INTERMEDIATE_STUDY_PROBLEMS" \
     --output_root output/intermediate_repr_study
@@ -235,7 +191,7 @@ if [[ "$RUN_SAS_CORRELATION" == "1" && -n "${MEDIUM_SUITE_DIR:-}" ]]; then
   echo "============================================================"
   echo "[Extra] SAS correlation analysis"
   echo "============================================================"
-  CUDA_VISIBLE_DEVICES="$GPU_ID" VLLM_TARGET_DEVICE="$VLLM_TARGET_DEVICE" "$UV_BIN" run python scripts/analyze_sas_failure_correlation.py \
+  CUDA_VISIBLE_DEVICES="$GPU_ID" "$UV_BIN" run python scripts/analyze_sas_failure_correlation.py \
     --suite_dir "$MEDIUM_SUITE_DIR"
 fi
 
@@ -244,7 +200,7 @@ if [[ "$RUN_SEMANTIC_SUBSET_ANALYSIS" == "1" && -n "${FULL_SUITE_DIR:-}" ]]; the
   echo "============================================================"
   echo "[Extra] Semantic-heavy subset analysis"
   echo "============================================================"
-  CUDA_VISIBLE_DEVICES="$GPU_ID" VLLM_TARGET_DEVICE="$VLLM_TARGET_DEVICE" "$UV_BIN" run python scripts/analyze_semantic_subsets.py \
+  CUDA_VISIBLE_DEVICES="$GPU_ID" "$UV_BIN" run python scripts/analyze_semantic_subsets.py \
     --suite_dir "$FULL_SUITE_DIR"
 fi
 
@@ -253,7 +209,7 @@ if [[ "$RUN_MANUAL_AUDIT_PACK" == "1" && -n "${MEDIUM_SUITE_DIR:-}" ]]; then
   echo "============================================================"
   echo "[Extra] Manual audit pack"
   echo "============================================================"
-  CUDA_VISIBLE_DEVICES="$GPU_ID" VLLM_TARGET_DEVICE="$VLLM_TARGET_DEVICE" "$UV_BIN" run python scripts/prepare_manual_audit_pack.py \
+  CUDA_VISIBLE_DEVICES="$GPU_ID" "$UV_BIN" run python scripts/prepare_manual_audit_pack.py \
     --suite_dir "$MEDIUM_SUITE_DIR" \
     --per_label "$MANUAL_AUDIT_PER_LABEL"
 fi

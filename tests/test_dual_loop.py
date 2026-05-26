@@ -5,7 +5,6 @@ import tempfile
 import types
 import unittest
 from argparse import Namespace
-from dataclasses import asdict
 from unittest.mock import patch
 
 if "datasets" not in sys.modules:
@@ -56,8 +55,7 @@ from lcb_runner.dual_loop.rq_suite import (
 from lcb_runner.dual_loop.model_download import infer_output_dir
 from lcb_runner.lm_styles import LMStyle, resolve_language_model
 from lcb_runner.dual_loop.pipeline import DualLoopPipeline, LLMAdapter, ProblemTrace
-from lcb_runner.dual_loop.prompts import build_code_from_spec_prompt
-from lcb_runner.dual_loop.spec import SpecPatch, SpecScore, StructuredSpec, VerifierFeedback
+from lcb_runner.dual_loop.spec import SpecScore, StructuredSpec, VerifierFeedback
 from lcb_runner.evaluation.testing_util import reliability_guard, restore_reliability_guard
 
 
@@ -131,41 +129,6 @@ class SpecParsingTests(unittest.TestCase):
         self.assertEqual(spec.task, "solve the task")
         self.assertEqual(spec.reference_strategy, "reference_solver")
         self.assertIn("duplicates", spec.edge_cases)
-
-    def test_structured_spec_v2_codegen_contract_excludes_alignment_evidence(self):
-        text = json.dumps(
-            {
-                "task": "sort numbers",
-                "interface": {"execution_mode": "function", "signature": "sort(nums)"},
-                "input_model": {"variables": [{"name": "nums", "type": "List[int]"}]},
-                "output_model": {"type": "List[int]"},
-                "semantic_contract": {"postconditions": ["result is nondecreasing"]},
-                "alignment_evidence": {
-                    "source_quotes": ["Return the numbers in ascending order."]
-                },
-            }
-        )
-        spec = StructuredSpec.from_llm_output(text)
-        contract = spec.to_codegen_contract()
-        self.assertIn("semantic_contract", contract)
-        self.assertNotIn("alignment_evidence", contract)
-        self.assertNotIn("Return the numbers in ascending order.", contract)
-
-    def test_sealed_codegen_prompt_omits_original_problem(self):
-        problem = make_problem()
-        spec = StructuredSpec(
-            task="two sum",
-            interface={"execution_mode": "stdin"},
-            input_model={"variables": [{"name": "nums", "type": "List[int]"}]},
-            output_model={"type": "indices"},
-            semantic_contract={"core_rules": ["return two indices whose values sum to target"]},
-            alignment_evidence={"source_quotes": [problem.question_content]},
-            parse_ok=True,
-        )
-        prompt = build_code_from_spec_prompt(problem, spec, contract_mode="sealed")
-        self.assertIn("Sealed semantic contract", prompt)
-        self.assertNotIn("Original problem", prompt)
-        self.assertNotIn(problem.question_content, prompt)
 
     def test_spec_score_parses_fields(self):
         text = json.dumps(
@@ -279,11 +242,27 @@ class SpecParsingTests(unittest.TestCase):
         self.assertIn("same_length", property_types)
         self.assertIn("yes_no_output", property_types)
 
+    def test_compile_property_clauses_extracts_numeric_protocols(self):
+        spec = StructuredSpec(
+            outputs=[
+                "Output a single integer.",
+                "The answer is non-negative and should be reported modulo 1000000007.",
+                "Output true or false.",
+            ],
+        )
+
+        clauses = compile_property_clauses(spec)
+        property_types = {clause.property_type for clause in clauses}
+
+        self.assertIn("numeric_output", property_types)
+        self.assertIn("non_negative_output", property_types)
+        self.assertIn("modulo_output", property_types)
+        self.assertIn("boolean_output", property_types)
+
     def test_evaluate_property_clauses_reports_sortedness_violation(self):
         spec = StructuredSpec(
             task="sort numbers",
             checkable_properties=["output is sorted in ascending order"],
-            constraints=["Do not use sorted."],
         )
         clauses = compile_property_clauses(spec)
 
@@ -297,11 +276,49 @@ class SpecParsingTests(unittest.TestCase):
         self.assertEqual(feedbacks[0].property_type, "sorted_order")
         self.assertIn("ascending", feedbacks[0].message)
 
+    def test_numeric_property_reports_non_numeric_token(self):
+        spec = StructuredSpec(outputs=["Output a single integer."])
+        clauses = compile_property_clauses(spec)
+
+        feedbacks = evaluate_property_clauses(
+            clauses,
+            actual_output="answer",
+            expected_output="42",
+        )
+
+        self.assertEqual(len(feedbacks), 1)
+        self.assertEqual(feedbacks[0].property_type, "numeric_output")
+
+    def test_modulo_property_reports_out_of_range_value(self):
+        spec = StructuredSpec(outputs=["Print the answer modulo 1000000007."])
+        clauses = compile_property_clauses(spec)
+
+        feedbacks = evaluate_property_clauses(
+            clauses,
+            actual_output="1000000007",
+            expected_output="3",
+        )
+
+        self.assertEqual(len(feedbacks), 1)
+        self.assertEqual(feedbacks[0].property_type, "modulo_output")
+
+    def test_boolean_property_reports_invalid_token(self):
+        spec = StructuredSpec(outputs=["Output true or false."])
+        clauses = compile_property_clauses(spec)
+
+        feedbacks = evaluate_property_clauses(
+            clauses,
+            actual_output="YES",
+            expected_output="true",
+        )
+
+        self.assertEqual(len(feedbacks), 1)
+        self.assertEqual(feedbacks[0].property_type, "boolean_output")
+
     def test_evaluate_property_clauses_skips_mixed_type_sortedness_sequences(self):
         spec = StructuredSpec(
             task="sort numbers",
             checkable_properties=["output is sorted in ascending order"],
-            constraints=["Do not use sorted."],
         )
         clauses = compile_property_clauses(spec)
 
@@ -337,45 +354,6 @@ class SpecParsingTests(unittest.TestCase):
 
         self.assertEqual(len(feedbacks), 1)
         self.assertIn("number of YES/NO outputs", feedbacks[0].message)
-
-    def test_modulo_property_reports_out_of_range_output(self):
-        spec = StructuredSpec(outputs=["Output the answer modulo 1000000007."])
-        clauses = compile_property_clauses(spec)
-
-        feedbacks = evaluate_property_clauses(
-            clauses,
-            actual_output="1000000008",
-            expected_output="1",
-        )
-
-        self.assertEqual(len(feedbacks), 1)
-        self.assertEqual(feedbacks[0].property_type, "modulo_output")
-
-    def test_numeric_property_reports_non_numeric_output(self):
-        spec = StructuredSpec(outputs=["Output a single integer."])
-        clauses = compile_property_clauses(spec)
-
-        feedbacks = evaluate_property_clauses(
-            clauses,
-            actual_output="YES",
-            expected_output="3",
-        )
-
-        self.assertEqual(len(feedbacks), 1)
-        self.assertEqual(feedbacks[0].property_type, "numeric_output")
-
-    def test_count_property_reports_negative_output(self):
-        spec = StructuredSpec(outputs=["Output the number of valid pairs."])
-        clauses = compile_property_clauses(spec)
-
-        feedbacks = evaluate_property_clauses(
-            clauses,
-            actual_output="-1",
-            expected_output="0",
-        )
-
-        property_types = {feedback.property_type for feedback in feedbacks}
-        self.assertIn("non_negative_output", property_types)
 
     def test_reliability_guard_restores_process_state(self):
         import os
@@ -468,15 +446,8 @@ class DualLoopPipelineTests(unittest.TestCase):
             judge_temperature=0.0,
             codegen_temperature=0.2,
             codegen_num_candidates=1,
-            codegen_contract_mode="open",
             repair_num_candidates=1,
             post_failure_sal_max_iters=0,
-            post_failure_sal_trigger="attribution",
-            attribution_mode="legacy",
-            attribution_spec_margin=5,
-            attribution_reentry_confidence_threshold=0.6,
-            failure_gap_judge_enabled=True,
-            failure_gap_confidence_threshold=70,
             contract_search_population_size=1,
             contract_search_rounds=0,
             contract_search_top_k=1,
@@ -553,198 +524,6 @@ class DualLoopPipelineTests(unittest.TestCase):
             self.assertEqual(trace.failure_attribution, "solved")
             self.assertIn("spec_draft", trace.effectiveness)
             self.assertIn("codegen", trace.effectiveness)
-
-    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
-    def test_attribution_guided_post_failure_sal_reenters_and_repairs(self, mock_adapter_cls):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            args = self.make_args(tmpdir)
-            args.post_failure_sal_max_iters = 1
-            args.post_failure_sal_trigger = "attribution"
-            args.attribution_mode = "legacy"
-            args.spec_score_threshold = 90
-            mock_adapter = mock_adapter_cls.return_value
-            mock_adapter.model.model_repr = "fake-model"
-            mock_adapter.generate.return_value = (
-                json.dumps(
-                    {
-                        "failure_source": "spec_gap",
-                        "confidence": 90,
-                        "spec_gap": "ascending order is missing as a checkable obligation",
-                        "implementation_bug": "",
-                        "why_code_repair_is_insufficient": "the contract does not expose ascending order",
-                        "minimal_spec_patch": {
-                            "checkable_properties": ["ascending order"]
-                        },
-                        "evidence": ["output is descending but expected ascending"],
-                    }
-                ),
-                {"prompt_chars": 1, "completion_chars": 1},
-            )
-            pipeline = DualLoopPipeline(args)
-            problem = make_problem()
-
-            initial_spec = StructuredSpec(
-                task="sort",
-                constraints=["return sorted values"],
-                parse_ok=True,
-            )
-            refined_spec = StructuredSpec(
-                task="sort",
-                constraints=["return sorted values"],
-                checkable_properties=["ascending order"],
-                parse_ok=True,
-            )
-            initial_score = SpecScore(
-                coverage=70,
-                faithfulness=90,
-                precision=80,
-                overall=70,
-                missing_constraints=["ascending order is underspecified"],
-                requires_refine=True,
-                issue_types=["missing_constraint"],
-                parse_ok=True,
-            )
-            final_score = initial_score
-            reentry_score = SpecScore(
-                coverage=95,
-                faithfulness=95,
-                precision=95,
-                overall=95,
-                parse_ok=True,
-            )
-            failed_feedback = VerifierFeedback(
-                passed=False,
-                error_type="wrong_answer",
-                field="checkable_subset",
-                message="descending output",
-                input="[3,1,2]",
-                output="[3,2,1]",
-                expected="[1,2,3]",
-            )
-            passed_feedback = VerifierFeedback(
-                passed=True,
-                error_type="accepted",
-                field="checkable_subset",
-                message="ok",
-            )
-
-            with patch.object(pipeline, "_draft_spec", return_value=initial_spec), patch.object(
-                pipeline,
-                "_score_spec",
-                side_effect=[initial_score, final_score, reentry_score],
-            ), patch.object(
-                pipeline,
-                "_refine_spec",
-                return_value=(
-                    initial_spec,
-                    [],
-                    {
-                        "raw_score_outputs": [],
-                        "raw_spec_outputs": [],
-                        "judge_usages": [],
-                        "spec_usages": [],
-                        "stage_times": {},
-                        "effectiveness_steps": [],
-                    },
-                ),
-            ), patch.object(
-                pipeline,
-                "_generate_code_from_spec",
-                side_effect=["print('initial')", "print('regenerated')"],
-            ), patch.object(
-                pipeline,
-                "_repair_code",
-                side_effect=[
-                    ("print('still_bad')", [asdict(failed_feedback)]),
-                    ("print('fixed')", [asdict(failed_feedback), asdict(passed_feedback)]),
-                ],
-            ), patch.object(
-                pipeline,
-                "_parse_spec_patch_output",
-                return_value=(
-                    SpecPatch(checkable_properties=["ascending order"], parse_ok=True),
-                    ['{"checkable_properties": ["ascending order"]}'],
-                    [],
-                ),
-            ), patch.object(
-                pipeline,
-                "_verify",
-                return_value=failed_feedback,
-            ):
-                trace = pipeline._run_problem(problem)
-
-            self.assertTrue(trace.passed)
-            self.assertEqual(trace.final_code, "print('fixed')")
-            self.assertEqual(trace.spec_final["checkable_properties"], ["ascending order"])
-            self.assertEqual(trace.effectiveness["post_failure_sal"]["trigger_policy"], "attribution")
-            self.assertEqual(
-                trace.effectiveness["post_failure_sal"]["pre_reentry_attribution"],
-                "spec_induced",
-            )
-            self.assertEqual(
-                trace.effectiveness["post_failure_sal"]["failure_gap_judge"][
-                    "failure_source"
-                ],
-                "spec_gap",
-            )
-            self.assertTrue(trace.effectiveness["post_failure_sal"]["accepted"])
-            self.assertEqual(
-                trace.effectiveness["post_failure_sal"]["reason"],
-                "reentry_repair_passed",
-            )
-
-    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
-    def test_evidence_attribution_requires_hard_spec_signal(self, mock_adapter_cls):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            args = self.make_args(tmpdir)
-            args.attribution_mode = "evidence"
-            args.spec_score_threshold = 90
-            mock_adapter_cls.return_value.model.model_repr = "fake-model"
-            pipeline = DualLoopPipeline(args)
-            trace = ProblemTrace(
-                question_id="q",
-                question_title="q",
-                pipeline_mode="full",
-                raw_problem="problem",
-                final_spec_score={"overall": 88},
-                spec_issue_types=[],
-                verifier_feedbacks=[{"passed": False, "error_type": "wrong_answer"}],
-                passed=False,
-            )
-            decision = pipeline._attribute_failure_detail(trace)
-            self.assertEqual(decision["attribution"], "unknown")
-
-            trace.spec_issue_types = ["missing_constraint"]
-            decision = pipeline._attribute_failure_detail(trace)
-            self.assertEqual(decision["attribution"], "spec_induced")
-            self.assertGreaterEqual(decision["confidence"], 0.75)
-
-    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
-    def test_evidence_attribution_detects_mixed_signals(self, mock_adapter_cls):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            args = self.make_args(tmpdir)
-            args.attribution_mode = "evidence"
-            args.spec_score_threshold = 90
-            mock_adapter_cls.return_value.model.model_repr = "fake-model"
-            pipeline = DualLoopPipeline(args)
-            trace = ProblemTrace(
-                question_id="q",
-                question_title="q",
-                pipeline_mode="full",
-                raw_problem="problem",
-                final_spec_score={"overall": 80},
-                spec_issue_types=["missing_constraint"],
-                verifier_feedbacks=[
-                    {
-                        "passed": False,
-                        "error_type": "wrong_answer",
-                        "property_feedbacks": [{"property_type": "sorted_order"}],
-                    }
-                ],
-                passed=False,
-            )
-            decision = pipeline._attribute_failure_detail(trace)
-            self.assertEqual(decision["attribution"], "mixed")
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
     def test_run_problem_self_refine_uses_direct_repair_branch(self, mock_adapter_cls):
@@ -967,70 +746,6 @@ class DualLoopPipelineTests(unittest.TestCase):
             self.assertEqual(
                 feedback.property_feedbacks[0]["property_type"],
                 "sorted_order",
-            )
-
-    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
-    def test_verify_attaches_static_spec_feedback_for_forbidden_api(self, mock_adapter_cls):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            args = self.make_args(tmpdir)
-            mock_adapter_cls.return_value.model.model_repr = "fake-model"
-            pipeline = DualLoopPipeline(args)
-            problem = make_problem()
-            spec = StructuredSpec(
-                task="sort numbers",
-                constraints=["Do not use sort or sorted."],
-            )
-
-            with patch(
-                "lcb_runner.evaluation.compute_code_generation_metrics.check_correctness",
-                return_value=(
-                    [-2],
-                    {
-                        "error_code": -2,
-                        "error_message": "Wrong answer",
-                        "inputs": "3 1 2",
-                        "output": "3 2 1",
-                        "expected": "1 2 3",
-                    },
-                ),
-            ):
-                feedback = pipeline._verify(problem, "print(sorted([3, 1, 2]))", spec=spec)
-
-            property_types = {
-                item["property_type"] for item in feedback.property_feedbacks
-            }
-            self.assertIn("forbidden_api_usage", property_types)
-
-    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
-    def test_candidate_feedback_rank_penalizes_spec_property_violations(self, mock_adapter_cls):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            args = self.make_args(tmpdir)
-            mock_adapter_cls.return_value.model.model_repr = "fake-model"
-            pipeline = DualLoopPipeline(args)
-            clean_feedback = VerifierFeedback(
-                passed=False,
-                error_type="wrong_answer",
-                field="Rules",
-                message="wrong",
-            )
-            violating_feedback = VerifierFeedback(
-                passed=False,
-                error_type="wrong_answer",
-                field="Rules",
-                message="wrong",
-                property_feedbacks=[
-                    {
-                        "property_type": "forbidden_api_usage",
-                        "source_field": "must_not_assume",
-                        "message": "used forbidden API",
-                        "evidence": {},
-                    }
-                ],
-            )
-
-            self.assertLess(
-                pipeline._candidate_feedback_rank(clean_feedback),
-                pipeline._candidate_feedback_rank(violating_feedback),
             )
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
@@ -1565,6 +1280,41 @@ class DualLoopPipelineTests(unittest.TestCase):
             self.assertTrue(feedback_trace[-1]["passed"])
             self.assertEqual(spec._repair_effectiveness[0]["candidate_count"], 2)
             self.assertEqual(spec._repair_effectiveness[0]["selected_candidate_index"], 2)
+            self.assertIn(
+                "selection_summary",
+                spec._repair_effectiveness[0]["candidate_feedbacks"][0],
+            )
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_conservative_attribution_records_confidence_and_evidence(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            args.attribution_mode = "conservative"
+            args.attribution_spec_margin = 3
+            mock_adapter_cls.return_value.model.model_repr = "fake-model"
+            pipeline = DualLoopPipeline(args)
+            trace = ProblemTrace(
+                question_id="q1",
+                question_title="q",
+                pipeline_mode="full",
+                raw_problem="problem",
+                initial_spec_score={"overall": 84},
+                final_spec_score={"overall": 70},
+                spec_issue_types=["missing_constraint"],
+                verifier_feedbacks=[
+                    {
+                        "passed": False,
+                        "error_type": "wrong_answer",
+                        "property_feedbacks": [{"property_type": "numeric_output"}],
+                    }
+                ],
+            )
+
+            pipeline._finalize_trace(trace)
+
+            self.assertEqual(trace.failure_attribution, "spec_induced")
+            self.assertGreater(trace.failure_attribution_confidence, 0.7)
+            self.assertIn("spec_issue:missing_constraint", trace.failure_attribution_evidence)
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
     def test_repair_code_uses_counterexample_prompt_after_repeated_wrong_answers(self, mock_adapter_cls):

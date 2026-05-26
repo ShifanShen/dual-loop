@@ -31,18 +31,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--trust_remote_code", action="store_true")
     parser.add_argument("--dtype", type=str, default="bfloat16")
     parser.add_argument("--tensor_parallel_size", type=int, default=1)
-    parser.add_argument(
-        "--vllm_device",
-        type=str,
-        default=None,
-        help="Optional vLLM device override, e.g. cuda, cpu, or auto.",
-    )
-    parser.add_argument(
-        "--max_model_len",
-        type=int,
-        default=0,
-        help="Optional vLLM max_model_len override. Use this for long-context models on smaller GPUs.",
-    )
     parser.add_argument("--enable_prefix_caching", action="store_true")
     parser.add_argument("--use_cache", action="store_true")
     parser.add_argument("--cache_batch_size", type=int, default=32)
@@ -87,24 +75,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--judge_temperature", type=float, default=0.0)
     parser.add_argument("--codegen_temperature", type=float, default=0.2)
     parser.add_argument("--codegen_num_candidates", type=int, default=1)
-    parser.add_argument(
-        "--codegen_contract_mode",
-        type=str,
-        default="open",
-        choices=["open", "sealed"],
-    )
     parser.add_argument("--repair_num_candidates", type=int, default=1)
     parser.add_argument("--post_failure_sal_max_iters", type=int, default=0)
-    parser.add_argument(
-        "--post_failure_sal_trigger",
-        type=str,
-        default="attribution",
-        choices=["attribution", "semantic_signal"],
-        help=(
-            "Post-failure SAL re-entry trigger. Attribution mode only re-enters SAL "
-            "for pre-reentry spec-induced failures."
-        ),
-    )
     parser.add_argument("--contract_search_population_size", type=int, default=1)
     parser.add_argument("--contract_search_rounds", type=int, default=0)
     parser.add_argument("--contract_search_top_k", type=int, default=1)
@@ -122,7 +94,7 @@ def parse_args() -> argparse.Namespace:
         "--attribution_mode",
         type=str,
         default="legacy",
-        choices=["legacy", "conservative", "evidence"],
+        choices=["legacy", "conservative"],
         help="Failure attribution policy. Conservative mode abstains with unknown more often.",
     )
     parser.add_argument(
@@ -130,25 +102,6 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=5,
         help="Confidence margin used by conservative attribution around spec_score_threshold.",
-    )
-    parser.add_argument(
-        "--attribution_reentry_confidence_threshold",
-        type=float,
-        default=0.6,
-        help="Minimum attribution confidence required for attribution-guided SAL re-entry.",
-    )
-    parser.add_argument(
-        "--disable_failure_gap_judge",
-        dest="failure_gap_judge_enabled",
-        action="store_false",
-        help="Disable the post-IRL failure-to-spec-gap judge before SAL re-entry.",
-    )
-    parser.set_defaults(failure_gap_judge_enabled=True)
-    parser.add_argument(
-        "--failure_gap_confidence_threshold",
-        type=int,
-        default=70,
-        help="Minimum failure-gap judge confidence required to use its spec patch.",
     )
     args = parser.parse_args()
     args.stop = args.stop.split(",")
@@ -206,11 +159,9 @@ def main() -> None:
         "include_repair_ablations": args.include_repair_ablations,
         "include_budget_ablations": args.include_budget_ablations,
         "include_adaptive_ablations": args.include_adaptive_ablations,
-        "codegen_contract_mode": args.codegen_contract_mode,
         "codegen_num_candidates": args.codegen_num_candidates,
         "repair_num_candidates": args.repair_num_candidates,
         "post_failure_sal_max_iters": args.post_failure_sal_max_iters,
-        "post_failure_sal_trigger": args.post_failure_sal_trigger,
         "contract_search_population_size": args.contract_search_population_size,
         "contract_search_rounds": args.contract_search_rounds,
         "contract_search_top_k": args.contract_search_top_k,
@@ -220,11 +171,6 @@ def main() -> None:
         "adaptive_ablation_threshold": args.adaptive_ablation_threshold,
         "attribution_mode": args.attribution_mode,
         "attribution_spec_margin": args.attribution_spec_margin,
-        "attribution_reentry_confidence_threshold": (
-            args.attribution_reentry_confidence_threshold
-        ),
-        "failure_gap_judge_enabled": args.failure_gap_judge_enabled,
-        "failure_gap_confidence_threshold": args.failure_gap_confidence_threshold,
         "suite_dir": str(suite_dir),
         "csv_path": str(csv_path),
         "manifest_path": str(manifest_path),

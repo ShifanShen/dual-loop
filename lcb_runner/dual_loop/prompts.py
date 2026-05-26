@@ -19,66 +19,7 @@ SPEC_JSON_SCHEMA = """{
   "tie_break": ["rule for multiple valid outputs if applicable"],
   "reference_strategy": "validator_only or reference_solver",
   "algorithmic_notes": ["optional implementation hint grounded in the prompt"],
-  "non_checkable_notes": ["requirements that are descriptive only"],
-  "interface": {
-    "execution_mode": "function or stdin",
-    "function_name": "required function name if any",
-    "signature": "exact callable signature if any",
-    "class_name": "required class wrapper if any",
-    "input_format": ["complete input order and parsing rules"],
-    "output_format": ["complete return or print protocol"],
-    "return_type": "return type if function mode",
-    "required_wrapper": "wrapper constraints from starter code if any"
-  },
-  "input_model": {
-    "variables": [
-      {
-        "name": "variable name",
-        "type": "semantic type",
-        "shape": "size or dimensionality",
-        "range": "numeric/string range if stated",
-        "constraints": ["variable-specific constraints"]
-      }
-    ],
-    "relations": ["relations among variables"],
-    "guarantees": ["validity guarantees explicitly stated by the prompt"]
-  },
-  "output_model": {
-    "type": "semantic output type",
-    "validity_conditions": ["conditions every correct output must satisfy"],
-    "multiple_valid_outputs": false,
-    "tie_break": ["tie-breaking rule if any"],
-    "modulo": "modulo rule if any",
-    "empty_case_behavior": "special behavior for empty or impossible cases"
-  },
-  "semantic_contract": {
-    "core_rules": ["executable semantic obligations"],
-    "invariants": ["invariants preserved from input to output"],
-    "postconditions": ["postconditions on the returned/printed result"],
-    "forbidden_behaviors": ["behaviors a correct solution must not do"]
-  },
-  "implementation_contract": {
-    "expected_complexity": "complexity bound if stated or strongly implied",
-    "necessary_observations": ["implementation-relevant observations grounded in the prompt"],
-    "allowed_strategies": ["safe strategy families"],
-    "forbidden_shortcuts": ["unsupported shortcuts likely to fail hidden tests"]
-  },
-  "oracle_contract": {
-    "checkable_properties": [
-      {
-        "name": "property name",
-        "description": "checkable obligation",
-        "applicability": "when this property applies"
-      }
-    ],
-    "small_case_reference": "bruteforce, validator, or none",
-    "property_test_hints": ["small cases likely to expose semantic mistakes"]
-  },
-  "alignment_evidence": {
-    "covered_requirements": ["short NL-grounded requirement summaries"],
-    "uncertain_points": ["remaining ambiguity if any"],
-    "source_quotes": ["short source phrase used only by SAS, not by code generation"]
-  }
+  "non_checkable_notes": ["requirements that are descriptive only"]
 }"""
 
 
@@ -90,14 +31,7 @@ SPEC_PATCH_JSON_SCHEMA = """{
   "must_not_assume": ["updated unsupported assumption guard if needed"],
   "corner_triggers": ["updated trigger condition if needed"],
   "outputs": ["updated output protocol if needed"],
-  "tie_break": ["updated tie-breaking rule if needed"],
-  "interface": {"updated": "interface details if needed"},
-  "input_model": {"updated": "input model details if needed"},
-  "output_model": {"updated": "output model details if needed"},
-  "semantic_contract": {"updated": "semantic contract details if needed"},
-  "implementation_contract": {"updated": "implementation contract details if needed"},
-  "oracle_contract": {"updated": "oracle contract details if needed"},
-  "alignment_evidence": {"updated": "alignment evidence if needed"}
+  "tie_break": ["updated tie-breaking rule if needed"]
 }"""
 
 SPEC_PATCH_ALLOWED_FIELDS = (
@@ -114,13 +48,6 @@ SPEC_PATCH_ALLOWED_FIELDS = (
     "reference_strategy",
     "algorithmic_notes",
     "non_checkable_notes",
-    "interface",
-    "input_model",
-    "output_model",
-    "semantic_contract",
-    "implementation_contract",
-    "oracle_contract",
-    "alignment_evidence",
 )
 
 
@@ -134,8 +61,6 @@ Use this schema exactly:
 Guidelines:
 - Keep only requirements supported by the problem statement.
 - Put executable requirements under constraints, rules, edge_cases, and checkable_properties.
-- Make interface, input_model, output_model, and semantic_contract complete enough that code generation can later use the spec without seeing the original problem.
-- Put NL traceability material only in alignment_evidence; this field will not be shown to code generation.
 - Use must_not_assume for tempting but unsupported assumptions that a solver might incorrectly introduce.
 - Do not put guaranteed input facts in must_not_assume. For example, if the prompt says values are distinct, record that under constraints, not must_not_assume.
 - Use corner_triggers for concise trigger conditions that are likely to expose semantic mistakes.
@@ -144,7 +69,6 @@ Guidelines:
 - Do not invent complexity constraints unless the prompt explicitly states them.
 - Prefer concrete, checkable items over broad paraphrases.
 - Leave fields as [] when the problem statement does not justify them.
-- Use {{}} for nested-object fields when no problem-grounded content is available.
 
 Problem:
 {problem.question_content}
@@ -230,7 +154,6 @@ Scoring rules:
 - coverage: whether the spec covers the problem requirements
 - faithfulness: whether the spec avoids unsupported assumptions
 - precision: whether the spec is clear enough to drive code generation
-- independent_codegen_readiness: implicitly consider whether the spec can drive code generation without the original problem text
 - overall: rounded weighted score using 0.4 coverage, 0.4 faithfulness, 0.2 precision
 - issue_types: choose only from concrete semantic issues such as missing_constraint, unsupported_assumption, missing_edge_case, weak_output_protocol, weak_checkable_property, ambiguous_decision_rule
 - supporting_evidence: cite short evidence grounded in the problem statement; do not invent rationale that is not visible in the prompt
@@ -248,7 +171,6 @@ Decision rules:
 - Do not call a spec ambiguous merely because a schema field name is abstract. Ambiguity must refer to a term, rule, or condition from the original problem statement.
 - If an issue is not grounded in the problem statement, do not include it in missing_constraints, unsupported_constraints, ambiguities, blocking_issues, or issue_types.
 - Set requires_refine to true only for hard semantic problems: a missing executable requirement, an unsupported assumption, a missing edge/corner condition, or an output protocol likely to produce wrong code.
-- Treat an incomplete interface, input_model, output_model, or semantic_contract as a hard issue when it would prevent sealed spec-to-code generation.
 - If the spec only has minor wording ambiguity and no missing or unsupported constraints, set requires_refine to false.
 - If no revision is needed, return target_fields as [], edit_plan as [], and proposed_patch as {{}}.
 - If requires_refine is true, focus on the highest-priority blocking issues first.
@@ -265,7 +187,7 @@ Problem:
 {problem.question_content}
 
 Spec:
-{spec.to_alignment_json()}
+{spec.to_json()}
 """
 
 
@@ -300,7 +222,6 @@ Requirements:
 - Do not add problem guarantees to must_not_assume. must_not_assume is only for assumptions that are tempting but not supported by the original problem.
 - Do not edit a field just to rename, define, or clarify JSON schema labels such as edge_cases or corner_triggers.
 - Prefer adding concrete items under constraints, rules, edge_cases, checkable_properties, must_not_assume, and corner_triggers.
-- Prefer updating interface, input_model, output_model, or semantic_contract when the spec is not complete enough for sealed code generation.
 - Keep the spec concise and executable.
 - Do not rewrite the whole spec.
 - Do not introduce edits outside target_fields or broad wording-only rewrites.
@@ -438,30 +359,11 @@ Response to normalize:
 
 
 def build_code_from_spec_prompt(
-    problem: "CodeGenerationProblem",
-    spec: StructuredSpec,
-    *,
-    contract_mode: str = "open",
+    problem: "CodeGenerationProblem", spec: StructuredSpec
 ) -> str:
     starter = ""
     if problem.starter_code:
         starter = f"\nStarter code:\n```python\n{problem.starter_code}\n```\n"
-    if contract_mode == "sealed":
-        return f"""You are an expert Python programmer.
-You will not see the original problem statement. Implement only the sealed semantic contract below.
-Return only one Python code block.
-
-Sealed semantic contract:
-{spec.to_codegen_contract()}
-{starter}
-Requirements:
-- Treat the contract as the complete source of task semantics.
-- Follow the interface, input_model, output_model, and semantic_contract exactly.
-- Treat must_not_assume as forbidden solver assumptions, not as guaranteed input facts.
-- Use corner_triggers and oracle_contract as an internal checklist for cases your code must handle.
-- Do not print extra text.
-- Prefer a direct, contest-style solution.
-"""
     return f"""You are an expert Python programmer.
 Write a complete Python solution that satisfies the structured spec and solves the original problem.
 Return only one Python code block.
@@ -553,7 +455,6 @@ def build_repair_prompt(
     feedback: VerifierFeedback,
     *,
     require_change: bool = False,
-    contract_mode: str = "open",
 ) -> str:
     starter = ""
     if problem.starter_code:
@@ -565,27 +466,6 @@ def build_repair_prompt(
             "\n- Do not return the same program again."
             "\n- Change the logic that causes the reported mismatch."
         )
-    if contract_mode == "sealed":
-        return f"""You are repairing a Python program against a sealed semantic contract.
-First identify the issue briefly, then return a complete fixed program in exactly one Python code block.
-
-Sealed semantic contract:
-{spec.to_codegen_contract()}
-{starter}
-Current code:
-```python
-{code}
-```
-
-Verifier feedback:
-{feedback.to_json()}
-
-Repair target:
-- Fix the failure without adding assumptions outside the sealed contract.
-- Satisfy the checkable subset of the structured spec.
-- If property_feedbacks are present, treat them as the highest-priority semantic obligations to fix.
-{change_requirement}
-"""
     return f"""You are repairing a Python program for a competitive programming problem.
 First identify the issue briefly, then return a complete fixed program in exactly one Python code block.
 
@@ -722,36 +602,10 @@ def build_counterexample_repair_prompt(
     code: str,
     feedback: VerifierFeedback,
     counterexample: str,
-    *,
-    contract_mode: str = "open",
 ) -> str:
     starter = ""
     if problem.starter_code:
         starter = f"\nStarter code:\n```python\n{problem.starter_code}\n```\n"
-    if contract_mode == "sealed":
-        return f"""You are fixing a wrong-answer bug in a Python program using a sealed semantic contract.
-Return exactly one complete Python code block and nothing else.
-
-Sealed semantic contract:
-{spec.to_codegen_contract()}
-{starter}
-Current code:
-```python
-{code}
-```
-
-Bug summary:
-- The current program fails on this concrete counterexample.
-- Fix the logic that causes this mismatch without adding assumptions outside the sealed contract.
-- If property_feedbacks are present, use them to identify which semantic obligation is violated.
-- Do not return the same program again.
-
-Counterexample:
-{counterexample}
-
-Verifier feedback:
-{feedback.to_json()}
-"""
     return f"""You are fixing a wrong-answer bug in a Python program.
 Return exactly one complete Python code block and nothing else.
 
@@ -785,32 +639,10 @@ def build_rewrite_from_counterexample_prompt(
     spec: StructuredSpec,
     feedback: VerifierFeedback,
     counterexample: str,
-    *,
-    contract_mode: str = "open",
 ) -> str:
     starter = ""
     if problem.starter_code:
         starter = f"\nStarter code:\n```python\n{problem.starter_code}\n```\n"
-    if contract_mode == "sealed":
-        return f"""You are rewriting a Python solution from scratch using a sealed semantic contract.
-Return exactly one complete Python code block and nothing else.
-
-Sealed semantic contract:
-{spec.to_codegen_contract()}
-{starter}
-Requirements:
-- Ignore the previous implementation and write a fresh solution from scratch.
-- Follow the exact interface and output protocol in the sealed contract.
-- Fix the wrong-answer behavior shown in the counterexample.
-- If property_feedbacks are present, ensure the rewritten program satisfies those violated properties.
-- Prefer the simplest correct contest-style solution.
-
-Counterexample:
-{counterexample}
-
-Verifier feedback:
-{feedback.to_json()}
-"""
     return f"""You are rewriting a Python solution for a competitive programming problem after multiple failed repair attempts.
 Return exactly one complete Python code block and nothing else.
 
@@ -864,60 +696,4 @@ Rules:
 - Do not put guaranteed input facts in must_not_assume.
 - Use a small local patch, not a rewrite.
 - If the patch would only paraphrase the current spec, return {{}}.
-"""
-
-
-def build_failure_to_spec_gap_prompt(
-    problem: "CodeGenerationProblem",
-    spec: StructuredSpec,
-    code: str,
-    feedback: VerifierFeedback,
-    attribution_metadata: dict | None = None,
-) -> str:
-    metadata = attribution_metadata or {}
-    return f"""You are judging whether a failed program exposes a gap in the structured spec or only an implementation bug.
-Return JSON only. Do not include markdown, prose, or code fences.
-
-Schema:
-{{
-  "failure_source": "spec_gap | implementation_bug | mixed | unknown",
-  "confidence": 0,
-  "spec_gap": "one concrete missing, wrong, or underspecified semantic obligation; empty if none",
-  "implementation_bug": "one concrete implementation defect if visible; empty if none",
-  "why_code_repair_is_insufficient": "why repairing code under the current spec may be insufficient; empty if not applicable",
-  "minimal_spec_patch": {{}},
-  "evidence": ["short problem/spec/feedback-grounded evidence"]
-}}
-
-Allowed minimal_spec_patch fields:
-{SPEC_PATCH_JSON_SCHEMA}
-
-Decision rules:
-- Choose spec_gap only when the current spec is missing, contradicting, or underspecifying a requirement needed to explain the failure.
-- Choose implementation_bug when the current spec already contains the needed obligation and the code violates it.
-- Choose mixed when both a real spec gap and a code bug are visible.
-- Choose unknown when the evidence is too weak.
-- Do not infer a spec gap merely because the program failed.
-- Do not propose broad algorithmic advice as a spec patch.
-- The patch must be a small local semantic edit grounded in the original problem and the failing feedback.
-- If failure_source is implementation_bug or unknown, minimal_spec_patch must be {{}}.
-- If confidence is below 70, minimal_spec_patch must be {{}}.
-- Prefer patching semantic_contract, output_model, interface, constraints, rules, edge_cases, checkable_properties, corner_triggers, outputs, or tie_break.
-
-Original problem:
-{problem.question_content}
-
-Current structured spec:
-{spec.to_alignment_json()}
-
-Current code:
-```python
-{code}
-```
-
-Verifier feedback:
-{feedback.to_json()}
-
-Preliminary attribution metadata:
-{metadata}
 """

@@ -290,11 +290,6 @@ def _build_raw_row(run_result: dict[str, Any]) -> dict[str, Any]:
     repair_strategy_solved_counts = Counter()
     repair_strategy_improved_counts = Counter()
     spec_refine_reason_counts = Counter()
-    post_failure_sal_reasons = Counter()
-    post_failure_pre_attributions = Counter()
-    post_failure_attempt_count = 0
-    post_failure_accepted_count = 0
-    post_failure_accepted_solved_count = 0
     stage_time_sums = defaultdict(float)
 
     for trace in traces:
@@ -323,20 +318,6 @@ def _build_raw_row(run_result: dict[str, Any]) -> dict[str, Any]:
                 repair_strategy_solved_counts[strategy] += 1
             if effect == "improved":
                 repair_strategy_improved_counts[strategy] += 1
-
-        post_failure_sal = effectiveness.get("post_failure_sal", {}) or {}
-        if post_failure_sal:
-            post_failure_sal_reasons[post_failure_sal.get("reason", "unknown")] += 1
-            if post_failure_sal.get("pre_reentry_attribution"):
-                post_failure_pre_attributions[
-                    post_failure_sal.get("pre_reentry_attribution", "unknown")
-                ] += 1
-            if post_failure_sal.get("attempts"):
-                post_failure_attempt_count += 1
-            if post_failure_sal.get("accepted"):
-                post_failure_accepted_count += 1
-                if trace.get("passed"):
-                    post_failure_accepted_solved_count += 1
 
         for stage_name, duration in (trace.get("stage_times", {}) or {}).items():
             stage_time_sums[stage_name] += float(duration or 0.0)
@@ -376,16 +357,9 @@ def _build_raw_row(run_result: dict[str, Any]) -> dict[str, Any]:
         "adaptive_sal_threshold": summary.get("adaptive_sal_threshold"),
         "attribution_mode": summary.get("attribution_mode"),
         "attribution_spec_margin": summary.get("attribution_spec_margin"),
-        "attribution_reentry_confidence_threshold": summary.get(
-            "attribution_reentry_confidence_threshold"
-        ),
-        "failure_gap_judge_enabled": summary.get("failure_gap_judge_enabled"),
-        "failure_gap_confidence_threshold": summary.get("failure_gap_confidence_threshold"),
-        "codegen_contract_mode": summary.get("codegen_contract_mode"),
         "codegen_num_candidates": summary.get("codegen_num_candidates"),
         "repair_num_candidates": summary.get("repair_num_candidates"),
         "post_failure_sal_max_iters": summary.get("post_failure_sal_max_iters"),
-        "post_failure_sal_trigger": summary.get("post_failure_sal_trigger"),
         "contract_search_population_size": summary.get("contract_search_population_size"),
         "contract_search_rounds": summary.get("contract_search_rounds"),
         "contract_search_top_k": summary.get("contract_search_top_k"),
@@ -440,6 +414,9 @@ def _build_raw_row(run_result: dict[str, Any]) -> dict[str, Any]:
             _safe_div(failure_counts.get("implementation_induced", 0), num_problems)
         ),
         "unknown_failure_count": int(failure_counts.get("unknown", 0)),
+        "average_failure_attribution_confidence": _round_metric(
+            float(summary.get("average_failure_attribution_confidence", 0.0))
+        ),
         "attributable_failures_count": attributable_failures,
         "attributable_failures_rate_among_failures": _round_metric(
             _safe_div(attributable_failures, total_failures)
@@ -492,11 +469,6 @@ def _build_raw_row(run_result: dict[str, Any]) -> dict[str, Any]:
         "repair_strategy_repair_rewrite_improved": int(
             repair_strategy_improved_counts.get("repair_rewrite", 0)
         ),
-        "post_failure_sal_attempt_count": int(post_failure_attempt_count),
-        "post_failure_sal_accepted_count": int(post_failure_accepted_count),
-        "post_failure_sal_accepted_solved_count": int(post_failure_accepted_solved_count),
-        "post_failure_sal_reason_counts": dict(post_failure_sal_reasons),
-        "post_failure_sal_pre_attribution_counts": dict(post_failure_pre_attributions),
         "average_llm_calls": _round_metric(float(summary.get("average_llm_calls", 0.0))),
         "average_spec_calls": _round_metric(float(summary.get("average_spec_calls", 0.0))),
         "average_judge_calls": _round_metric(float(summary.get("average_judge_calls", 0.0))),
@@ -573,14 +545,9 @@ def _ordered_csv_columns(rows: list[dict[str, Any]]) -> list[str]:
         "adaptive_sal_threshold",
         "attribution_mode",
         "attribution_spec_margin",
-        "attribution_reentry_confidence_threshold",
-        "failure_gap_judge_enabled",
-        "failure_gap_confidence_threshold",
-        "codegen_contract_mode",
         "codegen_num_candidates",
         "repair_num_candidates",
         "post_failure_sal_max_iters",
-        "post_failure_sal_trigger",
         "contract_search_population_size",
         "contract_search_rounds",
         "contract_search_top_k",
@@ -621,6 +588,7 @@ def _ordered_csv_columns(rows: list[dict[str, Any]]) -> list[str]:
         "implementation_induced_count",
         "implementation_induced_rate",
         "unknown_failure_count",
+        "average_failure_attribution_confidence",
         "attributable_failures_count",
         "attributable_failures_rate_among_failures",
         "verifier_wrong_answer_count",
@@ -645,11 +613,6 @@ def _ordered_csv_columns(rows: list[dict[str, Any]]) -> list[str]:
         "repair_strategy_repair_improved",
         "repair_strategy_repair_counterexample_improved",
         "repair_strategy_repair_rewrite_improved",
-        "post_failure_sal_attempt_count",
-        "post_failure_sal_accepted_count",
-        "post_failure_sal_accepted_solved_count",
-        "post_failure_sal_reason_counts",
-        "post_failure_sal_pre_attribution_counts",
         "average_llm_calls",
         "average_spec_calls",
         "average_judge_calls",
