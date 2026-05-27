@@ -15,6 +15,8 @@ GPU_ID="${GPU_ID:-0}"
 DTYPE="${DTYPE:-bfloat16}"
 TIMEOUT="${TIMEOUT:-6}"
 MAX_PROBLEMS="${MAX_PROBLEMS:-50}"
+MAX_MODEL_LEN="${MAX_MODEL_LEN:-8192}"
+VLLM_DEVICE="${VLLM_DEVICE:-}"
 DATASET_PATH="${DATASET_PATH:-}"
 UV_BIN="${UV_BIN:-}"
 
@@ -28,7 +30,7 @@ ADAPTIVE_SAL_THRESHOLD="${ADAPTIVE_SAL_THRESHOLD:-85}"
 
 CODEGEN_NUM_CANDIDATES="${CODEGEN_NUM_CANDIDATES:-2}"
 REPAIR_NUM_CANDIDATES="${REPAIR_NUM_CANDIDATES:-3}"
-POST_FAILURE_SAL_MAX_ITERS="${POST_FAILURE_SAL_MAX_ITERS:-1}"
+POST_FAILURE_SAL_MAX_ITERS="${POST_FAILURE_SAL_MAX_ITERS:-0}"
 CONTRACT_SEARCH_POPULATION_SIZE="${CONTRACT_SEARCH_POPULATION_SIZE:-4}"
 CONTRACT_SEARCH_ROUNDS="${CONTRACT_SEARCH_ROUNDS:-2}"
 CONTRACT_SEARCH_TOP_K="${CONTRACT_SEARCH_TOP_K:-2}"
@@ -56,6 +58,7 @@ COMMON_ARGS=(
   --release_version "$RELEASE_VERSION"
   --tensor_parallel_size 1
   --dtype "$DTYPE"
+  --max_model_len "$MAX_MODEL_LEN"
   --max_problems "$MAX_PROBLEMS"
   --timeout "$TIMEOUT"
   --spec_max_iters "$SPEC_MAX_ITERS"
@@ -78,6 +81,10 @@ COMMON_ARGS=(
   --attribution_spec_margin "$ATTRIBUTION_SPEC_MARGIN"
 )
 
+if [[ -n "$VLLM_DEVICE" ]]; then
+  COMMON_ARGS+=(--vllm_device "$VLLM_DEVICE")
+fi
+
 if [[ -n "$DATASET_PATH" ]]; then
   COMMON_ARGS+=(--dataset_path "$DATASET_PATH")
 fi
@@ -86,6 +93,7 @@ echo "Running minimal dual-loop smoke suite:"
 echo "  model_path=$LOCAL_MODEL_PATH"
 echo "  model_style=$MODEL_STYLE"
 echo "  max_problems=$MAX_PROBLEMS"
+echo "  max_model_len=$MAX_MODEL_LEN"
 echo "  main methods=baseline,decomposition,self_refine,reflexion,full"
 echo "  codegen_num_candidates=$CODEGEN_NUM_CANDIDATES"
 echo "  repair_num_candidates=$REPAIR_NUM_CANDIDATES"

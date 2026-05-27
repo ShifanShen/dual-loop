@@ -14,6 +14,8 @@ RELEASE_VERSION="${RELEASE_VERSION:-release_v6}"
 GPU_ID="${GPU_ID:-0}"
 DTYPE="${DTYPE:-bfloat16}"
 TIMEOUT="${TIMEOUT:-6}"
+MAX_MODEL_LEN="${MAX_MODEL_LEN:-8192}"
+VLLM_DEVICE="${VLLM_DEVICE:-}"
 UV_BIN="${UV_BIN:-}"
 DATASET_PATH="${DATASET_PATH:-}"
 
@@ -25,7 +27,7 @@ SPEC_PRECISION_FLOOR="${SPEC_PRECISION_FLOOR:-85}"
 SPEC_MAX_REJECTED_REFINES="${SPEC_MAX_REJECTED_REFINES:-1}"
 CODEGEN_NUM_CANDIDATES="${CODEGEN_NUM_CANDIDATES:-2}"
 REPAIR_NUM_CANDIDATES="${REPAIR_NUM_CANDIDATES:-3}"
-POST_FAILURE_SAL_MAX_ITERS="${POST_FAILURE_SAL_MAX_ITERS:-1}"
+POST_FAILURE_SAL_MAX_ITERS="${POST_FAILURE_SAL_MAX_ITERS:-0}"
 CONTRACT_SEARCH_POPULATION_SIZE="${CONTRACT_SEARCH_POPULATION_SIZE:-4}"
 CONTRACT_SEARCH_ROUNDS="${CONTRACT_SEARCH_ROUNDS:-2}"
 CONTRACT_SEARCH_TOP_K="${CONTRACT_SEARCH_TOP_K:-2}"
@@ -57,6 +59,7 @@ COMMON_ARGS=(
   --release_version "$RELEASE_VERSION"
   --tensor_parallel_size 1
   --dtype "$DTYPE"
+  --max_model_len "$MAX_MODEL_LEN"
   --spec_max_iters "$SPEC_MAX_ITERS"
   --repair_max_iters "$REPAIR_MAX_ITERS"
   --spec_score_threshold "$SPEC_SCORE_THRESHOLD"
@@ -76,6 +79,10 @@ COMMON_ARGS=(
   --attribution_mode "$ATTRIBUTION_MODE"
   --attribution_spec_margin "$ATTRIBUTION_SPEC_MARGIN"
 )
+
+if [[ -n "$VLLM_DEVICE" ]]; then
+  COMMON_ARGS+=(--vllm_device "$VLLM_DEVICE")
+fi
 
 INTERMEDIATE_ARGS=(
   --model "$MODEL_REPR"
@@ -135,6 +142,7 @@ echo "Running revision suite with:"
 echo "  model_path=$LOCAL_MODEL_PATH"
 echo "  model_style=$MODEL_STYLE"
 echo "  release_version=$RELEASE_VERSION"
+echo "  max_model_len=$MAX_MODEL_LEN"
 echo "  attribution_mode=$ATTRIBUTION_MODE"
 echo "  attribution_spec_margin=$ATTRIBUTION_SPEC_MARGIN"
 echo "  adaptive_sal_threshold=$ADAPTIVE_SAL_THRESHOLD"

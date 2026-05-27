@@ -31,6 +31,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--trust_remote_code", action="store_true")
     parser.add_argument("--dtype", type=str, default="bfloat16")
     parser.add_argument("--tensor_parallel_size", type=int, default=1)
+    parser.add_argument(
+        "--max_model_len",
+        type=int,
+        default=int(os.environ.get("VLLM_MAX_MODEL_LEN", "0") or 0),
+        help="Optional vLLM max model length. Use 8192 on 24GB cards for long full-suite runs.",
+    )
+    parser.add_argument(
+        "--vllm_device",
+        type=str,
+        default=os.environ.get("VLLM_DEVICE"),
+        help="Optional explicit vLLM device, e.g. cuda.",
+    )
     parser.add_argument("--enable_prefix_caching", action="store_true")
     parser.add_argument("--use_cache", action="store_true")
     parser.add_argument("--cache_batch_size", type=int, default=32)
@@ -159,6 +171,7 @@ def main() -> None:
         "include_repair_ablations": args.include_repair_ablations,
         "include_budget_ablations": args.include_budget_ablations,
         "include_adaptive_ablations": args.include_adaptive_ablations,
+        "max_model_len": args.max_model_len,
         "codegen_num_candidates": args.codegen_num_candidates,
         "repair_num_candidates": args.repair_num_candidates,
         "post_failure_sal_max_iters": args.post_failure_sal_max_iters,
