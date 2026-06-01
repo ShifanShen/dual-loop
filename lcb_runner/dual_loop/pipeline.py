@@ -1075,6 +1075,50 @@ class DualLoopPipeline:
     def _repair_candidate_count(self) -> int:
         return max(1, int(getattr(self.args, "repair_num_candidates", 1) or 1))
 
+    def _adaptive_candidate_budget_enabled(self) -> bool:
+        return bool(getattr(self.args, "adaptive_candidate_budget", False))
+
+    def _adaptive_codegen_max_candidates(self) -> int:
+        base = self._codegen_candidate_count()
+        return max(base, int(getattr(self.args, "adaptive_codegen_max_candidates", base) or base))
+
+    def _adaptive_repair_max_candidates(self) -> int:
+        base = self._repair_candidate_count()
+        return max(base, int(getattr(self.args, "adaptive_repair_max_candidates", base) or base))
+
+    def _codegen_candidate_count_for_spec(self, spec: StructuredSpec | None) -> int:
+        base = self._codegen_candidate_count()
+        if not self._adaptive_candidate_budget_enabled() or spec is None:
+            return base
+
+        property_count = len(compile_property_clauses(spec))
+        semantic_count = self._semantic_item_count(spec)
+        if property_count == 0 and semantic_count <= 3 and base > 1:
+            return 1
+        if property_count >= 2 or semantic_count >= 8:
+            return min(self._adaptive_codegen_max_candidates(), base + 1)
+        return base
+
+    def _repair_candidate_count_for_feedback(
+        self,
+        feedback: VerifierFeedback,
+        *,
+        stagnant_attempts: int = 0,
+        repeated_failure_count: int = 0,
+    ) -> int:
+        base = self._repair_candidate_count()
+        if not self._adaptive_candidate_budget_enabled():
+            return base
+
+        cap = self._adaptive_repair_max_candidates()
+        if feedback.error_type in {"runtime_error", "verifier_error", "invalid_candidate"}:
+            return min(cap, max(1, min(base, 2)))
+        if feedback.error_type == "wrong_answer" and (
+            feedback.property_feedbacks or stagnant_attempts > 0 or repeated_failure_count > 0
+        ):
+            return min(cap, max(base + 1, 2))
+        return base
+
     def _post_failure_sal_max_iters(self) -> int:
         return max(0, int(getattr(self.args, "post_failure_sal_max_iters", 0) or 0))
 
@@ -1332,6 +1376,61 @@ class DualLoopPipeline:
             repair_hint="Produce valid Python code before execution-based verification.",
         )
 
+    @staticmethod
+    def _safe_int(value: Any, default: int = 0) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def _safe_float(value: Any, default: float = 0.0) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def _token_count_delta(output: str, expected: str) -> int:
+        return abs(len(str(output or "").split()) - len(str(expected or "").split()))
+
+    @staticmethod
+    def _runtime_error_kind(message: str) -> str:
+        lowered = (message or "").lower()
+        if "syntaxerror" in lowered or "indentationerror" in lowered:
+            return "syntax"
+        if "importerror" in lowered or "modulenotfounderror" in lowered:
+            return "import"
+        if "indexerror" in lowered or "keyerror" in lowered:
+            return "container"
+        if "valueerror" in lowered or "typeerror" in lowered:
+            return "type_value"
+        if "recursionerror" in lowered:
+            return "recursion"
+        return "runtime"
+
+    @staticmethod
+    def _property_violation_weight(property_type: str) -> float:
+        weights = {
+            "same_multiset": 3.0,
+            "sorted_order": 2.5,
+            "same_length": 2.0,
+            "numeric_output": 2.0,
+            "boolean_output": 2.0,
+            "yes_no_output": 2.0,
+            "modulo_output": 2.0,
+            "non_negative_output": 1.5,
+        }
+        return weights.get(property_type, 1.0)
+
+    def _weighted_property_violation_score(self, feedback: VerifierFeedback) -> float:
+        score = 0.0
+        for item in feedback.property_feedbacks or []:
+            if item.get("passed") is True:
+                continue
+            score += self._property_violation_weight(str(item.get("property_type", "")))
+        return round(score, 4)
+
     def _candidate_feedback_rank(self, feedback: VerifierFeedback) -> tuple[Any, ...]:
         error_priority = {
             "accepted": 0,
@@ -1342,24 +1441,49 @@ class DualLoopPipeline:
             "invalid_candidate": 5,
             "unknown_failure": 6,
         }
+        metadata = feedback.raw_metadata or {}
+        passed_count = self._safe_int(metadata.get("passed_test_count"), 0)
+        total_count = self._safe_int(metadata.get("total_test_count"), 0)
+        passed_ratio = self._safe_float(metadata.get("passed_test_ratio"), 0.0)
+        first_failed = self._safe_int(metadata.get("first_failed_test_index"), -1)
+        failure_progress = first_failed if first_failed >= 0 else total_count
+        output_delta = self._safe_int(
+            metadata.get("output_token_count_delta"),
+            self._token_count_delta(feedback.output, feedback.expected),
+        )
         empty_output_penalty = 1 if feedback.error_type == "wrong_answer" and not (feedback.output or "").strip() else 0
         return (
             0 if feedback.passed else 1,
+            -passed_ratio,
+            -passed_count,
+            -failure_progress,
             error_priority.get(feedback.error_type, 99),
+            self._weighted_property_violation_score(feedback),
             empty_output_penalty,
-            len(feedback.property_feedbacks or []),
             len(feedback.violated_spec_items or []),
+            output_delta,
             -self._matching_line_count(feedback),
         )
 
     def _candidate_feedback_summary(self, feedback: VerifierFeedback) -> dict[str, Any]:
+        metadata = feedback.raw_metadata or {}
         return {
             "passed": bool(feedback.passed),
             "error_type": feedback.error_type,
+            "passed_test_count": self._safe_int(metadata.get("passed_test_count"), 0),
+            "total_test_count": self._safe_int(metadata.get("total_test_count"), 0),
+            "passed_test_ratio": round(self._safe_float(metadata.get("passed_test_ratio"), 0.0), 4),
+            "first_failed_test_index": self._safe_int(metadata.get("first_failed_test_index"), -1),
             "property_violation_count": len(feedback.property_feedbacks or []),
+            "weighted_property_violation_score": self._weighted_property_violation_score(feedback),
             "violated_spec_item_count": len(feedback.violated_spec_items or []),
             "matching_line_count": self._matching_line_count(feedback),
-            "empty_output": not bool((feedback.output or "").strip()),
+            "output_empty": bool(metadata.get("output_empty", not bool((feedback.output or "").strip()))),
+            "output_token_count_delta": self._safe_int(
+                metadata.get("output_token_count_delta"),
+                self._token_count_delta(feedback.output, feedback.expected),
+            ),
+            "runtime_error_kind": str(metadata.get("runtime_error_kind", "")),
             "rank": list(self._candidate_feedback_rank(feedback)),
         }
 
@@ -1372,7 +1496,7 @@ class DualLoopPipeline:
     ) -> dict[str, Any]:
         candidate_records: list[dict[str, Any]] = []
         total_started_at = time.perf_counter()
-        candidate_count = self._codegen_candidate_count()
+        candidate_count = self._codegen_candidate_count_for_spec(spec)
 
         for candidate_index in range(candidate_count):
             output, usage = self.llm.generate(
@@ -1888,6 +2012,8 @@ class DualLoopPipeline:
         repair_effectiveness: list[dict[str, Any]] = []
         current_code = code
         stagnant_attempts = 0
+        last_failure_signature = ""
+        repeated_failure_count = 0
         cached_feedback: VerifierFeedback | None = None
         for attempt_idx in range(self.args.repair_max_iters):
             if cached_feedback is None:
@@ -1899,25 +2025,39 @@ class DualLoopPipeline:
             if feedback.passed:
                 spec._repair_effectiveness = repair_effectiveness
                 return current_code, feedback_trace
+            current_signature = self._verifier_signature(feedback)
+            if current_signature == last_failure_signature:
+                repeated_failure_count += 1
+            else:
+                repeated_failure_count = 0
+                last_failure_signature = current_signature
             counterexample = self._build_counterexample_summary(feedback)
             use_rewrite_fallback = (
                 not getattr(self.args, "disable_rewrite_repair", False)
                 and feedback.error_type == "wrong_answer"
-                and (stagnant_attempts > 1 or attempt_idx >= 2)
+                and (
+                    (repeated_failure_count >= 1 and attempt_idx >= 1)
+                    or stagnant_attempts > 1
+                    or attempt_idx >= 2
+                )
             )
             use_counterexample_fallback = (
                 not getattr(self.args, "disable_counterexample_repair", False)
                 and
                 feedback.error_type == "wrong_answer"
                 and not use_rewrite_fallback
-                and (stagnant_attempts > 0 or attempt_idx > 0)
+                and (
+                    stagnant_attempts > 0
+                    or attempt_idx > 0
+                    or bool(feedback.property_feedbacks)
+                )
             )
             prompt = build_repair_prompt(
                 problem,
                 spec,
                 current_code,
                 feedback,
-                require_change=stagnant_attempts > 0,
+                require_change=stagnant_attempts > 0 or repeated_failure_count > 0,
             )
             role = "repair"
             if use_rewrite_fallback:
@@ -1941,7 +2081,12 @@ class DualLoopPipeline:
             self._ensure_repair_buffers(spec)
             candidate_records: list[dict[str, Any]] = []
             started_at = time.perf_counter()
-            for candidate_index in range(self._repair_candidate_count()):
+            repair_candidate_count = self._repair_candidate_count_for_feedback(
+                feedback,
+                stagnant_attempts=stagnant_attempts,
+                repeated_failure_count=repeated_failure_count,
+            )
+            for candidate_index in range(repair_candidate_count):
                 repair_output, usage = self.llm.generate(
                     prompt,
                     role=role,
@@ -2033,6 +2178,8 @@ class DualLoopPipeline:
                 reason="awaiting_verifier",
             )
             step["candidate_count"] = len(candidate_records)
+            step["candidate_budget"] = repair_candidate_count
+            step["repeated_failure_count"] = repeated_failure_count
             step["selected_candidate_index"] = int(selected_record["candidate_index"])
             step["selected_error_type"] = str(selected_feedback.error_type)
             step["candidate_feedbacks"] = [
@@ -2059,7 +2206,16 @@ class DualLoopPipeline:
                 spec._repair_effectiveness = repair_effectiveness
                 return current_code, feedback_trace
             cached_feedback = selected_feedback
-            stagnant_attempts = 0 if selected_reason == "candidate_changed" else stagnant_attempts + 1
+            selected_signature = self._verifier_signature(selected_feedback)
+            if selected_reason != "candidate_changed":
+                stagnant_attempts += 1
+            elif (
+                selected_signature == current_signature
+                or self._matching_line_count(selected_feedback) <= self._matching_line_count(feedback)
+            ):
+                stagnant_attempts += 1
+            else:
+                stagnant_attempts = 0
 
         final_feedback = cached_feedback or self._verify(problem, current_code, spec=spec)
         feedback_trace.append(asdict(final_feedback))
@@ -2083,9 +2239,40 @@ class DualLoopPipeline:
         if expected_text:
             lines.append("Expected output:")
             lines.append(expected_text)
+        property_hints = DualLoopPipeline._property_repair_hints(feedback.property_feedbacks)
+        if property_hints:
+            lines.append("Property feedback:")
+            lines.append(property_hints)
         if message:
             lines.append(f"Mismatch: {message}")
         return "\n".join(lines).strip()
+
+    @staticmethod
+    def _property_repair_hints(property_feedbacks: list[dict[str, Any]]) -> str:
+        if not property_feedbacks:
+            return ""
+        hint_by_type = {
+            "numeric_output": "Ensure every required output token is numeric and follows the exact output protocol.",
+            "sorted_order": "Check comparator direction, final ordering, and whether the task asks for ascending or descending order.",
+            "same_multiset": "Preserve all required elements exactly once unless the task explicitly allows deletion or duplication.",
+            "same_length": "Match the required number of output items or lines.",
+            "non_negative_output": "Check count, minimum, and sentinel logic so invalid negative values do not leak into the answer.",
+            "modulo_output": "Apply the required modulus at every arithmetic update that can overflow the expected value.",
+            "boolean_output": "Normalize boolean output to the required representation.",
+            "yes_no_output": "Normalize yes/no output to the required spelling and case.",
+        }
+        lines: list[str] = []
+        for item in property_feedbacks[:4]:
+            if item.get("passed") is True:
+                continue
+            property_type = str(item.get("property_type", "unknown"))
+            message = str(item.get("message", "")).strip()
+            hint = hint_by_type.get(property_type, "Fix the violated semantic property before optimizing style.")
+            if message:
+                lines.append(f"- {property_type}: {message} Hint: {hint}")
+            else:
+                lines.append(f"- {property_type}: {hint}")
+        return "\n".join(lines)
 
     def _parse_spec_output(
         self, output: str, *, fallback_task: str
@@ -2341,6 +2528,39 @@ class DualLoopPipeline:
             1 for output_line, expected_line in zip(output_lines, expected_lines) if output_line == expected_line
         )
 
+    def _enrich_verifier_metadata(
+        self, results: list[Any] | tuple[Any, ...] | None, metadata: dict[str, Any] | None
+    ) -> dict[str, Any]:
+        if isinstance(metadata, dict):
+            enriched = dict(metadata)
+        else:
+            enriched = {"raw_metadata_repr": repr(metadata)}
+        result_items = list(results or [])
+        total_test_count = len(result_items)
+        passed_test_count = sum(1 for item in result_items if item is True)
+        first_failed_test_index = next(
+            (index for index, item in enumerate(result_items) if item is not True),
+            -1,
+        )
+        output = str(enriched.get("output", ""))
+        expected = str(enriched.get("expected", ""))
+        error_message = str(enriched.get("error_message", enriched.get("error", "")))
+        enriched.update(
+            {
+                "total_test_count": total_test_count,
+                "passed_test_count": passed_test_count,
+                "passed_test_ratio": (
+                    passed_test_count / total_test_count if total_test_count else 0.0
+                ),
+                "first_failed_test_index": first_failed_test_index,
+                "output_empty": not bool(output.strip()),
+                "output_token_count_delta": self._token_count_delta(output, expected),
+            }
+        )
+        if error_message:
+            enriched["runtime_error_kind"] = self._runtime_error_kind(error_message)
+        return enriched
+
     @staticmethod
     def _hash_text(text: str) -> str:
         if not text:
@@ -2405,6 +2625,7 @@ class DualLoopPipeline:
                 "error_message": "Verifier subprocess failed",
                 "error": repr(exc),
             }
+        metadata = self._enrich_verifier_metadata(results, metadata)
         passed = bool(results) and all(result is True for result in results)
         if passed:
             return VerifierFeedback(
@@ -2415,7 +2636,6 @@ class DualLoopPipeline:
                 raw_metadata=metadata,
             )
 
-        metadata = metadata or {}
         error_code = metadata.get("error_code", -5)
         field = "Rules"
         error_type = "unknown_failure"
@@ -2462,6 +2682,9 @@ class DualLoopPipeline:
                     f"Property {property_feedback.get('property_type', 'unknown')}: "
                     f"{property_feedback.get('message', '')}"
                 )
+            property_repair_hint = self._property_repair_hints(property_feedbacks)
+            if property_repair_hint:
+                repair_hint = f"{repair_hint}\n{property_repair_hint}"
 
         return VerifierFeedback(
             passed=False,
@@ -2632,6 +2855,9 @@ class DualLoopPipeline:
             ),
             "codegen_num_candidates": int(getattr(self.args, "codegen_num_candidates", 1) or 1),
             "repair_num_candidates": self._repair_candidate_count(),
+            "adaptive_candidate_budget": self._adaptive_candidate_budget_enabled(),
+            "adaptive_codegen_max_candidates": self._adaptive_codegen_max_candidates(),
+            "adaptive_repair_max_candidates": self._adaptive_repair_max_candidates(),
             "post_failure_sal_max_iters": self._post_failure_sal_max_iters(),
             "contract_search_population_size": self._contract_population_size(),
             "contract_search_rounds": self._contract_search_rounds(),

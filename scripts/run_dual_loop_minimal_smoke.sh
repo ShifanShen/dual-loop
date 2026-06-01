@@ -30,6 +30,9 @@ ADAPTIVE_SAL_THRESHOLD="${ADAPTIVE_SAL_THRESHOLD:-85}"
 
 CODEGEN_NUM_CANDIDATES="${CODEGEN_NUM_CANDIDATES:-2}"
 REPAIR_NUM_CANDIDATES="${REPAIR_NUM_CANDIDATES:-3}"
+ADAPTIVE_CANDIDATE_BUDGET="${ADAPTIVE_CANDIDATE_BUDGET:-0}"
+ADAPTIVE_CODEGEN_MAX_CANDIDATES="${ADAPTIVE_CODEGEN_MAX_CANDIDATES:-3}"
+ADAPTIVE_REPAIR_MAX_CANDIDATES="${ADAPTIVE_REPAIR_MAX_CANDIDATES:-4}"
 POST_FAILURE_SAL_MAX_ITERS="${POST_FAILURE_SAL_MAX_ITERS:-0}"
 CONTRACT_SEARCH_POPULATION_SIZE="${CONTRACT_SEARCH_POPULATION_SIZE:-4}"
 CONTRACT_SEARCH_ROUNDS="${CONTRACT_SEARCH_ROUNDS:-2}"
@@ -71,6 +74,8 @@ COMMON_ARGS=(
   --adaptive_ablation_threshold "$ADAPTIVE_SAL_THRESHOLD"
   --codegen_num_candidates "$CODEGEN_NUM_CANDIDATES"
   --repair_num_candidates "$REPAIR_NUM_CANDIDATES"
+  --adaptive_codegen_max_candidates "$ADAPTIVE_CODEGEN_MAX_CANDIDATES"
+  --adaptive_repair_max_candidates "$ADAPTIVE_REPAIR_MAX_CANDIDATES"
   --post_failure_sal_max_iters "$POST_FAILURE_SAL_MAX_ITERS"
   --contract_search_population_size "$CONTRACT_SEARCH_POPULATION_SIZE"
   --contract_search_rounds "$CONTRACT_SEARCH_ROUNDS"
@@ -89,6 +94,10 @@ if [[ -n "$DATASET_PATH" ]]; then
   COMMON_ARGS+=(--dataset_path "$DATASET_PATH")
 fi
 
+if [[ "$ADAPTIVE_CANDIDATE_BUDGET" == "1" ]]; then
+  COMMON_ARGS+=(--adaptive_candidate_budget)
+fi
+
 echo "Running minimal dual-loop smoke suite:"
 echo "  model_path=$LOCAL_MODEL_PATH"
 echo "  model_style=$MODEL_STYLE"
@@ -97,6 +106,11 @@ echo "  max_model_len=$MAX_MODEL_LEN"
 echo "  main methods=baseline,decomposition,self_refine,reflexion,full"
 echo "  codegen_num_candidates=$CODEGEN_NUM_CANDIDATES"
 echo "  repair_num_candidates=$REPAIR_NUM_CANDIDATES"
+echo "  adaptive_candidate_budget=$ADAPTIVE_CANDIDATE_BUDGET"
+if [[ "$ADAPTIVE_CANDIDATE_BUDGET" == "1" ]]; then
+  echo "  adaptive_codegen_max_candidates=$ADAPTIVE_CODEGEN_MAX_CANDIDATES"
+  echo "  adaptive_repair_max_candidates=$ADAPTIVE_REPAIR_MAX_CANDIDATES"
+fi
 echo "  contract_search=${CONTRACT_SEARCH_POPULATION_SIZE}x${CONTRACT_SEARCH_ROUNDS}"
 echo "  post_failure_sal_max_iters=$POST_FAILURE_SAL_MAX_ITERS"
 if [[ -n "$DATASET_PATH" ]]; then

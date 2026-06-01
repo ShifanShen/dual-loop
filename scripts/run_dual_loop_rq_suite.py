@@ -88,6 +88,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--codegen_temperature", type=float, default=0.2)
     parser.add_argument("--codegen_num_candidates", type=int, default=1)
     parser.add_argument("--repair_num_candidates", type=int, default=1)
+    parser.add_argument(
+        "--adaptive_candidate_budget",
+        action="store_true",
+        help="Dynamically adjust codegen/repair candidate counts from verifier/spec signals.",
+    )
+    parser.add_argument("--adaptive_codegen_max_candidates", type=int, default=3)
+    parser.add_argument("--adaptive_repair_max_candidates", type=int, default=4)
     parser.add_argument("--post_failure_sal_max_iters", type=int, default=0)
     parser.add_argument("--contract_search_population_size", type=int, default=1)
     parser.add_argument("--contract_search_rounds", type=int, default=0)
@@ -174,6 +181,9 @@ def main() -> None:
         "max_model_len": args.max_model_len,
         "codegen_num_candidates": args.codegen_num_candidates,
         "repair_num_candidates": args.repair_num_candidates,
+        "adaptive_candidate_budget": args.adaptive_candidate_budget,
+        "adaptive_codegen_max_candidates": args.adaptive_codegen_max_candidates,
+        "adaptive_repair_max_candidates": args.adaptive_repair_max_candidates,
         "post_failure_sal_max_iters": args.post_failure_sal_max_iters,
         "contract_search_population_size": args.contract_search_population_size,
         "contract_search_rounds": args.contract_search_rounds,
