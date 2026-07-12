@@ -230,6 +230,7 @@ class DualLoopPipeline:
             generations.append([trace.final_code])
 
         metrics = self._compute_metrics(benchmark, generations)
+        self._apply_final_evaluation_to_traces(traces, metrics)
         summary = self._build_summary(benchmark, traces, metrics)
         self._write_outputs(summary, traces)
         return summary
@@ -2606,14 +2607,52 @@ class DualLoopPipeline:
             return False
         return any(token in stripped for token in signal_tokens)
 
+    @staticmethod
+    def _evaluation_sample_test_count(sample: dict[str, Any]) -> int:
+        try:
+            payload = json.loads(str(sample.get("input_output", "{}")))
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return 0
+        inputs = payload.get("inputs", [])
+        return len(inputs) if isinstance(inputs, list) else 0
+
+    def _feedback_evaluation_sample(
+        self, problem: "CodeGenerationProblem"
+    ) -> dict[str, Any]:
+        scope = str(getattr(self.args, "feedback_test_scope", "public") or "public")
+        if scope == "all":
+            return problem.get_evaluation_sample()
+        return problem.get_feedback_evaluation_sample()
+
+    def _final_evaluation_sample(
+        self, problem: "CodeGenerationProblem"
+    ) -> dict[str, Any]:
+        scope = str(getattr(self.args, "final_test_scope", "private") or "private")
+        if scope == "all":
+            return problem.get_evaluation_sample()
+        return problem.get_final_evaluation_sample()
+
     def _verify(
         self, problem: "CodeGenerationProblem", code: str, spec: StructuredSpec | None = None
     ) -> VerifierFeedback:
         from lcb_runner.evaluation.compute_code_generation_metrics import check_correctness
 
+        evaluation_sample = self._feedback_evaluation_sample(problem)
+        if self._evaluation_sample_test_count(evaluation_sample) == 0:
+            return VerifierFeedback(
+                passed=False,
+                error_type="feedback_unavailable",
+                field="Non-checkable Notes",
+                message="No public feedback tests are available for iterative verification.",
+                repair_hint=(
+                    "Revise using only the problem statement and accepted contract; "
+                    "held-out final tests remain inaccessible."
+                ),
+            )
+
         try:
             results, metadata = check_correctness(
-                problem.get_evaluation_sample(),
+                evaluation_sample,
                 code,
                 timeout=self.args.timeout,
                 debug=False,
@@ -2742,6 +2781,26 @@ class DualLoopPipeline:
             "run_tag": getattr(self.args, "run_tag", None),
             "release_version": self.args.release_version,
             "num_problems": len(benchmark),
+            "verifier_protocol": (
+                "heldout_final"
+                if str(getattr(self.args, "feedback_test_scope", "public") or "public")
+                == "public"
+                and str(getattr(self.args, "final_test_scope", "private") or "private")
+                == "private"
+                else "legacy_all_tests"
+            ),
+            "feedback_test_scope": str(
+                getattr(self.args, "feedback_test_scope", "public") or "public"
+            ),
+            "final_test_scope": str(
+                getattr(self.args, "final_test_scope", "private") or "private"
+            ),
+            "final_verifier_used_during_generation": bool(
+                str(getattr(self.args, "feedback_test_scope", "public") or "public")
+                == "all"
+                or str(getattr(self.args, "final_test_scope", "private") or "private")
+                == "all"
+            ),
             "pass_at_1": metrics[0]["pass@1"],
             "average_repairs": average_repairs,
             "average_spec_score": average_spec_score,
@@ -2895,14 +2954,69 @@ class DualLoopPipeline:
     ) -> list[Any]:
         from lcb_runner.evaluation import codegen_metrics
 
+        final_samples = [self._final_evaluation_sample(problem) for problem in benchmark]
+        empty_final_samples = [
+            problem.question_id
+            for problem, sample in zip(benchmark, final_samples)
+            if self._evaluation_sample_test_count(sample) == 0
+        ]
+        if empty_final_samples:
+            preview = ", ".join(empty_final_samples[:5])
+            raise ValueError(
+                "Held-out final evaluation requires private tests for every problem; "
+                f"missing for {len(empty_final_samples)} problem(s): {preview}"
+            )
+
         return codegen_metrics(
-            [problem.get_evaluation_sample() for problem in benchmark],
+            final_samples,
             generations,
             k_list=[1],
             num_process_evaluate=self.args.num_process_evaluate,
             timeout=self.args.timeout,
             debug=False,
         )
+
+    def _apply_final_evaluation_to_traces(
+        self,
+        traces: list[ProblemTrace],
+        metrics: list[Any],
+    ) -> None:
+        final_results = metrics[1] if len(metrics) > 1 else {}
+        final_metadata = metrics[2] if len(metrics) > 2 else []
+        scope = str(getattr(self.args, "final_test_scope", "private") or "private")
+
+        for index, trace in enumerate(traces):
+            per_generation = final_results.get(index, [])
+            first_generation = per_generation[0] if per_generation else []
+            if not isinstance(first_generation, list):
+                first_generation = [first_generation]
+            final_passed = bool(first_generation) and all(
+                result is True for result in first_generation
+            )
+
+            metadata: dict[str, Any] = {}
+            if index < len(final_metadata) and final_metadata[index]:
+                raw_metadata = final_metadata[index][0]
+                if isinstance(raw_metadata, str):
+                    try:
+                        parsed = json.loads(raw_metadata)
+                    except (TypeError, ValueError, json.JSONDecodeError):
+                        parsed = {}
+                    if isinstance(parsed, dict):
+                        metadata = parsed
+                elif isinstance(raw_metadata, dict):
+                    metadata = raw_metadata
+
+            feedback_passed = bool(trace.passed)
+            trace.effectiveness["final_evaluation"] = {
+                "scope": scope,
+                "feedback_passed": feedback_passed,
+                "final_passed": final_passed,
+                "error_code": metadata.get("error_code"),
+                "error_message": metadata.get("error_message", ""),
+            }
+            trace.passed = final_passed
+            self._finalize_trace(trace)
 
     def _finalize_trace(self, trace: ProblemTrace) -> None:
         trace.spec_issue_types = sorted(set(trace.spec_issue_types))

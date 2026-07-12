@@ -61,6 +61,24 @@ def get_args():
         default=None,
         help="Optional local LiveCodeBench dataset directory created by save_to_disk or a local dataset path",
     )
+    parser.add_argument(
+        "--feedback_test_scope",
+        choices=["public", "all"],
+        default="public",
+        help=(
+            "Tests exposed to candidate selection and repair. Use 'public' for the "
+            "held-out protocol; 'all' is retained only for legacy reproduction."
+        ),
+    )
+    parser.add_argument(
+        "--final_test_scope",
+        choices=["private", "all"],
+        default="private",
+        help=(
+            "Tests used to compute final pass@1 after generation and repair finish. "
+            "The held-out protocol uses 'private'."
+        ),
+    )
     parser.add_argument("--question_ids", type=str, default=None)
     parser.add_argument("--max_problems", type=int, default=10)
     parser.add_argument("--output_root", type=str, default="output/dual_loop")

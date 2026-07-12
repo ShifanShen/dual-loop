@@ -50,6 +50,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--start_date", type=str, default=None)
     parser.add_argument("--end_date", type=str, default=None)
     parser.add_argument("--dataset_path", type=str, default=None)
+    parser.add_argument(
+        "--feedback_test_scope",
+        choices=["public", "all"],
+        default="public",
+        help="Use public tests for iterative feedback; 'all' is legacy-only.",
+    )
+    parser.add_argument(
+        "--final_test_scope",
+        choices=["private", "all"],
+        default="private",
+        help="Use private tests once for final evaluation; 'all' is legacy-only.",
+    )
     parser.add_argument("--question_ids", type=str, default=None)
     parser.add_argument("--max_problems", type=int, default=50)
     parser.add_argument(
@@ -694,16 +706,60 @@ def _write_results_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 
 def _budget_protocol(args: argparse.Namespace) -> dict[str, Any]:
     return {
+        "matching_axis": "downstream_codegen_repair",
         "methods": args.selected_methods,
         "codegen_num_candidates": args.codegen_num_candidates,
         "repair_max_iters": args.repair_max_iters,
         "repair_num_candidates": args.repair_num_candidates,
+        "feedback_test_scope": args.feedback_test_scope,
+        "final_test_scope": args.final_test_scope,
         "adaptive_candidate_budget": False,
         "sal_refinement": "disabled",
         "contract_search": "disabled",
         "selection_policy": "existing verifier-aware candidate rank",
         "semantic_feedback_enabled_only_for": "semantic_contract_irl",
+        "matched_resources": [
+            "code generation candidates",
+            "repair iterations",
+            "repair candidates per iteration",
+            "feedback verifier scope",
+        ],
+        "unmatched_overhead": (
+            "Intermediate-artifact construction calls are method overhead and are "
+            "reported explicitly; this is a mechanism-matched, not total-cost-matched, comparison."
+        ),
     }
+
+
+def _apply_heldout_final_evaluation(
+    pipeline: DualLoopPipeline,
+    benchmark: list[Any],
+    traces: list[dict[str, Any]],
+) -> dict[str, Any]:
+    generations = [[str(trace.get("final_code", ""))] for trace in traces]
+    metrics = pipeline._compute_metrics(benchmark, generations)
+    final_results = metrics[1] if len(metrics) > 1 else {}
+
+    for index, trace in enumerate(traces):
+        per_generation = final_results.get(index, [])
+        first_generation = per_generation[0] if per_generation else []
+        if not isinstance(first_generation, list):
+            first_generation = [first_generation]
+        final_passed = bool(first_generation) and all(
+            result is True for result in first_generation
+        )
+        trace["feedback_passed"] = bool(trace.get("passed", False))
+        trace["passed"] = final_passed
+        trace["final_evaluation"] = {
+            "scope": args_final_scope(pipeline.args),
+            "passed": final_passed,
+        }
+
+    return {"pass@1": float(metrics[0]["pass@1"])}
+
+
+def args_final_scope(args: argparse.Namespace) -> str:
+    return str(getattr(args, "final_test_scope", "private") or "private")
 
 
 def main() -> None:
@@ -774,6 +830,11 @@ def main() -> None:
             )
             traces_by_method[method].append(trace)
 
+    final_metrics_by_method = {
+        method: _apply_heldout_final_evaluation(pipeline, benchmark, traces)
+        for method, traces in traces_by_method.items()
+    }
+
     rows = _add_summary_deltas(
         [_aggregate(method, traces) for method, traces in traces_by_method.items()]
     )
@@ -796,6 +857,7 @@ def main() -> None:
         "output_dir": str(output_dir),
         "results_csv": str(results_csv),
         "budget_protocol": budget_protocol,
+        "final_metrics_by_method": final_metrics_by_method,
         "rows": rows,
     }
     _write_json(output_dir / "summary.json", summary)

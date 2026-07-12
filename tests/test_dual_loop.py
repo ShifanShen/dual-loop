@@ -415,6 +415,8 @@ class DualLoopPipelineTests(unittest.TestCase):
             release_version="release_v6",
             start_date=None,
             end_date=None,
+            feedback_test_scope="public",
+            final_test_scope="private",
             question_ids=None,
             max_problems=1,
             output_root=output_root,
@@ -461,6 +463,82 @@ class DualLoopPipelineTests(unittest.TestCase):
             judge_max_tokens=512,
             codegen_max_tokens=512,
         )
+
+    def test_problem_exposes_disjoint_feedback_and_final_samples(self):
+        problem = make_problem()
+
+        feedback_payload = json.loads(
+            problem.get_feedback_evaluation_sample()["input_output"]
+        )
+        final_payload = json.loads(problem.get_final_evaluation_sample()["input_output"])
+
+        self.assertEqual(feedback_payload["inputs"], ["[2,7,11,15]\n9"])
+        self.assertEqual(feedback_payload["outputs"], ["0 1"])
+        self.assertEqual(final_payload["inputs"], ["[3,2,4]\n6"])
+        self.assertEqual(final_payload["outputs"], ["1 2"])
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_feedback_verifier_uses_only_public_tests(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            mock_adapter_cls.return_value.model.model_repr = "fake-model"
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+
+            with patch(
+                "lcb_runner.evaluation.compute_code_generation_metrics.check_correctness",
+                return_value=([True], {}),
+            ) as check_correctness:
+                feedback = pipeline._verify(problem, "print('x')")
+
+            sample = json.loads(check_correctness.call_args.args[0]["input_output"])
+            self.assertTrue(feedback.passed)
+            self.assertEqual(sample["inputs"], ["[2,7,11,15]\n9"])
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_final_metrics_use_only_private_tests(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            mock_adapter_cls.return_value.model.model_repr = "fake-model"
+            pipeline = DualLoopPipeline(args)
+            problem = make_problem()
+            fake_metrics = [
+                {"pass@1": 1.0},
+                {0: [[True]]},
+                [[json.dumps({"execution time": 0.01})]],
+            ]
+
+            with patch("lcb_runner.evaluation.codegen_metrics", return_value=fake_metrics) as metrics:
+                result = pipeline._compute_metrics([problem], [["print('x')"]])
+
+            sample = json.loads(metrics.call_args.args[0][0]["input_output"])
+            self.assertEqual(result, fake_metrics)
+            self.assertEqual(sample["inputs"], ["[3,2,4]\n6"])
+
+    @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
+    def test_final_evaluation_overrides_feedback_verdict(self, mock_adapter_cls):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = self.make_args(tmpdir)
+            mock_adapter_cls.return_value.model.model_repr = "fake-model"
+            pipeline = DualLoopPipeline(args)
+            trace = ProblemTrace(
+                question_id="q1",
+                question_title="Two Sum",
+                pipeline_mode="full",
+                raw_problem="problem",
+                passed=True,
+            )
+            metrics = [
+                {"pass@1": 0.0},
+                {0: [[False]]},
+                [[json.dumps({"error_code": -2, "error_message": "Wrong Answer"})]],
+            ]
+
+            pipeline._apply_final_evaluation_to_traces([trace], metrics)
+
+            self.assertFalse(trace.passed)
+            self.assertTrue(trace.effectiveness["final_evaluation"]["feedback_passed"])
+            self.assertFalse(trace.effectiveness["final_evaluation"]["final_passed"])
 
     @patch("lcb_runner.dual_loop.pipeline.LLMAdapter")
     def test_run_problem_full_uses_spec_and_repair(self, mock_adapter_cls):

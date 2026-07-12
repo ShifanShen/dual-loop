@@ -164,3 +164,16 @@ cython_debug/
 #.idea/
 /docs/
 /docs/
+/.agents/
+/.vscode/
+/assets/
+/docs/
+/output/
+/paper/
+/tests/
+/tmp/
+/audit_sheet.before_ai_review.csv
+/audit_sheet.csv
+/audit_sheet_reviewed.csv
+/revision.md
+/rq_results.csv

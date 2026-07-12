@@ -104,22 +104,30 @@ class CodeGenerationProblem:
             output[k] = v
         return output
 
-    def get_evaluation_sample(self):
+    def _build_evaluation_sample(self, test_cases: list[Test]):
         return {
             "input_output": json.dumps(
                 {
-                    "inputs": [
-                        t.input
-                        for t in self.public_test_cases + self.private_test_cases
-                    ],
-                    "outputs": [
-                        t.output
-                        for t in self.public_test_cases + self.private_test_cases
-                    ],
+                    "inputs": [t.input for t in test_cases],
+                    "outputs": [t.output for t in test_cases],
                     "fn_name": self.metadata.get("func_name", None),
                 }
             ),
         }
+
+    def get_feedback_evaluation_sample(self):
+        """Tests available to candidate selection and iterative repair."""
+        return self._build_evaluation_sample(self.public_test_cases)
+
+    def get_final_evaluation_sample(self):
+        """Held-out tests used only after the final program has been selected."""
+        return self._build_evaluation_sample(self.private_test_cases)
+
+    def get_evaluation_sample(self):
+        """Legacy all-test sample retained for non-dual-loop runners."""
+        return self._build_evaluation_sample(
+            self.public_test_cases + self.private_test_cases
+        )
 
 
 def load_code_generation_dataset(
