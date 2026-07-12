@@ -60,7 +60,8 @@ if [[ "$RUN_REEVALUATION" == "1" ]]; then
   echo "  traces=$TRACE_PATH"
   echo "  output=$REEVAL_OUTPUT_DIR"
   echo "  model_generation=false"
-  "$UV_BIN" run python scripts/reevaluate_heldout_traces.py "${REEVAL_ARGS[@]}"
+  PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" \
+    "$UV_BIN" run python scripts/reevaluate_heldout_traces.py "${REEVAL_ARGS[@]}"
 else
   echo "Stage 1/2 skipped because RUN_REEVALUATION=$RUN_REEVALUATION."
 fi
