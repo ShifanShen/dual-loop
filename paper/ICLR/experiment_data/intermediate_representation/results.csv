@@ -1,0 +1,5 @@
+method,num_problems,pass_at_1,average_llm_calls,average_prompt_chars,average_completion_chars,average_elapsed_seconds
+direct,50,0.7,1.0,1696.3,441.04,2.35
+plan,50,0.56,2.0,5002.52,1789.7,8.26
+pseudocode,50,0.46,2.0,4566.24,1551.38,7.42
+spec,50,0.6,2.5,8653.96,2660.54,12.55

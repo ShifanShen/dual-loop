@@ -1,0 +1,212 @@
+{
+  "suite_dir": "/home/<user>/projects/dual-loop/output/dual_loop_rq_suite/rq_suite_Qwen2.5-Coder-7B-Instruct_20260507_155152",
+  "selected_runs": [
+    "baseline_direct",
+    "decomposition_only",
+    "reflexion_style",
+    "full_dual_loop"
+  ],
+  "output_dir": "/home/<user>/projects/dual-loop/output/dual_loop_rq_suite/rq_suite_Qwen2.5-Coder-7B-Instruct_20260507_155152/semantic_subset_analysis",
+  "summary_rows": [
+    {
+      "run_name": "baseline_direct",
+      "subset_name": "all",
+      "num_problems": 1055,
+      "pass_at_1": 0.2872,
+      "average_final_sas": 0.0,
+      "spec_induced_rate": 0.0,
+      "unknown_rate": 0.0,
+      "delta_pass_at_1_vs_direct": 0.0
+    },
+    {
+      "run_name": "baseline_direct",
+      "subset_name": "constraint_heavy",
+      "num_problems": 337,
+      "pass_at_1": 0.1602,
+      "average_final_sas": 0.0,
+      "spec_induced_rate": 0.0,
+      "unknown_rate": 0.0,
+      "delta_pass_at_1_vs_direct": 0.0
+    },
+    {
+      "run_name": "baseline_direct",
+      "subset_name": "format_sensitive",
+      "num_problems": 836,
+      "pass_at_1": 0.2512,
+      "average_final_sas": 0.0,
+      "spec_induced_rate": 0.0,
+      "unknown_rate": 0.0,
+      "delta_pass_at_1_vs_direct": 0.0
+    },
+    {
+      "run_name": "baseline_direct",
+      "subset_name": "edge_case_heavy",
+      "num_problems": 389,
+      "pass_at_1": 0.3239,
+      "average_final_sas": 0.0,
+      "spec_induced_rate": 0.0,
+      "unknown_rate": 0.0,
+      "delta_pass_at_1_vs_direct": 0.0
+    },
+    {
+      "run_name": "baseline_direct",
+      "subset_name": "semantic_heavy",
+      "num_problems": 526,
+      "pass_at_1": 0.2281,
+      "average_final_sas": 0.0,
+      "spec_induced_rate": 0.0,
+      "unknown_rate": 0.0,
+      "delta_pass_at_1_vs_direct": 0.0
+    },
+    {
+      "run_name": "decomposition_only",
+      "subset_name": "all",
+      "num_problems": 1055,
+      "pass_at_1": 0.3118,
+      "average_final_sas": 80.2938,
+      "spec_induced_rate": 0.6095,
+      "unknown_rate": 0.0739,
+      "delta_pass_at_1_vs_direct": 0.0246
+    },
+    {
+      "run_name": "decomposition_only",
+      "subset_name": "constraint_heavy",
+      "num_problems": 337,
+      "pass_at_1": 0.184,
+      "average_final_sas": 79.4303,
+      "spec_induced_rate": 0.7507,
+      "unknown_rate": 0.0653,
+      "delta_pass_at_1_vs_direct": 0.0238
+    },
+    {
+      "run_name": "decomposition_only",
+      "subset_name": "format_sensitive",
+      "num_problems": 836,
+      "pass_at_1": 0.2799,
+      "average_final_sas": 80.0072,
+      "spec_induced_rate": 0.6316,
+      "unknown_rate": 0.0825,
+      "delta_pass_at_1_vs_direct": 0.0287
+    },
+    {
+      "run_name": "decomposition_only",
+      "subset_name": "edge_case_heavy",
+      "num_problems": 389,
+      "pass_at_1": 0.347,
+      "average_final_sas": 79.7969,
+      "spec_induced_rate": 0.5604,
+      "unknown_rate": 0.0925,
+      "delta_pass_at_1_vs_direct": 0.0231
+    },
+    {
+      "run_name": "decomposition_only",
+      "subset_name": "semantic_heavy",
+      "num_problems": 526,
+      "pass_at_1": 0.2567,
+      "average_final_sas": 79.4981,
+      "spec_induced_rate": 0.6616,
+      "unknown_rate": 0.0817,
+      "delta_pass_at_1_vs_direct": 0.0286
+    },
+    {
+      "run_name": "reflexion_style",
+      "subset_name": "all",
+      "num_problems": 1055,
+      "pass_at_1": 0.3355,
+      "average_final_sas": 0.0,
+      "spec_induced_rate": 0.0,
+      "unknown_rate": 0.0,
+      "delta_pass_at_1_vs_direct": 0.0483
+    },
+    {
+      "run_name": "reflexion_style",
+      "subset_name": "constraint_heavy",
+      "num_problems": 337,
+      "pass_at_1": 0.1869,
+      "average_final_sas": 0.0,
+      "spec_induced_rate": 0.0,
+      "unknown_rate": 0.0,
+      "delta_pass_at_1_vs_direct": 0.0267
+    },
+    {
+      "run_name": "reflexion_style",
+      "subset_name": "format_sensitive",
+      "num_problems": 836,
+      "pass_at_1": 0.2943,
+      "average_final_sas": 0.0,
+      "spec_induced_rate": 0.0,
+      "unknown_rate": 0.0,
+      "delta_pass_at_1_vs_direct": 0.0431
+    },
+    {
+      "run_name": "reflexion_style",
+      "subset_name": "edge_case_heavy",
+      "num_problems": 389,
+      "pass_at_1": 0.3702,
+      "average_final_sas": 0.0,
+      "spec_induced_rate": 0.0,
+      "unknown_rate": 0.0,
+      "delta_pass_at_1_vs_direct": 0.0463
+    },
+    {
+      "run_name": "reflexion_style",
+      "subset_name": "semantic_heavy",
+      "num_problems": 526,
+      "pass_at_1": 0.2643,
+      "average_final_sas": 0.0,
+      "spec_induced_rate": 0.0,
+      "unknown_rate": 0.0,
+      "delta_pass_at_1_vs_direct": 0.0362
+    },
+    {
+      "run_name": "full_dual_loop",
+      "subset_name": "all",
+      "num_problems": 1055,
+      "pass_at_1": 0.3801,
+      "average_final_sas": 82.3327,
+      "spec_induced_rate": 0.5621,
+      "unknown_rate": 0.054,
+      "delta_pass_at_1_vs_direct": 0.0929
+    },
+    {
+      "run_name": "full_dual_loop",
+      "subset_name": "constraint_heavy",
+      "num_problems": 337,
+      "pass_at_1": 0.2315,
+      "average_final_sas": 81.4629,
+      "spec_induced_rate": 0.724,
+      "unknown_rate": 0.0445,
+      "delta_pass_at_1_vs_direct": 0.0713
+    },
+    {
+      "run_name": "full_dual_loop",
+      "subset_name": "format_sensitive",
+      "num_problems": 836,
+      "pass_at_1": 0.3481,
+      "average_final_sas": 82.2656,
+      "spec_induced_rate": 0.5861,
+      "unknown_rate": 0.061,
+      "delta_pass_at_1_vs_direct": 0.0969
+    },
+    {
+      "run_name": "full_dual_loop",
+      "subset_name": "edge_case_heavy",
+      "num_problems": 389,
+      "pass_at_1": 0.4216,
+      "average_final_sas": 82.0848,
+      "spec_induced_rate": 0.5116,
+      "unknown_rate": 0.0668,
+      "delta_pass_at_1_vs_direct": 0.0977
+    },
+    {
+      "run_name": "full_dual_loop",
+      "subset_name": "semantic_heavy",
+      "num_problems": 526,
+      "pass_at_1": 0.3213,
+      "average_final_sas": 81.6635,
+      "spec_induced_rate": 0.6179,
+      "unknown_rate": 0.0608,
+      "delta_pass_at_1_vs_direct": 0.0932
+    }
+  ]
+}

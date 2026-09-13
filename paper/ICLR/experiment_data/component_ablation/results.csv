@@ -1,0 +1,5 @@
+"paper_method","SAL","IRL","num_problems","final_pass_rate","source_run"
+"Decomposition Only","no","no","50","0.66","decomposition_only"
+"SAL-only","yes","no","50","0.64","loop_b_only"
+"IRL-only","no","yes","50","0.64","loop_a_only"
+"Full Dual-Loop","yes","yes","50","0.72","full_dual_loop"

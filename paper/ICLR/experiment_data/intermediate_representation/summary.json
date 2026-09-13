@@ -1,0 +1,57 @@
+{
+  "model": "Qwen2.5-Coder-7B-Instruct",
+  "model_repr": "Qwen2.5-Coder-7B-Instruct",
+  "release_version": "release_v6",
+  "max_problems": 50,
+  "codegen_num_candidates": 2,
+  "repair_num_candidates": 3,
+  "post_failure_sal_max_iters": 1,
+  "codegen_temperature": 0.2,
+  "contract_search_population_size": 1,
+  "contract_search_rounds": 0,
+  "contract_search_top_k": 1,
+  "contract_search_codegen_top_k": 1,
+  "contract_search_temperature": 0.35,
+  "attribution_mode": "legacy",
+  "attribution_spec_margin": 5,
+  "output_dir": "output/intermediate_repr_study/ir_study_Qwen2.5-Coder-7B-Instruct_20260507_152622",
+  "results_csv": "output/intermediate_repr_study/ir_study_Qwen2.5-Coder-7B-Instruct_20260507_152622/results.csv",
+  "rows": [
+    {
+      "method": "direct",
+      "num_problems": 50,
+      "pass_at_1": 0.7,
+      "average_llm_calls": 1.0,
+      "average_prompt_chars": 1696.3,
+      "average_completion_chars": 441.04,
+      "average_elapsed_seconds": 2.35
+    },
+    {
+      "method": "plan",
+      "num_problems": 50,
+      "pass_at_1": 0.56,
+      "average_llm_calls": 2.0,
+      "average_prompt_chars": 5002.52,
+      "average_completion_chars": 1789.7,
+      "average_elapsed_seconds": 8.26
+    },
+    {
+      "method": "pseudocode",
+      "num_problems": 50,
+      "pass_at_1": 0.46,
+      "average_llm_calls": 2.0,
+      "average_prompt_chars": 4566.24,
+      "average_completion_chars": 1551.38,
+      "average_elapsed_seconds": 7.42
+    },
+    {
+      "method": "spec",
+      "num_problems": 50,
+      "pass_at_1": 0.6,
+      "average_llm_calls": 2.5,
+      "average_prompt_chars": 8653.96,
+      "average_completion_chars": 2660.54,
+      "average_elapsed_seconds": 12.55
+    }
+  ]
+}

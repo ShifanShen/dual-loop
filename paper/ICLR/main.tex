@@ -1,0 +1,378 @@
+\documentclass{article}
+\usepackage{iclr2027_conference,times}
+\input{math_commands.tex}
+
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{hyperref}
+\hypersetup{hidelinks}
+\usepackage{url}
+
+\newcommand{\up}{\ensuremath{\uparrow}}
+\newcommand{\down}{\ensuremath{\downarrow}}
+\newcommand{\algcall}[2]{\mathrm{#1}(#2)}
+
+\title{Semantic Contracts for Traceable NL-to-Code Generation}
+\author{Anonymous Authors}
+
+% Uncomment only for the camera-ready version.
+% \iclrfinalcopy
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Large language models can generate code from natural-language problem statements, yet remain unreliable on constraint-intensive tasks. Failures may arise because a model misinterprets task semantics or because it implements a reasonable interpretation incorrectly. Requirement-alignment methods mainly improve task understanding before code generation, whereas program-repair methods use post-generation feedback to correct implementation errors. Their outputs, however, are rarely connected through an explicit and stable semantic target, leaving repair without consistent task-obligation constraints. We introduce a semantic-contract-based dual-loop framework that maintains the semantic target and program implementation as connected but independently managed states. The Semantic Alignment Loop (SAL) induces a structured specification, applies gated field-level revisions using a coverage--faithfulness--precision diagnostic profile and a Spec Alignment Score (SAS), and freezes the current specification at termination as a semantic contract. The Implementation Repair Loop (IRL) selects an initial program under that contract and performs iterative repair using public-test feedback and conservatively compiled property-clause feedback. This design records semantic revisions and implementation repairs as separate state transitions. On 1,055 LiveCodeBench release\_v6 problems, Full Dual-Loop produces 401 complete-suite passes, yielding a Final Pass Rate of 0.3801, 9.19 percentage points above Direct NL-to-Code and 3.98 points above the strongest shared-protocol external baseline. The results show improved final correctness while preserving inspectable evidence of task obligations and implementation transitions.
+\end{abstract}
+
+\section{Introduction}
+
+Large language models have made natural-language-to-code generation a central problem in machine learning and software engineering. A natural-language task specifies input assumptions, output protocols, constraints, exceptional cases, and semantic conditions; a generated program is an executable implementation of those obligations. Existing systems improve reliability before generation through plans, pseudocode, retrieval, and requirement alignment \citep{ref_self_planning,ref_planning_driven_programming,ref_pseudocode_prompting,ref_codet,ref_acecoder,ref_mufix,ref_specfix,ref_reacoder}, or after generation through self-feedback, execution, compiler signals, and tests \citep{ref_self_refine,ref_reflexion,ref_opencodeinterpreter,ref_compiler_feedback,ref_stepcoder}.
+
+Task misunderstanding and implementation error nevertheless remain distinct failure sources. Empirical studies report semantic misinterpretations, omitted requirements, and missing boundary cases that cannot be reduced to local coding mistakes \citep{ref_bug_study,ref_codegen_error_taxonomy,ref_nl_spec_verification_failure}. Requirement alignment and program repair usually operate as separate stages: the alignment result is not maintained as an explicit, stable target during repair, while repeatedly revising that target from execution failures makes task interpretation and implementation change together. In either case, repair lacks a consistent set of obligations against which successive programs can be compared.
+
+We address this problem with a semantic-contract-based dual-loop framework that places an explicit state boundary between semantic alignment and implementation repair. SAL induces, diagnoses, and revises a structured specification. A candidate specification replaces the current state only after passing an acceptance gate; when SAL terminates, the current specification is frozen as the semantic contract. IRL then changes only program state: initial candidate selection and every repair round use the same contract. This boundary makes semantic revisions and implementation transitions separately observable.
+
+Concretely, SAL represents task obligations in six field groups and uses a coverage--faithfulness--precision profile together with SAS to localize revisions. Safety and improvement predicates determine whether a field-level patch replaces the current specification. IRL generates an initial candidate set from the problem and frozen contract, selects one program using public feedback, and repairs only that current program over subsequent rounds. Verifier feedback is complemented by executable property clauses conservatively compiled from the contract, while private tests remain held out until final evaluation.
+
+The main contributions are:
+\begin{itemize}
+    \item We formulate NL-to-code generation as two explicitly controlled state processes: SAL updates semantic state and freezes its accepted form before IRL updates implementation state.
+    \item We develop a contract-conditioned mechanism that combines gated field-level revision, conservative property compilation, public-feedback-based initial selection, iterative repair, and an evidence-linked trace.
+    \item We evaluate the framework on all 1,055 LiveCodeBench release\_v6 problems, three backbones, and 162 compatible HumanEval+ tasks, observing a 3.98-point gain over the strongest shared-protocol external baseline on the full release.
+\end{itemize}
+
+\section{Related Work}
+
+\paragraph{Intermediate representations.}
+Planning and pseudocode methods separate solution organization from implementation \citep{ref_self_planning,ref_pseudocode_prompting}. LPW generates a solution plan, verifies it on visible tests, and reuses the verified plan during code refinement \citep{ref_planning_driven_programming}. CodeT and AceCoder use generated tests or auxiliary artifacts to rank and refine candidates \citep{ref_codet,ref_acecoder}, while NL in the Middle studies natural-language intermediates for code translation \citep{ref_nl_middle}. These representations primarily describe how to solve or translate a task. Our specification instead records what every implementation must satisfy and remains available across candidate programs.
+
+\paragraph{Requirement alignment and multi-stage generation.}
+MuFix treats specification misunderstanding as a distinct pre-generation failure and repairs it using generated tests \citep{ref_mufix}. SpecFix detects ambiguous problem descriptions from behavioral clusters of generated programs and repairs the description through contrastive specification inference \citep{ref_specfix}. REA-Coder builds requirement-oriented questions and reference answers, then masks and recovers requirement fragments after generation; detected mismatches can return the system to requirement alignment \citep{ref_reacoder}. AlphaCodium and MapCoder organize problem analysis, planning, implementation, and debugging into multi-stage or multi-agent workflows \citep{ref_alphacodium,ref_mapcoder}. Our distinction is the lifecycle of the accepted requirement representation: SAL finishes before IRL, and execution feedback thereafter changes programs without reopening the semantic contract.
+
+\paragraph{Execution-guided repair and semantic failure analysis.}
+Self-Refine and Reflexion use model feedback or verbalized experience to guide iterative revision \citep{ref_self_refine,ref_reflexion}; OpenCodeInterpreter, COMPCODER, and StepCoder incorporate execution, compiler, or unit-test signals \citep{ref_opencodeinterpreter,ref_compiler_feedback,ref_stepcoder}. Complementary analyses show that generated code frequently omits constraints, invents assumptions, or mishandles edge cases, and that models struggle to verify code against natural-language specifications \citep{ref_bug_study,ref_codegen_error_taxonomy,ref_nl_spec_verification_failure}. These observations motivate an explicit semantic state that remains separate from executable implementation feedback.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{pics/framework_cn.png}
+\caption{Overview of the dual-loop framework.}
+\label{fig:framework}
+\end{figure}
+
+\section{Method}
+\input{method.tex}
+
+\section{Experiments}
+
+The evaluation is organized around four research questions. RQ1 asks whether the full semantic-contract pipeline improves end-to-end Final Pass Rate. RQ2 asks whether the effect persists beyond the main Qwen-on-LiveCodeBench setting. RQ3 asks which components account for the gain and what role the accepted contract plays. RQ4 asks what semantic and implementation evidence the trace exposes. Together, the questions progress from end-to-end correctness to robustness, mechanism, and trace evidence.
+
+Unless noted otherwise, experiments use all 1,055 problems in LiveCodeBench release\_v6 \citep{ref_livecodebench} and Qwen2.5-Coder-7B-Instruct \citep{ref_qwen25_coder}. Public tests are available to code-candidate selection and IRL. Private tests are inaccessible to specification induction, SAL, code selection, and repair; they are queried only after a single final program has been selected. Final Pass Rate is the fraction of final programs that pass every public and private test. The solved trace category uses this same complete-suite criterion, so a public-feedback pass is not automatically counted as solved.
+
+SAL and IRL are capped at three iterations. SAL uses threshold 90, minimum improvement $\delta=1$, precision floor 85, and at most one rejected or skipped refinement before stopping. Initial generation uses at most two candidates and each repair round uses at most three. Self-Refine-style and Reflexion-style are controlled implementations under the same backbone, data, verifier, and repair limit rather than line-by-line reproductions of the original systems \citep{ref_self_refine,ref_reflexion}. The resulting values are point estimates over the fixed release; private tests are never used for model selection.
+
+We additionally adapt two recent external systems to the same model, release, feedback restriction, and final evaluator. SpecFix-BM retains behavior clustering with four probe programs, at most four probe inputs, and one requirement-repair step \citep{ref_specfix}. LPW-adapted retains plan generation, verification on at most three public examples, fixed-plan code generation, and at most three repair rounds \citep{ref_planning_driven_programming}. Both cap primary program candidates at 11. They are shared-protocol adaptations rather than exact reproductions; auxiliary planning, probing, and analysis calls remain method-specific, so the matched quantity is the primary program-candidate budget rather than total tokens or LLM calls.
+
+The separate hyperparameter sensitivity run uses a fixed 50-problem sample with seed 2027, disables IRL, and generates one deterministic code candidate at temperature zero from the specification current when SAL terminates. It varies $r\in\{80,85,90,95\}$ under the paper weights and compares the paper, uniform, coverage-heavy, faithfulness-heavy, and precision-heavy profiles at $r=90$. Only public feedback is available, isolating SAL-side sensitivity from implementation repair and multi-candidate selection. Appendix~\ref{app:sensitivity} reports the completed results.
+
+\medskip
+\noindent\textbf{RQ1: Does the full semantic-contract pipeline improve end-to-end code generation?}
+
+Table~\ref{tab:main} reports the full-release comparison. Full Dual-Loop reaches 0.3801, corresponding to 401 complete-suite passes. Direct generation reaches 0.2882, while the three controlled internal variants range from 0.3175 to 0.3365. Under the shared protocol, SpecFix-BM reaches 0.3403 (359 passes) and LPW-adapted reaches 0.3308 (349 passes). Full therefore gains 9.19 percentage points over direct generation and 3.98 points over the strongest non-Full row, SpecFix-BM. Because private tests are held out until final program selection, these gains cannot be selected on the final evaluation partition. The external rows preserve the cited methods' central workflows but not their original models, data partitions, or total call budgets; they are protocol adaptations, not exact reproductions or a numerical state-of-the-art claim.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Method & Final Pass \up & $\Delta$ vs. Direct \up \\
+\midrule
+Direct NL-to-Code & 0.2882 & -- \\
+Decomposition Only & 0.3175 & +0.0294 \\
+Self-Refine-style & 0.3223 & +0.0341 \\
+Reflexion-style & 0.3365 & +0.0483 \\
+SpecFix-BM \citep{ref_specfix} & 0.3403 & +0.0521 \\
+LPW-adapted \citep{ref_planning_driven_programming} & 0.3308 & +0.0426 \\
+Full Dual-Loop & \textbf{0.3801} & \textbf{+0.0919} \\
+\bottomrule
+\end{tabular}
+\caption{Main comparison on LiveCodeBench release\_v6; external methods are shared-protocol adaptations.}
+\label{tab:main}
+\end{table}
+
+\noindent\textit{Answer to RQ1.}
+The frozen full configuration improves over the direct, controlled, and adapted external baselines at full-release scale, supporting the complete semantic-contract and repair pipeline. RQ3 separately examines where visible movement occurs.
+
+\medskip
+\noindent\textbf{RQ2: Does the result generalize beyond the main backbone and benchmark?}
+
+Table~\ref{tab:robustness} condenses two cross-setting checks. First, 50-problem LiveCodeBench slices use Qwen, Llama3.1-8B-Instruct \citep{ref_llama3}, and DeepSeek-Coder-6.7B-Instruct \citep{ref_deepseek_coder}. Full matches the best controlled iterative baseline for Qwen and Llama and improves from 0.42 to 0.50 for DeepSeek-Coder. The gain varies by backbone, so these small slices provide consistency evidence rather than a broad model-generalization claim.
+
+Second, the HumanEval+ converter retains a task only when at least one executable test remains after input serialization; 162 of 164 tasks satisfy this criterion \citep{ref_evalplus}. Direct generation already reaches 0.8457 on this more saturated benchmark, while the best controlled iterative variant reaches 0.8889 and Full reaches 0.9136. These studies are supporting checks rather than replacements for the full release: the backbone slices are small, and HumanEval+ leaves less headroom than constraint-heavy LiveCodeBench.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Setting ($n$) & Direct & Best Iter. & Full \up \\
+\midrule
+LCB--Qwen (50) & 0.56 & 0.70 & 0.70 \\
+LCB--Llama (50) & 0.26 & 0.28 & 0.28 \\
+LCB--DeepSeek (50) & 0.30 & 0.42 & \textbf{0.50} \\
+HumanEval+--Qwen (162) & 0.8457 & 0.8889 & \textbf{0.9136} \\
+\bottomrule
+\end{tabular}
+\caption{Condensed cross-backbone and external validation.}
+\label{tab:robustness}
+\end{table}
+
+\noindent\textit{Answer to RQ2.}
+The effect is not tied to one backbone or benchmark, but its magnitude is model-dependent. The backbone slices support preliminary robustness, HumanEval+ provides an external check, and full-release LiveCodeBench remains the primary evidence.
+
+\medskip
+\noindent\textbf{RQ3: Which components account for the gain?}
+
+Table~\ref{tab:mechanism} separates semantic-state from implementation movement. Average SAS rises from 80.15 to 82.29; 205 final contracts score above their initial specifications, 845 are unchanged, and 5 score lower. SAL records 165 artifact-changing patches and 837 attempts with no submitted change, whereas IRL records 49 passes, 36 additional verifier improvements, and 978 attempts without improvement. These are state-transition counts, not causal diagnoses or evidence that SAS independently predicts correctness.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{@{}lp{0.55\columnwidth}@{}}
+\toprule
+Signal & Observation \\
+\midrule
+SAS trajectory & $80.15\rightarrow82.29$ \\
+SAL decisions & 165 changed; 837 no submitted change \\
+IRL attempts & 49 passes; 36 improved; 978 no improvement \\
+Final trace & 401 solved / 579 spec / 4 impl. / 71 unknown \\
+Solved paths & 288 unchanged / 65 SAL / 38 IRL / 10 both \\
+\bottomrule
+\end{tabular}
+\caption{Full-release mechanism and final-aligned trace evidence. Trace categories are audit cues, not causal diagnoses.}
+\label{tab:mechanism}
+\end{table}
+
+A historical non-frozen diagnostic further tests the stage boundary. Reactivating SAL after unresolved execution failures produced 504 semantic returns and 40 accepted revisions, but only one subsequently passed; the other 39 (97.5\%) still failed. Although not compute-matched, this result shows that reopening SAL changes IRL's target while rarely converting an implementation failure into success. We therefore keep the contract fixed during repair; Appendix~\ref{app:additional-results} provides the controlled supporting analyses.
+
+The auxiliary probe in Appendix Table~\ref{tab:validation} compares explicit intermediate representations on 50 problems. Spec-to-code is the strongest tested explicit intermediate, although the unmatched generation budgets make this a design probe rather than an end-to-end performance comparison.
+
+The accepted contract also enters IRL through property clauses. Appendix Table~\ref{tab:properties} shows that numeric-output clauses are compiled most often and that numeric and ordering obligations produce the largest violation counts. This layer is a lightweight semantic bridge, not a general formal verifier.
+
+On requirement-heavy subsets (Appendix Table~\ref{tab:subsets}), Full exceeds direct generation by 7.13--9.77 points and Reflexion-style repair in every category, with the largest gains on format- and edge-case-sensitive problems.
+
+\noindent\textit{Answer to RQ3.}
+The system makes task obligations reusable across generation, repair, and audit. SAL records semantic-state changes, property clauses compile part of the contract into feedback, and IRL records verifier-level progress. The two loops therefore expose different intermediate outcomes within semantic-contract-guided repair.
+
+\input{results_summary.tex}
+
+\section{Conclusion}
+
+This paper presents a dual-loop NL-to-code framework that makes task semantics explicit before implementation and keeps the accepted contract fixed during verifier-guided repair. On 1,055 LiveCodeBench release\_v6 problems, Full Dual-Loop reaches 0.3801 Final Pass Rate, 9.19 percentage points above Direct NL-to-Code and 3.98 points above the strongest shared-protocol external baseline. Cross-setting, mechanism, sensitivity, and case analyses further show how semantic and implementation transitions remain separately inspectable. Future work will study independent specification review, confidence-aware attribution, broader settings, and budget-normalized activation.
+
+\subsection*{AI Use Statement}
+
+Generative AI tools were used to assist with literature discovery, language and formatting checks, and limited manuscript polishing and code editing. All cited sources, implementations, experimental results, and final claims were independently reviewed and verified by the authors, who take full responsibility for the paper.
+
+\subsection*{Reproducibility statement}
+
+The Experiments section describes the benchmark partitions, feedback restrictions, model, candidate budgets, stopping conditions, and evaluation metric. The appendices provide the complete acceptance predicates, controlled-method definitions, hyperparameter sensitivity results, and additional ablations. Anonymous supplementary code contains the core SAL and IRL procedures, evaluation scripts, configuration fields, and commands needed to reproduce the reported protocol. Private tests are queried only after final program selection.
+
+\bibliography{references}
+\bibliographystyle{iclr2027_conference}
+
+\appendix
+
+\section{Complete SAL Acceptance Predicates}
+\label{app:gate}
+
+Let $u^{(t)}$, $m^{(t)}$, and $b^{(t)}$ be the numbers of unsupported, missing, and blocking issues returned by the judge; let $c^{(t)}$ be judge confidence, $d^{(t)}$ the number of material semantic items, and $\rho^{(t)}$ aggregate issue pressure. Hatted quantities refer to candidate $\hat{s}^{(t+1)}$. $\mathrm{Valid}^{(t+1)}$ requires a parseable candidate and score record, a patch confined to target fields and disjoint from protected fields, and at least one material semantic change. The complete non-regression predicate is
+\begin{align}
+\mathrm{Safe}^{(t+1)}\Longleftrightarrow{}&
+\mathrm{Valid}^{(t+1)}
+\land \mathrm{SAS}(x,\hat{s}^{(t+1)})\geq\mathrm{SAS}^{(t)}
+\land \hat q_{\mathrm{faith}}^{(t+1)}\geq q_{\mathrm{faith}}^{(t)}
+\land \hat u^{(t+1)}\leq u^{(t)} \nonumber\\
+&\land\bigl(\hat m^{(t+1)}\leq m^{(t)}
+\lor \hat q_{\mathrm{cov}}^{(t+1)}>q_{\mathrm{cov}}^{(t)}\bigr) \nonumber\\
+&\land\bigl(c^{(t)}=0\lor\hat c^{(t+1)}=0
+\lor\hat c^{(t+1)}\geq c^{(t)}-10\bigr).
+\label{eq:safe-full}
+\end{align}
+The grounded-progress predicate is
+\begin{align}
+\mathrm{Improve}^{(t+1)}\Longleftrightarrow{}&
+\bigl(\mathrm{SAS}(x,\hat{s}^{(t+1)})-\mathrm{SAS}^{(t)}\geq\delta
+\land\rho^{(t)}>0\bigr) \nonumber\\
+&\lor(\hat u^{(t+1)}<u^{(t)})
+\lor(\hat\rho^{(t+1)}<\rho^{(t)}) \nonumber\\
+&\lor\bigl(\hat q_{\mathrm{prec}}^{(t+1)}>q_{\mathrm{prec}}^{(t)}
+\land\hat q_{\mathrm{cov}}^{(t+1)}\geq q_{\mathrm{cov}}^{(t)}
+\land\rho^{(t)}>0\bigr) \nonumber\\
+&\lor\bigl(\hat m^{(t+1)}<m^{(t)}
+\land\hat q_{\mathrm{cov}}^{(t+1)}\geq q_{\mathrm{cov}}^{(t)}\bigr) \nonumber\\
+&\lor\bigl(\hat b^{(t+1)}<b^{(t)}
+\land\hat q_{\mathrm{prec}}^{(t+1)}\geq q_{\mathrm{prec}}^{(t)}\bigr) \nonumber\\
+&\lor\bigl(\hat d^{(t+1)}>d^{(t)}
+\land\hat q_{\mathrm{prec}}^{(t+1)}>q_{\mathrm{prec}}^{(t)}
+\land\rho^{(t)}>0\bigr).
+\label{eq:improve-full}
+\end{align}
+Safety prevents a local revision from damaging already expressed obligations; improvement requires at least one grounded gain. The update in~\eqref{eq:accept} commits the candidate only when both predicates hold.
+
+\section{Additional Experimental Details}
+\label{app:additional-results}
+
+\subsection{Compared configurations}
+
+Table~\ref{tab:controlled-methods} records the operational definitions used in the shared evaluation pipeline. Style-matched baselines preserve the feedback form of the cited methods, while the two external adaptations preserve their central workflows under the common model, benchmark loader, verifier, and final evaluator.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lp{0.68\linewidth}@{}}
+\toprule
+Configuration & Operational definition \\
+\midrule
+Direct NL-to-Code & Generate one program directly from $x$ without iterative feedback. \\
+Decomposition Only & Induce $s^{(0)}$ and generate code without SAL or IRL. \\
+Self-Refine-style & Execute public tests and iteratively revise code from feedback \citep{ref_self_refine}. \\
+Reflexion-style & Accumulate public feedback as verbal reflection and repair from that memory \citep{ref_reflexion}. \\
+SAL-only & Induce and gate revisions, then freeze the current specification; no IRL. \\
+IRL-only & Generate and repair under unrefined $s^{(0)}$; no SAL revision. \\
+SpecFix-BM & Cluster behavior from four probe programs and perform at most one requirement repair within an 11-program cap \citep{ref_specfix}. \\
+LPW-adapted & Verify and revise a plan on public examples, then hold it fixed during generation and repair within an 11-program cap \citep{ref_planning_driven_programming}. \\
+Full Dual-Loop & Freeze $s^\star$, select $C^{(0)}$, and perform contract-conditioned IRL. \\
+\bottomrule
+\end{tabular}
+\caption{Operational definitions of the compared configurations.}
+\label{tab:controlled-methods}
+\end{table}
+
+\subsection{Intermediate-representation probe}
+
+On an exploratory 50-problem slice, direct generation scores 0.70. Among explicit intermediate representations, spec-to-code scores 0.60, above plan-to-code at 0.56 and pseudocode-to-code at 0.46. Because each representation adds a generation stage and budgets are not matched, this probe does not show that specifications outperform direct prompting. It instead identifies the strongest tested explicit intermediate for the later refinement and property-compilation operations.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lr@{}}
+\toprule
+Method & Final Pass \up \\
+\midrule
+Direct NL-to-Code & \textbf{0.700} \\
+Plan-to-Code & 0.560 \\
+Pseudocode-to-Code & 0.460 \\
+Spec-to-Code & 0.600 \\
+\bottomrule
+\end{tabular}
+\caption{Intermediate-representation probe on a 50-problem slice.}
+\label{tab:validation}
+\end{table}
+
+\subsection{Component ablation}
+
+The controlled 50-problem component slice uses three candidates per problem and is distinct from the two-candidate cross-backbone slice. SAL-only and IRL-only both reach 0.64, while Full reaches 0.72. The eight-point composition gain supports complementarity on this slice, but SAL-only being slightly below Decomposition Only prevents a claim of an isolated SAL performance gain.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Method & SAL & IRL & Final Pass \up \\
+\midrule
+Decomposition Only & no & no & 0.66 \\
+SAL-only & yes & no & 0.64 \\
+IRL-only & no & yes & 0.64 \\
+Full Dual-Loop & yes & yes & \textbf{0.72} \\
+\bottomrule
+\end{tabular}
+\caption{Controlled component ablation on 50 Qwen problems.}
+\label{tab:component}
+\end{table}
+
+\subsection{SAL hyperparameter sensitivity}
+\label{app:sensitivity}
+
+Table~\ref{tab:sensitivity} reports the fixed 50-problem public-feedback slice. Under $\mathbf w=(0.4,0.4,0.2)$, thresholds from 80 through 95 pass the same 20 problems. The final contracts at $r=90$ and $r=95$ are identical on all 50 problems, and $r=85$ differs from $r=90$ on one. Accepted revisions rise from 14 at $r=85$ to 15 at $r=90$ and do not increase at $r=95$, making 90 the first observed point on the local plateau.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+Group & Setting & Public Pass \up & Accepted & Calls \down \\
+\midrule
+Threshold & $r=80$ & 0.400 & 1 & 5.18 \\
+& $r=85$ & 0.400 & 14 & 6.90 \\
+& $r=90$ & 0.400 & 15 & 7.24 \\
+& $r=95$ & 0.400 & 15 & 7.24 \\
+\midrule
+Weights & $(0.4,0.4,0.2)$ & 0.400 & 15 & 7.24 \\
+& $(0.333,0.333,0.334)$ & 0.420 & 13 & 7.18 \\
+& $(0.6,0.2,0.2)$ & 0.400 & 10 & 7.26 \\
+& $(0.2,0.6,0.2)$ & 0.400 & 7 & 7.14 \\
+& $(0.2,0.2,0.6)$ & 0.400 & 6 & 6.94 \\
+\bottomrule
+\end{tabular}
+\caption{SAL sensitivity on a fixed 50-problem public-feedback slice.}
+\label{tab:sensitivity}
+\end{table}
+
+The one-problem difference between the paper and uniform weights is descriptive: their 95\% Wilson intervals, $[0.276,0.538]$ and $[0.294,0.558]$, overlap substantially. Changing $\mathbf w$ also changes the SAS scale, so aggregate SAS values are not compared across profiles. The sweep supports local stability rather than a uniquely optimal configuration.
+
+\subsection{Property-clause coverage}
+
+Table~\ref{tab:properties} reports clauses compiled from accepted contracts and violation events observed over verifier failures; one clause may be evaluated repeatedly. Numeric-output clauses are compiled most often, while numeric and ordering obligations produce the largest observed violation counts. Zero violations mean only that no evaluated output triggered the recorded check.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Clause type & Compiled \up & Violations \\
+\midrule
+\texttt{numeric\_output} & 1101 & 53 \\
+\texttt{modulo\_output} & 159 & 0 \\
+\texttt{non\_negative} & 152 & 4 \\
+\texttt{sorted\_order} & 69 & 22 \\
+\texttt{boolean\_output} & 30 & 0 \\
+\texttt{same\_length} & 12 & 0 \\
+\texttt{same\_multiset} & 6 & 7 \\
+\bottomrule
+\end{tabular}
+\caption{Property-clause coverage on LiveCodeBench release\_v6.}
+\label{tab:properties}
+\end{table}
+
+\subsection{Requirement-heavy subsets}
+
+Table~\ref{tab:subsets} connects the mechanism analysis to requirement-heavy tasks. Full exceeds direct generation by 7.13--9.77 points on constraint-heavy, format-sensitive, edge-case-heavy, and semantic-heavy subsets and exceeds Reflexion-style repair in every category. The largest gains occur on format- and edge-case-sensitive problems, where explicit protocol and boundary obligations are especially useful. These benchmark-derived slices are not mutually exclusive causal categories.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Subset & Direct & Reflexion & Full \up \\
+\midrule
+Constraint-heavy & 0.1602 & 0.1869 & \textbf{0.2315} \\
+Format-sensitive & 0.2512 & 0.2943 & \textbf{0.3481} \\
+Edge-case-heavy & 0.3239 & 0.3702 & \textbf{0.4216} \\
+Semantic-heavy & 0.2281 & 0.2643 & \textbf{0.3213} \\
+\bottomrule
+\end{tabular}
+\caption{Performance on requirement-heavy LiveCodeBench subsets.}
+\label{tab:subsets}
+\end{table}
+
+\section{Trace Audit and Case Study}
+\label{app:trace-audit}
+
+\input{appendix_trace_case.tex}
+
+\end{document}

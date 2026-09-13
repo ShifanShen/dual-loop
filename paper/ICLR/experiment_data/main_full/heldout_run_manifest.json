@@ -1,0 +1,11 @@
+{
+  "source_traces": "/home/<user>/projects/dual-loop/output/dual_loop/full_Qwen2.5-Coder-7B-Instruct_full_dual_loop_20260529_005015_876463/traces.json",
+  "source_traces_sha256": "70f286799294865c4aabd891fd242e3428c545a7a7d04b8bd04e92987c8e1f91",
+  "source_summary": "/home/<user>/projects/dual-loop/output/dual_loop/full_Qwen2.5-Coder-7B-Instruct_full_dual_loop_20260529_005015_876463/summary.json",
+  "release_version": "release_v6",
+  "dataset_path": "/home/<user>/datasets/livecodebench/code_generation_lite_release_v6",
+  "final_test_scope": "private",
+  "trace_count": 1055,
+  "max_problems": 0,
+  "timeout": 6
+}

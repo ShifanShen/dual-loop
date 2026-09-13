@@ -1,0 +1,102 @@
+{
+  "purpose": "Sensitivity of the SAL threshold and SAS aggregation weights",
+  "private_tests_used": false,
+  "pipeline_mode": "loop_b",
+  "sample_seed": 2027,
+  "max_problems": 50,
+  "reference_threshold": 90,
+  "reference_weight": "paper",
+  "fixed_controls": {
+    "spec_max_iters": 3,
+    "spec_min_improvement": 1,
+    "spec_precision_floor": 85,
+    "spec_max_rejected_refines": 1,
+    "codegen_num_candidates": 1,
+    "repair_max_iters": 0,
+    "contract_search_rounds": 0,
+    "feedback_test_scope": "public"
+  },
+  "matrix": [
+    {
+      "config_id": "threshold_r80_paper",
+      "sweep": "threshold",
+      "threshold": 80,
+      "weights": [
+        0.4,
+        0.4,
+        0.2
+      ]
+    },
+    {
+      "config_id": "threshold_r85_paper",
+      "sweep": "threshold",
+      "threshold": 85,
+      "weights": [
+        0.4,
+        0.4,
+        0.2
+      ]
+    },
+    {
+      "config_id": "threshold_r90_paper",
+      "sweep": "threshold",
+      "threshold": 90,
+      "weights": [
+        0.4,
+        0.4,
+        0.2
+      ]
+    },
+    {
+      "config_id": "threshold_r95_paper",
+      "sweep": "threshold",
+      "threshold": 95,
+      "weights": [
+        0.4,
+        0.4,
+        0.2
+      ]
+    },
+    {
+      "config_id": "weights_r90_uniform",
+      "sweep": "weights",
+      "threshold": 90,
+      "weights": [
+        0.333333,
+        0.333333,
+        0.333334
+      ]
+    },
+    {
+      "config_id": "weights_r90_coverage",
+      "sweep": "weights",
+      "threshold": 90,
+      "weights": [
+        0.6,
+        0.2,
+        0.2
+      ]
+    },
+    {
+      "config_id": "weights_r90_faithfulness",
+      "sweep": "weights",
+      "threshold": 90,
+      "weights": [
+        0.2,
+        0.6,
+        0.2
+      ]
+    },
+    {
+      "config_id": "weights_r90_precision",
+      "sweep": "weights",
+      "threshold": 90,
+      "weights": [
+        0.2,
+        0.2,
+        0.6
+      ]
+    }
+  ],
+  "normalization": "Each supplied weight triple is normalized to sum to one."
+}

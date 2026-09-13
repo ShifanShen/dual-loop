@@ -1,0 +1,3 @@
+method,num_problems,solved_count,final_pass_rate,metric_pass_at_1,private_pass_count,private_pass_rate,metric_private_pass_at_1,feedback_pass_private_pass,feedback_pass_private_fail,feedback_fail_private_pass,feedback_fail_private_fail,public_feedback_pass_count,average_llm_calls,average_program_candidates,average_feedback_verifier_executions,average_probe_executions,average_prompt_chars,average_completion_chars,average_elapsed_seconds
+specfix_bm,1055,359,0.340284,0.340284,364,0.345024,0.345024,359,148,5,543,507,10.318483,8.611374,8.611374,34.093839,19970.849289,6850.589573,52.784988
+lpw_adapted,1055,349,0.330806,0.330806,356,0.337441,0.337441,349,132,7,567,481,11.899526,6.673934,6.673934,0,55145.212322,10971.076777,51.750119

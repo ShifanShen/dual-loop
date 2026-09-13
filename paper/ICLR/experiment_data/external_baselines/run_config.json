@@ -1,0 +1,40 @@
+{
+  "protocol": {
+    "model": "Qwen2.5-Coder-7B-Instruct",
+    "model_repr": "Qwen2.5-Coder-7B-Instruct",
+    "local_model_path": "<LOCAL_MODEL_PATH>",
+    "model_style": "CodeQwenInstruct",
+    "release_version": "release_v6",
+    "dataset_path": "/home/<user>/datasets/livecodebench/code_generation_lite_release_v6",
+    "start_date": null,
+    "end_date": null,
+    "question_ids": null,
+    "feedback_test_scope": "public",
+    "final_test_scope": "private",
+    "timeout": 6,
+    "temperature": 0.2,
+    "top_p": 0.95,
+    "spec_temperature": 0.0,
+    "judge_temperature": 0.0,
+    "codegen_temperature": 0.2,
+    "repair_temperature": 0.1,
+    "spec_max_tokens": 1400,
+    "judge_max_tokens": 1200,
+    "codegen_max_tokens": 2200,
+    "max_program_candidates": 11,
+    "specfix_probe_candidates": 4,
+    "specfix_probe_tests": 4,
+    "codegen_num_candidates": 2,
+    "repair_num_candidates": 3,
+    "repair_max_iters": 3,
+    "lpw_plan_max_iters": 3,
+    "lpw_plan_example_limit": 3,
+    "private_tests_available_during_generation": false,
+    "program_budget_definition": "maximum primary program-candidate slots per problem; planning, test generation, requirement repair, error analysis, and code-format recovery calls are reported overhead"
+  },
+  "selected_methods": [
+    "specfix_bm",
+    "lpw_adapted"
+  ],
+  "max_problems": 1055
+}

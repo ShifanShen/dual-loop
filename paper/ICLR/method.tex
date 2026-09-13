@@ -1,0 +1,131 @@
+The method is motivated by a state-observability problem. An incorrect program may follow from an inadequate task interpretation, an incorrect implementation of an adequate interpretation, or both. Direct NL-to-Code exposes only the final program and cannot show where the failure entered. We therefore place an explicit semantic state between problem $x$ and program $C$, revise that state before implementation, and hold it fixed during program repair.
+
+\subsection{Overview}
+
+Figure~\ref{fig:framework} divides generation into two connected stages. SAL induces an initial specification $s^{(0)}$. At semantic iteration $t$, it proposes a field-level patch $\Delta^{(t)}$, merges the patch with the current specification to obtain $\hat{s}^{(t+1)}$, and accepts the candidate only if it satisfies both safety and improvement conditions. An accepted candidate directly replaces the current state; a rejected candidate leaves $s^{(t)}$ unchanged and stops SAL. The current specification at termination is frozen as semantic contract $s^\star$, from which executable property set $P^\star$ is compiled.
+
+IRL then generates an initial candidate set $\mathcal C^{(0)}$ from $(x,s^\star)$ and uses public feedback to select the unique initial state $C^{(0)}$. At round $k$, only current program $C^{(k)}$ is verified and repaired. The resulting repair candidates form the round-specific set $\mathcal C^{(k+1)}$, from which the system selects $C^{(k+1)}$. Unselected candidates from earlier rounds do not carry over. The complete process records semantic states, implementation states, and their evidence in trace $\tau$:
+\begin{equation}
+\begin{aligned}
+x &\rightarrow s^{(0)}\rightarrow(q^{(0)},\mathrm{SAS}^{(0)})\rightarrow\cdots
+\rightarrow(\Delta^{(t)},\hat{s}^{(t+1)})\\
+&\rightarrow \mathrm{Accept}^{(t+1)}\rightarrow s^{(t+1)}\rightarrow\cdots
+\rightarrow s^\star\rightarrow P^\star,\\
+(x,s^\star)&\rightarrow\mathcal C^{(0)}\rightarrow C^{(0)}\rightarrow\cdots\rightarrow C^{(k)}\\
+&\rightarrow(F_v^{(k)},F_p^{(k)})\rightarrow\mathcal C^{(k+1)}
+\rightarrow C^{(k+1)}\rightarrow\cdots\rightarrow\tau.
+\end{aligned}
+\label{eq:transition}
+\end{equation}
+This boundary does not treat $s^\star$ as a proof of task intent. The contract is an LLM-induced, inspectable target; SAS is a directional evaluation signal; and only a limited subset of obligations can be compiled into executable clauses. Algorithm~\ref{alg:dual_loop} gives the complete control flow.
+
+\begin{algorithm}[t]
+\caption{Semantic-contract-based dual-loop generation}
+\label{alg:dual_loop}
+\begin{algorithmic}[1]
+\REQUIRE problem $x$; SAL budget $T_s$; IRL budget $T_r$
+\ENSURE final program $C$ and trace $\tau$
+\STATE \textbf{Stage 1: semantic alignment}
+\STATE $s^{(0)}\gets\algcall{InduceSpec}{x}$
+\STATE $(q^{(0)},\mathrm{SAS}^{(0)})\gets\algcall{Judge_{\mathbf w}}{x,s^{(0)}}$
+\FOR{$t=0,\ldots,T_s-1$}
+  \IF{$\neg\algcall{ShouldRefine}{s^{(t)},q^{(t)},\mathrm{SAS}^{(t)},r}$}
+    \STATE \textbf{break}
+  \ENDIF
+  \STATE $\Delta^{(t)}\gets\algcall{ProposePatch}{x,s^{(t)},q^{(t)}}$
+  \STATE $\hat{s}^{(t+1)}\gets\algcall{Merge}{s^{(t)},\Delta^{(t)}}$; judge candidate
+  \IF{$\mathrm{Safe}^{(t+1)}\land\mathrm{Improve}^{(t+1)}$}
+    \STATE $s^{(t+1)}\gets\hat{s}^{(t+1)}$
+  \ELSE
+    \STATE $s^{(t+1)}\gets s^{(t)}$; \textbf{break}
+  \ENDIF
+\ENDFOR
+\STATE $s^\star\gets$ current specification at SAL termination; freeze $s^\star$
+\STATE $P^\star\gets\algcall{CompileClauses}{s^\star}$; initialize trace $\tau$
+\STATE \textbf{Stage 2: implementation and repair}
+\STATE $\mathcal C^{(0)}\gets\algcall{GenerateCandidates}{x,s^\star,N_0}$
+\STATE $C^{(0)}\gets\algcall{SelectByFeedback}{\mathcal C^{(0)},x,s^\star,P^\star}$
+\FOR{$k=0,\ldots,T_r$}
+  \STATE $F_v^{(k)}\gets\algcall{Verify_{fb}}{x,C^{(k)}}$
+  \IF{$\algcall{Pass}{F_v^{(k)}}\lor k=T_r$}
+    \STATE \textbf{return} $(C^{(k)},\tau)$
+  \ENDIF
+  \STATE $F_p^{(k)}\gets\algcall{EvaluateClauses}{P^\star,x,C^{(k)},F_v^{(k)}}$
+  \FOR{$i=1,\ldots,N_r$}
+    \STATE $C_i'^{(k+1)}\gets\algcall{Repair_i}{x,s^\star,C^{(k)},F_v^{(k)},F_p^{(k)}}$
+  \ENDFOR
+  \STATE $\mathcal C^{(k+1)}\gets\{C_i'^{(k+1)}\mid 1\leq i\leq N_r\}$
+  \STATE $C^{(k+1)}\gets\algcall{SelectByFeedback}{\mathcal C^{(k+1)},x,s^\star,P^\star}$
+  \STATE retain $C^{(k)}$ if the selected result is invalid or unchanged; update $\tau$
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Semantic Alignment Loop}
+
+SAL contains a specification inducer, a prompt-driven semantic judge, a field-level revision module, and an acceptance gate. The six central field groups correspond to recurrent failure surfaces identified in prior defect and specification-misunderstanding studies \citep{ref_bug_study,ref_codegen_error_taxonomy,ref_mufix,ref_pseudoeval}: task summary $s_{\mathrm{sum}}$, I/O protocol $s_{\mathrm{io}}$, constraints $s_{\mathrm{cons}}$, rules $s_{\mathrm{rules}}$, edge cases $s_{\mathrm{edge}}$, and candidate properties $s_{\mathrm{prop}}$:
+\begin{equation}
+s\triangleq(s_{\mathrm{sum}},s_{\mathrm{io}},s_{\mathrm{cons}},s_{\mathrm{rules}},s_{\mathrm{edge}},s_{\mathrm{prop}}).
+\label{eq:spec}
+\end{equation}
+The decomposition lets the system localize a protocol error, missing constraint, unsupported rule, or boundary omission without regenerating the whole interpretation. Candidate properties are obligation statements, not trusted assertions; only clauses matching supported and reliably evaluable schemas can later become executable feedback.
+
+The semantic judge uses the same backbone at temperature zero with a dedicated rubric and JSON output schema. Given $x$ and $s$, it returns coverage, faithfulness, and precision profile $q(x,s)$ together with aggregate SAS:
+\begin{equation}
+\begin{aligned}
+(q(x,s),\mathrm{SAS}(x,s))&=\mathrm{Judge}_{\mathbf w}(x,s),\\
+\mathbf w&=(0.4,0.4,0.2).
+\end{aligned}
+\label{eq:sas}
+\end{equation}
+Coverage measures whether important obligations and edge cases are retained; faithfulness penalizes unsupported assumptions; and precision measures whether obligations are operational enough to guide generation and repair. Outputs are integers in $[0,100]$. The pipeline validates and records the aggregate returned under the rubric rather than recomputing a post-hoc dot product, and it does not treat SAS as an independent ground-truth label. Coverage and faithfulness receive equal primary weight because either omission or invention can redirect generation; precision receives lower weight because operational detail cannot compensate for missing or distorted semantics. Section~\ref{app:sensitivity} reports the sensitivity experiment supporting this fixed setting.
+
+The judge additionally returns grounded issue evidence, issue types, at most three target fields, protected fields, and a field-level edit plan. A patch may change only target fields, may not change protected fields, and must produce a material semantic difference. Let $\mathcal F$ denote the field set and $\mathcal T^{(t)}$, $\mathcal G^{(t)}$, and $\Pi^{(t)}$ denote the target set, protected set, and edit plan. A candidate outside these constraints is rejected before re-evaluation.
+
+The acceptance gate separates non-regression from grounded progress:
+\begin{equation}
+\mathrm{Accept}^{(t+1)}=1\iff
+\mathrm{Safe}^{(t+1)}\land\mathrm{Improve}^{(t+1)}.
+\label{eq:accept}
+\end{equation}
+$\mathrm{Safe}$ requires a valid material patch, non-decreasing SAS and faithfulness, no increase in unsupported issues, and bounded degradation in missing-issue and confidence signals. $\mathrm{Improve}$ requires at least one grounded gain, such as an SAS increase of at least $\delta$, reduced issue pressure, improved precision without coverage loss, or fewer missing or blocking obligations. Appendix~\ref{app:gate} gives the complete predicates. If Eq.~\eqref{eq:accept} holds, $s^{(t+1)}=\hat{s}^{(t+1)}$; otherwise $s^{(t+1)}=s^{(t)}$ and SAL stops. The main configuration uses $\delta=1$. Refinement is attempted only when $\mathrm{SAS}^{(t)}<r$, the judge reports a grounded material issue, and a field-specific plan exists. We use $r=90$, at most three attempts, and stop after one rejected or skipped revision.
+
+No additional specification candidates are generated or ranked after this trajectory. The current specification at SAL termination is directly frozen as $s^\star$. A conservative compiler then extracts the executable subset
+\begin{equation}
+P^\star=\bigcup_{\ell\in\mathrm{Fields}(s^\star)}\mathrm{Compile}(\ell).
+\label{eq:compile}
+\end{equation}
+Supported schemas cover ordering, multiset preservation, output length, Boolean protocols, numeric and non-negative output, and modulo ranges. General optimality and algorithmic-correctness claims remain textual. A recognized clause may still abstain if observed and expected values do not support a reliable check.
+
+\subsection{Implementation Repair Loop}
+
+The contract-conditioned generator receives both $x$ and $s^\star$, produces at most $N_0$ initial candidates, and forms $\mathcal C^{(0)}$. Each candidate is evaluated on public feedback tests. A fixed lexicographic rank considers complete public pass, pass ratio and count, failure progress, error type, weighted property violations, empty output, violated specification items, output-length difference, and matching lines. Private tests never participate. The selected program $C^{(0)}$ is the unique initial IRL state; unselected initial candidates are not repaired later.
+
+At round $k$, the feedback verifier executes current program $C^{(k)}$ on public tests and returns structured evidence $F_v^{(k)}$, including pass status, error type, failing input, observed output, available expected output, and partial progress. SAS evaluates semantic state before implementation; $F_v^{(k)}$ evaluates executable behavior. SAL, initial selection, and IRL never query private tests. The final evaluator uses the complete public-and-private suite only after a single final program has been selected.
+
+Let $P^\star=\{\phi_i\}_{i=1}^{N_p}$, where $N_p$ is the number of successfully compiled clauses that can be evaluated reliably. The property oracle evaluates those clauses using the problem, current program, and verifier evidence:
+\begin{equation}
+\begin{aligned}
+F_v^{(k)}&=\mathrm{Verify}_{fb}(x,C^{(k)}),\\
+F_p^{(k)}&=\mathrm{EvaluateClauses}(P^\star,x,C^{(k)},F_v^{(k)}).
+\end{aligned}
+\label{eq:feedback}
+\end{equation}
+$F_v^{(k)}$ reports concrete execution behavior, whereas $F_p^{(k)}$ records violated executable obligations and their evidence. Satisfied clauses and clauses that cannot be judged reliably produce no violation feedback. Neither feedback source may modify $s^\star$.
+
+The repair module then generates a round-specific candidate set from the unique current program:
+\begin{equation}
+\begin{aligned}
+C_i'^{(k+1)}&=\mathrm{Repair}_i(x,s^\star,C^{(k)},F_v^{(k)},F_p^{(k)}),quad 1\leq i\leq N_r,\\
+\mathcal C^{(k+1)}&=\{C_i'^{(k+1)}\mid 1\leq i\leq N_r\},\\
+C^{(k+1)}&=\mathrm{SelectByFeedback}(\mathcal C^{(k+1)},x,s^\star,P^\star).
+\end{aligned}
+\label{eq:repair}
+\end{equation}
+Selection uses the same public-feedback ranking as initial selection. Earlier candidate sets and their unselected members do not accumulate. If the selected result is unparsable or identical to $C^{(k)}$, no program-state change is recorded. IRL stops when the current program passes public feedback or the repair budget is exhausted:
+\begin{equation}
+\mathrm{Stop}_{\mathrm{IRL}}^{(k)}=1\iff
+\mathrm{Pass}(F_v^{(k)})\lor(k=T_r),\qquad 0\leq k\leq T_r.
+\label{eq:stop}
+\end{equation}
+The final program is then evaluated on held-out private tests. Trace labels summarize visible semantic-side, implementation-side, or mixed evidence; they support inspection but are not causal diagnoses, and the conservative policy returns \texttt{unknown} when evidence remains mixed.

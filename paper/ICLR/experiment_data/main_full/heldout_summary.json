@@ -1,0 +1,25 @@
+{
+  "protocol": "saved_final_code_private_heldout_reevaluation",
+  "source_traces": "/home/<user>/projects/dual-loop/output/dual_loop/full_Qwen2.5-Coder-7B-Instruct_full_dual_loop_20260529_005015_876463/traces.json",
+  "source_summary": "/home/<user>/projects/dual-loop/output/dual_loop/full_Qwen2.5-Coder-7B-Instruct_full_dual_loop_20260529_005015_876463/summary.json",
+  "release_version": "release_v6",
+  "num_problems": 1055,
+  "feedback_pass_count": 402,
+  "feedback_pass_rate": 0.381042654028436,
+  "final_pass_count": 405,
+  "final_pass_rate": 0.38388625592417064,
+  "transition_counts": {
+    "feedback_fail_final_fail": 649,
+    "feedback_fail_final_pass": 4,
+    "feedback_pass_final_fail": 1,
+    "feedback_pass_final_pass": 401
+  },
+  "final_aligned_attribution_counts": {
+    "solved": 405,
+    "spec_induced": 575,
+    "implementation_induced": 4,
+    "unknown": 71
+  },
+  "attribution_alignment_policy": "Held-out passes are solved. A feedback pass followed by a held-out failure is unknown because the original trace contains no residual attribution. For programs failing both stages, the original residual trace label is retained.",
+  "model_generation_performed": false
+}

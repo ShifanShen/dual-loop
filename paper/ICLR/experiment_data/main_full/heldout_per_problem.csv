@@ -1,0 +1,1056 @@
+question_id,question_title,feedback_passed,final_passed,transition,original_attribution,final_aligned_attribution,error_type,error_code,error_message,num_private_tests
+1873_A,A. Short Sort,True,True,feedback_pass_final_pass,solved,solved,accepted,,,4
+1873_B,B. Good Kid,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+1873_D,D. 1D Eraser,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+1883_B,B. Chemistry,True,True,feedback_pass_final_pass,solved,solved,accepted,,,3
+1883_C,C. Raspberries,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 2,1
+1899_A,A. Game with Integers,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: Second != First,1
+1899_B,B. 250 Thousand Tons of TNT,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=1: 176338657 != 89350529,2
+1899_C,C. Yarik and Array,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: -3 != -1,8
+1899_D,D. Yarik and Musical Notes,False,True,feedback_fail_final_pass,spec_induced,solved,accepted,,,12
+2727,number-of-senior-citizens,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2728,sum-in-a-matrix,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2730,maximum-or,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2754,maximum-strength-of-a-group,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,7
+2755,extra-characters-in-a-string,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2756,buy-two-chocolates,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2757,count-of-integers,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+2777,find-the-distinct-difference-array,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,9
+2779,number-of-adjacent-elements-with-the-same-color,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2784,power-of-heroes,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+2785,semi-ordered-permutation,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2786,find-the-longest-semi-repetitive-substring,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2791,find-the-losers-of-the-circular-game,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2792,neighboring-bitwise-xor,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2800,minimum-string-length-after-removing-substrings,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2802,find-the-punishment-number-of-an-integer,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2808,painting-the-walls,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2810,collecting-chocolates,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,9
+2811,determine-the-minimum-sum-of-a-k-avoiding-array,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2812,find-the-maximum-achievable-number,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2816,lexicographically-smallest-palindrome,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2817,minimum-cost-to-make-all-characters-equal,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2819,remove-trailing-zeros-from-a-string,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2824,check-if-the-number-is-fascinating,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2825,minimize-string-length,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2827,greatest-common-divisor-traversal,True,True,feedback_pass_final_pass,solved,solved,accepted,,,80
+2828,lexicographically-smallest-string-after-substring-operation,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong Answer,8
+2831,number-of-beautiful-pairs,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2832,find-the-longest-equal-subarray,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2833,count-zero-request-servers,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2834,relocate-marbles,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2837,minimum-operations-to-make-the-integer-zero,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2839,maximum-sum-queries,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+2844,sum-of-squares-of-special-elements,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2845,find-the-value-of-the-partition,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2847,find-maximum-number-of-string-pairs,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2848,special-permutations,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2849,sum-of-imbalance-numbers-of-all-subarrays,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,9
+2850,construct-the-longest-new-string,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2854,decremental-string-concatenation,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,6
+2855,maximum-number-of-jumps-to-reach-the-last-index,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2856,count-complete-subarrays-in-an-array,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2857,total-distance-traveled,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2866,longest-even-odd-subarray-with-threshold,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong Answer,5
+2867,ways-to-split-array-into-good-subarrays,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2868,continuous-subarrays,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2869,longest-non-decreasing-subarray-from-two-arrays,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2870,longest-alternating-subarray,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2872,largest-element-in-an-array-after-merge-operations,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,4
+2873,prime-pairs-with-target-sum,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2876,number-of-employees-who-met-the-target,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2877,shortest-string-that-contains-three-strings,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2878,apply-operations-to-make-all-array-elements-equal-to-zero,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,8
+2879,minimum-changes-to-make-k-semi-palindromes,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+2881,split-strings-by-separator,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2882,ways-to-express-an-integer-as-sum-of-powers,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2883,partition-string-into-minimum-beautiful-substrings,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2884,length-of-the-longest-valid-substring,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2886,faulty-keyboard,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2887,sort-vowels-in-a-string,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2888,minimum-index-of-a-valid-split,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2891,maximum-beauty-of-an-array-after-applying-operation,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2892,check-if-array-is-good,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2893,visit-array-positions-to-maximize-score,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2902,max-pair-sum-in-an-array,True,True,feedback_pass_final_pass,solved,solved,accepted,,,69
+2915,count-of-interesting-subarrays,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2916,check-if-it-is-possible-to-split-array,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,10
+2917,count-pairs-whose-sum-is-less-than-target,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2919,maximum-number-of-groups-with-increasing-length,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2920,minimum-seconds-to-equalize-a-circular-array,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+2921,count-stepping-numbers-in-range,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+2952,minimum-time-to-make-array-sum-at-most-x,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,7
+2953,count-pairs-of-points-with-distance-k,True,True,feedback_pass_final_pass,solved,solved,accepted,,,100
+2954,maximum-sum-of-almost-unique-subarray,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2955,account-balance-after-rounded-purchase,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2977,check-if-a-string-is-an-acronym-of-words,True,True,feedback_pass_final_pass,solved,solved,accepted,,,11
+2979,maximize-the-profit-as-the-salesman,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2998,count-symmetric-integers,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+2999,check-if-strings-can-be-made-equal-with-operations-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,10
+3000,minimum-absolute-difference-between-elements-with-constraint,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+3017,number-of-beautiful-integers-in-the-range,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,9
+3018,make-string-a-subsequence-using-cyclic-increments,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3019,furthest-point-from-origin,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3024,string-transformation,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,8
+3025,minimum-operations-to-form-subsequence-with-target-sum,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+3026,find-the-minimum-possible-sum-of-a-beautiful-array,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3031,construct-product-matrix,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3032,maximize-value-of-function-in-a-ball-passing-game,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,10
+3033,apply-operations-to-make-two-strings-equal,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong Answer,3
+3034,points-that-intersect-with-cars,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3044,minimum-operations-to-collect-elements,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,4
+3045,minimum-right-shifts-to-sort-the-array,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3046,minimum-operations-to-make-a-special-number,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,10
+3047,maximum-element-sum-of-a-complete-subset-of-indices,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3055,maximum-odd-binary-number,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3080,split-array-into-maximum-number-of-subarrays,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3081,minimum-array-length-after-pair-removals,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3091,count-of-sub-multisets-with-bounded-sum,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,5
+3093,sum-of-values-at-indices-with-k-set-bits,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3094,minimum-number-of-operations-to-make-array-empty,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3104,happy-students,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3106,length-of-the-longest-subsequence-that-sums-to-target,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3114,beautiful-towers-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3141,minimum-size-subarray-in-infinite-array,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3150,shortest-and-lexicographically-smallest-beautiful-string,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3151,minimum-processing-time,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3153,apply-operations-on-array-to-maximize-sum-of-squares,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3154,maximum-value-of-an-ordered-triplet-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3163,subarrays-distinct-element-sum-of-squares-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3164,last-visited-integers,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3166,minimum-number-of-groups-to-create-a-valid-assignment,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3171,minimum-equal-sum-of-two-arrays-after-replacing-zeros,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3172,divisible-and-non-divisible-sums-difference,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3174,minimum-number-of-changes-to-make-binary-string-beautiful,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3176,minimum-sum-of-mountain-triplets-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3183,find-the-k-or-of-an-array,True,True,feedback_pass_final_pass,solved,solved,accepted,,,100
+3184,maximum-balanced-subsequence-sum,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+3188,find-champion-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3190,minimum-operations-to-maximize-last-elements-in-arrays,False,False,feedback_fail_final_fail,unknown,unknown,runtime_error,-4,Runtime Error,1
+3192,maximum-xor-product,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+3193,maximum-strong-pair-xor-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3194,find-words-containing-character,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3195,separate-black-and-white-balls,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3196,apply-operations-to-maximize-frequency-score,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,5
+3199,distribute-candies-among-children-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3200,number-of-strings-which-can-be-rearranged-to-contain-substring,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,"Error during testing: unmatched ']' (<string>, line 46)",1
+3203,palindrome-rearrangement-queries,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,10
+3206,find-common-elements-between-two-arrays,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3207,make-three-strings-equal,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3209,minimum-number-of-coins-for-fruits,True,True,feedback_pass_final_pass,solved,solved,accepted,,,100
+3210,count-beautiful-substrings-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3211,find-maximum-non-decreasing-array-length,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,10
+3212,count-the-number-of-good-partitions,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3213,count-subarrays-where-max-element-appears-at-least-k-times,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3219,make-lexicographically-smallest-array-by-swapping-elements,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,5
+3220,count-tested-devices-after-test-operations,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3221,find-the-peaks,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3223,count-complete-substrings,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3224,count-the-number-of-infection-sequences,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3225,length-of-longest-subarray-with-at-most-k-frequency,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3226,minimum-number-game,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3227,find-missing-and-repeated-values,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3228,maximum-size-of-a-set-after-removals,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,8
+3229,minimum-cost-to-make-array-equalindromic,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3230,remove-adjacent-almost-equal-characters,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3231,minimum-number-of-coins-to-be-added,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3233,maximize-the-number-of-partitions-after-operations,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3234,double-modular-exponentiation,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3235,minimum-cost-to-convert-string-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+3236,smallest-missing-integer-greater-than-sequential-prefix-sum,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3239,minimum-number-of-operations-to-make-x-and-y-equal,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3240,maximum-number-that-sum-of-the-prices-is-less-than-or-equal-to-k,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+3242,count-elements-with-maximum-frequency,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3243,count-the-number-of-powerful-integers,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3244,minimize-length-of-array-using-operations,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3245,find-beautiful-indices-in-the-given-array-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3246,check-if-bitwise-or-has-trailing-zeros,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3249,minimum-number-of-operations-to-make-array-xor-equal-to-k,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3251,maximum-area-of-longest-diagonal-rectangle,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3252,count-the-number-of-incremovable-subarrays-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3261,minimize-or-of-remaining-elements-using-operations,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,3
+3262,find-polygon-with-the-largest-perimeter,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3263,divide-an-array-into-subarrays-with-minimum-cost-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3264,maximum-points-after-enemy-battles,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,3
+3265,maximum-good-subarray-sum,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3267,find-longest-special-substring-that-occurs-thrice-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3269,number-of-subarrays-that-match-a-pattern-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3279,alice-and-bob-playing-flower-game,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3291,find-if-array-can-be-sorted,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,10
+3292,earliest-second-to-mark-indices-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3297,minimum-time-to-revert-word-to-initial-state-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3298,maximize-consecutive-elements-in-an-array-after-modification,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,3
+3299,find-the-maximum-number-of-elements-in-subset,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,5
+3306,mark-elements-on-array-by-performing-queries,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3308,apply-operations-to-make-string-empty,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3309,count-prefix-and-suffix-pairs-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3311,ant-on-the-boundary,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3312,number-of-changing-keys,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3313,maximum-strength-of-k-disjoint-subarrays,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3316,find-the-sum-of-subsequence-powers,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3317,maximum-palindromes-after-operations,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3320,maximum-number-of-operations-with-the-same-score-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3324,split-the-array,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3327,minimum-moves-to-pick-k-ones,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3328,apply-operations-to-make-sum-of-array-greater-than-or-equal-to-k,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3329,find-the-length-of-the-longest-common-prefix,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+3331,minimum-operations-to-exceed-threshold-value-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3334,apple-redistribution-into-boxes,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3337,count-substrings-starting-and-ending-with-given-character,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3344,minimize-manhattan-distances,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3345,find-the-sum-of-the-power-of-all-subsequences,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3346,lexicographically-smallest-string-after-operations-with-constraint,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3347,distribute-elements-into-two-arrays-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+3349,maximum-length-substring-with-two-occurrences,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3351,maximize-happiness-of-selected-children,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3353,existence-of-a-substring-in-a-string-and-its-reverse,True,True,feedback_pass_final_pass,solved,solved,accepted,,,11
+3354,replace-question-marks-in-string-to-minimize-its-value,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3355,minimum-levels-to-gain-more-points,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3356,shortest-uncommon-substring-in-an-array,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3360,minimum-deletions-to-make-string-k-special,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3361,latest-time-you-can-obtain-after-replacing-characters,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong Answer,2
+3362,find-the-median-of-the-uniqueness-array,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3363,most-frequent-ids,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3364,minimum-sum-of-values-by-dividing-array,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3367,find-the-sum-of-encrypted-integers,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3371,harshad-number,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,8
+3372,longest-strictly-increasing-or-strictly-decreasing-subarray,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong Answer,13
+3373,maximum-prime-difference,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+3374,count-alternating-subarrays,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3375,kth-smallest-amount-with-single-denomination-combination,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong Answer,1
+3376,longest-common-suffix-queries,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3379,score-of-a-string,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3381,shortest-subarray-with-or-at-least-k-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3382,find-the-number-of-subarrays-where-boundary-elements-are-maximum,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3383,taking-maximum-energy-from-the-mystic-dungeon,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,6
+3384,minimum-number-of-operations-to-make-word-k-periodic,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3387,minimum-operations-to-make-median-of-array-equal-to-k,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3388,right-triangles,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3394,minimum-array-end,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3395,minimum-length-of-anagram-concatenation,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3396,valid-word,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,3
+3397,find-the-integer-added-to-array-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3398,make-a-square-with-the-same-color,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3402,minimum-cost-to-equalize-array,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3403,minimum-substring-partition-of-equal-character-frequency,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3406,find-all-possible-stable-binary-arrays-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+3408,count-the-number-of-special-characters-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3411,find-products-of-elements-of-big-array,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+3412,permutation-difference-between-two-strings,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3413,find-the-first-player-to-win-k-games-in-a-row,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,3
+3414,find-number-of-ways-to-reach-the-k-th-stair,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+3416,sum-of-digit-differences-of-all-pairs,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3420,find-occurrences-of-an-element-in-an-array,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3421,count-pairs-that-form-a-complete-day-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,35
+3422,find-the-n-th-value-after-k-seconds,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3423,maximum-sum-of-subsequence-with-non-adjacent-elements,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3426,minimum-number-of-chairs-in-a-waiting-room,True,True,feedback_pass_final_pass,solved,solved,accepted,,,35
+3428,find-the-xor-of-numbers-which-appear-twice,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3429,special-array-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3430,count-days-without-meetings,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3436,find-subarray-with-bitwise-or-closest-to-k,True,True,feedback_pass_final_pass,solved,solved,accepted,,,26
+3437,maximum-total-damage-with-spell-casting,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3438,peaks-in-array,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+3439,find-minimum-diameter-after-merging-two-trees,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3442,maximum-total-reward-using-operations-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3446,find-the-number-of-good-pairs-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3447,clear-digits,True,True,feedback_pass_final_pass,solved,solved,accepted,,,35
+3450,find-the-child-who-has-the-ball-after-k-seconds,True,True,feedback_pass_final_pass,solved,solved,accepted,,,35
+3451,string-compression-iii,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+3453,generate-binary-strings-without-adjacent-zeros,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3454,minimum-operations-to-make-array-equal-to-target,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3455,minimum-length-of-string-after-operations,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3456,find-the-maximum-length-of-a-good-subsequence-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3460,count-the-number-of-inversions,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3461,find-the-minimum-area-to-cover-all-ones-i,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong Answer,1
+3462,vowels-game-in-a-string,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,10
+3463,alternating-groups-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,35
+3464,maximize-total-cost-of-alternating-subarrays,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3466,number-of-subarrays-with-and-value-of-k,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3468,find-the-encrypted-string,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3469,maximum-height-of-a-triangle,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong Answer,2
+3471,minimum-average-of-smallest-and-largest-elements,True,True,feedback_pass_final_pass,solved,solved,accepted,,,35
+3475,minimum-operations-to-make-binary-array-elements-equal-to-one-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,35
+3476,find-minimum-operations-to-make-all-elements-divisible-by-three,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,3
+3478,check-if-the-rectangle-corner-is-reachable,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,3
+3479,count-the-number-of-substrings-with-dominant-ones,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3482,construct-string-with-minimum-cost,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3484,lexicographically-smallest-string-after-a-swap,True,True,feedback_pass_final_pass,solved,solved,accepted,,,35
+3485,maximize-score-of-numbers-in-ranges,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3487,find-maximum-removals-from-source-string,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3490,find-the-maximum-length-of-valid-subsequence-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3492,count-submatrices-with-equal-frequency-of-x-and-y,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3493,maximum-number-of-operations-to-move-ones-to-the-end,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong Answer,1
+3494,minimum-cost-for-cutting-cake-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3495,k-th-nearest-obstacle-queries,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3496,minimum-number-of-seconds-to-make-mountain-height-zero,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3498,minimum-array-changes-to-make-differences-equal,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3502,count-substrings-with-k-frequency-characters-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,3
+3507,find-the-count-of-numbers-which-are-not-special,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3508,number-of-bit-changes-to-make-two-integers-equal,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,5
+3510,maximize-the-total-height-of-unique-towers,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong Answer,1
+3511,find-the-winning-player-in-coin-game,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,3
+3515,find-if-digit-game-can-be-won,True,True,feedback_pass_final_pass,solved,solved,accepted,,,35
+3517,shortest-distance-after-road-addition-queries-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,3
+3518,maximum-multiplication-score,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3519,find-the-number-of-winning-players,True,True,feedback_pass_final_pass,solved,solved,accepted,,,35
+3522,find-the-power-of-k-size-subarrays-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+3525,maximum-energy-boost-from-two-drinks,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+3526,minimum-number-of-flips-to-make-binary-grid-palindromic-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,35
+3527,alternating-groups-iii,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,2
+3528,reach-end-of-array-with-max-score,False,False,feedback_fail_final_fail,unknown,unknown,runtime_error,-4,Runtime Error,2
+3531,minimum-amount-of-damage-dealt-to-bob,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3532,time-taken-to-mark-all-nodes,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3533,snake-in-matrix,True,True,feedback_pass_final_pass,solved,solved,accepted,,,35
+3534,count-almost-equal-pairs-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,9
+3535,find-the-count-of-monotonic-pairs-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+3540,hash-divided-string,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+3541,report-spam-message,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+3543,count-substrings-that-satisfy-k-constraint-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+3548,find-the-count-of-good-integers,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3550,maximum-value-sum-by-placing-three-rooks-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3551,maximum-xor-score-subarray-queries,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+3552,find-the-largest-palindrome-divisible-by-k,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,3
+3553,check-if-two-chessboard-squares-have-the-same-color,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+3555,final-array-state-after-k-multiplication-operations-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3558,find-a-safe-walk-through-a-grid,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong Answer,2
+3559,minimum-number-of-valid-strings-to-form-target-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+3560,maximum-number-of-moves-to-kill-all-pawns,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+3562,maximum-score-of-non-overlapping-intervals,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+3563,select-cells-in-grid-with-maximum-score,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,12
+3566,find-the-sequence-of-strings-appeared-on-the-screen,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3567,convert-date-to-binary,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+3568,find-the-key-of-the-numbers,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+3570,count-of-substrings-containing-every-vowel-and-k-consonants-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+3571,length-of-the-longest-increasing-path,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3573,count-substrings-that-can-be-rearranged-to-contain-a-string-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3575,find-the-maximum-sequence-value-of-array,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+3579,maximum-possible-number-by-binary-concatenation,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3580,find-the-occurrence-of-first-almost-equal-substring,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+3583,sorted-gcd-pair-queries,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3584,find-the-lexicographically-smallest-valid-sequence,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,6
+3587,maximum-points-tourist-can-earn,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3588,count-the-number-of-winning-sequences,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3591,shift-distance-between-two-strings,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+3593,find-the-maximum-factor-score-of-array,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3594,identify-the-largest-outlier-in-an-array,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+3600,find-the-k-th-character-in-string-game-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3603,check-if-dfs-strings-are-palindromes,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3604,find-the-number-of-possible-ways-for-an-event,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3605,construct-the-minimum-bitwise-array-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3606,minimum-element-after-replacement-with-digit-sum,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+3607,minimum-division-operations-to-make-array-non-decreasing,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3608,find-the-number-of-subsequences-with-equal-gcd,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+3610,find-x-sum-of-all-k-long-subarrays-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+3612,adjacent-increasing-subarrays-detection-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+3613,maximize-amount-after-two-days-of-conversions,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3616,make-array-elements-equal-to-zero,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+3617,find-the-original-typed-string-i,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong Answer,1
+3620,maximum-number-of-distinct-elements-after-operations,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,7
+3621,minimum-operations-to-make-array-values-equal-to-k,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3622,maximum-frequency-of-an-element-after-performing-operations-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,3
+3625,stone-removal-game,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3626,smallest-divisible-digit-product-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3627,find-minimum-time-to-reach-last-room-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3629,total-characters-in-string-after-transformations-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,3
+3631,count-k-reducible-numbers-less-than-n,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,9
+3632,button-with-longest-push-time,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3634,find-mirror-score-of-a-string,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3636,check-balanced-string,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3637,count-number-of-balanced-permutations,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3638,minimum-operations-to-make-character-frequencies-equal,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3639,zero-array-transformation-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3644,minimum-positive-sum-subarray,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3646,sum-of-good-subsequences,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3647,zero-array-transformation-iii,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3648,find-the-maximum-number-of-fruits-collected,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3649,minimum-time-to-break-locks-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3651,transformed-array,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3653,maximum-subarray-sum-with-length-divisible-by-k,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,7
+3654,minimum-array-sum,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+3655,digit-operations-to-make-two-integers-equal,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong Answer,1
+3656,minimum-number-of-operations-to-make-elements-in-array-distinct,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3657,check-if-grid-can-be-cut-into-sections,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3658,minimize-the-maximum-adjacent-element-difference,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3659,count-paths-with-the-given-xor-value,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+3674,count-non-decreasing-subarrays-after-k-operations,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+3675,maximize-sum-of-weights-after-edge-removals,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3676,smallest-number-with-all-set-bits,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3677,maximum-amount-of-money-robot-can-earn,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3680,count-connected-components-in-lcm-graph,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,4
+3681,maximum-area-rectangle-with-point-constraints-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,16
+3682,count-the-number-of-arrays-with-k-matching-adjacent-elements,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,3
+3683,find-the-lexicographically-largest-string-from-the-box-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3684,substring-matching-pattern,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,15
+3685,count-subarrays-of-length-three-with-a-condition,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3686,count-beautiful-splits-in-an-array,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3687,longest-special-path,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,2
+3688,maximize-subarray-sum-after-removing-all-occurrences-of-one-element,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+3690,smallest-substring-with-identical-characters-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+3692,shortest-matching-substring,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3696,count-substrings-divisible-by-last-digit,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,2
+3697,minimum-increments-for-target-multiples-in-an-array,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3699,count-special-subsequences,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,2
+3700,subsequences-with-a-unique-middle-mode-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3701,minimum-cost-good-caption,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3702,maximum-subarray-with-equal-products,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3704,count-partitions-with-even-sum-difference,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3705,find-the-largest-almost-missing-integer,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+3708,zigzag-grid-traversal-with-skip,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3709,find-special-substring-of-length-k,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3714,maximum-and-minimum-sums-of-at-most-size-k-subsequences,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3715,maximum-coins-from-k-consecutive-bags,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3716,longest-subsequence-with-decreasing-adjacent-difference,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3717,minimum-operations-to-make-elements-within-k-subarrays-equal,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3720,minimize-the-maximum-edge-weight-of-graph,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,3
+3721,count-mentions-per-user,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3722,sum-of-k-subarrays-with-length-at-least-m,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+3723,sum-of-good-numbers,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3725,maximum-and-minimum-sums-of-at-most-size-k-subarrays,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,8
+3731,sum-of-variable-length-subarrays,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3733,length-of-longest-v-shaped-diagonal-segment,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3736,find-valid-pair-of-adjacent-digits-in-string,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3737,paint-house-iv,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+3739,manhattan-distances-of-all-arrangements-of-pieces,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3743,reschedule-meetings-for-maximum-free-time-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3744,minimum-operations-to-make-array-elements-zero,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+3747,maximum-difference-between-adjacent-elements-in-a-circular-array,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3748,sort-matrix-by-diagonals,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,4
+3750,closest-equal-element-queries,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+3751,maximum-frequency-after-subarray-operation,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3753,maximum-difference-between-even-and-odd-frequency-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3754,maximum-manhattan-distance-after-k-changes,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3759,choose-k-elements-with-maximum-sum,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3760,assign-elements-to-groups-with-constraints,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong Answer,2
+3762,maximize-the-minimum-game-score,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+3763,separate-squares-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+3764,maximum-sum-with-at-most-k-elements,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,5
+3765,minimum-cost-to-divide-array-into-subarrays,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3768,check-if-digits-are-equal-in-string-after-operations-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3770,lexicographically-smallest-generated-string,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3771,select-k-disjoint-special-substrings,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+3773,minimum-pair-removal-to-sort-array-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,4
+3776,find-minimum-cost-to-remove-array-elements,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+3777,maximum-product-of-subsequences-with-an-alternating-sum-equal-to-k,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+3778,transform-array-by-parity,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3779,eat-pizzas,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3781,maximize-the-distance-between-points-on-a-square,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3783,permutations-iv,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+3784,longest-common-prefix-of-k-strings-after-removal,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3785,find-the-number-of-copy-arrays,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+3786,longest-palindromic-subsequence-after-at-most-k-operations,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3788,maximum-unique-subarray-sum-after-deletion,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3789,maximize-subarrays-after-removing-one-conflicting-pair,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3791,fruits-into-baskets-iii,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,3
+3793,longest-palindrome-after-substring-concatenation-i,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+3794,find-the-minimum-amount-of-time-to-brew-potions,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+3795,zero-array-transformation-iv,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong Answer,3
+3799,unique-3-digit-even-numbers,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3801,count-beautiful-numbers,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+3805,maximize-active-section-with-trade-i,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,2
+3809,properties-graph,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+3811,reverse-degree-of-a-string,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3817,maximum-containers-on-a-ship,True,True,feedback_pass_final_pass,solved,solved,accepted,,,31
+3832,minimum-cost-to-reach-every-position,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong Answer,1
+abc301_a,Overall Winner,False,False,feedback_fail_final_fail,implementation_induced,implementation_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: A != T,4
+abc301_b,Fill the Gaps,True,True,feedback_pass_final_pass,solved,solved,accepted,,,8
+abc301_c,AtCoder Cards,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: No != Yes,2
+abc301_d,Bitmask,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1 != 5,4
+abc301_e,Pac,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 1,2
+abc301_f,Anti,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 6854640 != 7294040,1
+abc302_a,Attack,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc302_b,Find snuke,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc302_c,Almost Equal,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc302_d,Impartial Gift,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 3 != 4,1
+abc302_e,Isolation,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=193: 299955 != 299956,1
+abc302_f,Merge Set,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 600 != 599,2
+abc303_a,Similar String,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc303_b,Discord,True,True,feedback_pass_final_pass,solved,solved,accepted,,,11
+abc303_c,Dash,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc303_d,Shift vs. CapsLock,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1000000003 != 3,4
+abc303_e,A Gift From the Stars,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 0 199998 != 199999,1
+abc304_a,First Player,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=1: xuuksvt != dnbp,3
+abc304_b,Subscribers,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc304_c,Virus,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=1: No != Yes,2
+abc304_d,A Piece of Cake,False,False,feedback_fail_final_fail,unknown,unknown,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc304_e,Good Graph,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,2
+abc305_a,Water Station,True,True,feedback_pass_final_pass,solved,solved,accepted,,,7
+abc305_b,ABCDEFG,True,True,feedback_pass_final_pass,solved,solved,accepted,,,11
+abc305_c,Snuke the Cookie Picker,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1 1 != 2 2,1
+abc305_d,Sleep Log,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 4909080 != 4916279,1
+abc305_e,Art Gallery on Graph,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=1: 31585 98669 105896 != 31586 98670 105897,1
+abc306_a,Echo,True,True,feedback_pass_final_pass,solved,solved,accepted,,,6
+abc306_b,Base 2,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 15357551735529472910 != 8196788687340504235,2
+abc306_c,Centers,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc306_d,Poisonous Full,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 2 != 1,1
+abc306_e,Best Performances,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=21: 6 != 7,2
+abc307_a,Weekly Records,True,True,feedback_pass_final_pass,solved,solved,accepted,,,8
+abc307_b,racecar,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc307_c,Ideal Sheet,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc307_d,Mismatched Parentheses,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0:  != (,1
+abc307_e,Distinct Adjacent,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,3
+abc308_a,New Scheme,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc308_b,Default Price,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc308_c,Standings,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1918 11597 17853 18435 27510 36081 39935 42885 44371 48618 49897 55068 55427 56879 68785 69471 79102 80279 92312 93070 100655 103804 112188 120056 121...(truncated) ...964 132010 134807 135664 137623 141914 143965 145802 146453 149774 158587 161039 172832 177924 178434 180944 189482 190921 192337 192719 193712 194924 != 48618 36081 55427 103804 166739 27510 144677 120056 17853 18435 1918 131511 69471 80279 112188 93070 55068 68785 121207 56879 42885 44371 49897 79102 ...(truncated) ...4 145802 135664 50498 18173 95742 192337 68098 4351 194924 109710 146453 158587 2349 97210 190921 27285 112090 189482 132010 92941 177924 141914 68054,8
+abc308_d,Snuke Maze,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: No != Yes,1
+abc308_e,MEX,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc308_f,Vouchers,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,2
+abc309_a,Nine,True,True,feedback_pass_final_pass,solved,solved,accepted,,,10
+abc309_b,Rotate,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 110 != 11,1
+abc309_c,Medicine,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: -1 != 310,2
+abc309_d,Add One Edge,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 1,1
+abc309_e,Family and Insurance,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc310_a,Order Something Else,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc310_b,Strictly Superior,False,False,feedback_fail_final_fail,unknown,unknown,runtime_error,-4,Runtime Error,1
+abc310_c,Reversible,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc310_d,Peaceful Teams,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 6 != 1,1
+abc310_e,NAND repeatedly,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1 != 0,1
+abc310_f,Make 10 Again,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 299473306,3
+abc311_a,First ABC,True,True,feedback_pass_final_pass,solved,solved,accepted,,,10
+abc311_b,Vacation Together,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 2 != 3,1
+abc311_c,Find it!,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=1: 1 1 != 1 2,1
+abc311_d,Grid Ice Floor,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 206 != 102,4
+abc311_e,Defect,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,2
+abc312_a,Chord,True,True,feedback_pass_final_pass,solved,solved,accepted,,,11
+abc312_b,TaK Code,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer: mismatched output length,1
+abc312_c,Invisible Hand,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc312_d,Count Bracket Sequences,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1 != 0,1
+abc312_e,Tangency of Cuboids,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1 != 6,2
+abc312_f,Cans and Openers,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 36218263566310 != 54663541418029,1
+abc313_a,To Be Saikyo,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc313_b,Who is Saikyo?,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 2 != 1,3
+abc313_c,Approximate Equalization 2,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 24462000458013 != 21470052535619,6
+abc314_a,3.14,True,True,feedback_pass_final_pass,solved,solved,accepted,,,5
+abc314_b,Roulette,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc314_c,Rotate Colored Subsequence,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: rxzukmofmjqjycxuljixkewrpsrppzixhmvsxeaqltqajmvzrbotyyfapdplkuaftwcmgnuxecfouxavxekvfwzpvvrnbkfpcvocnlkoagpcqpjoxxdyzyvhtvsbnugwpxbttzhsqdikltscbfhacs...(truncated) ...prncowuapcmkhvpllgoprymhgyfjsverkhredqzsmxtcnfshjqvbdfiwatvmrmpqglgkoltabsaqroodipiyjijfyiosxplhdwvyqacrbcbzrayuaahjcmpoglokcxpckxeonhlfrearhefpgtlehj != dswgdeohbtyqxjevcztyoqyauzcdtdfktlzomdqtykynzgvdxyyymnfyfossqxjmwjjqhhilwlyeeryjvzrzwfnypwoqojcgjlkkiqcpangmetnibuagvdptoolisggtskhvrocqruppjiyjiezmbv...(truncated) ...jqkddymzfgxsiylnjovvghvfokuhkdsqwozxtyerlnracbhmxfsvlehsrigfrbkknfsiavgqejfauafrsmwhiauhrnahkngxxephoiydrjgwouumjgzmqxryavoudusyzieztfwzkegmkhlvpqyfre,2
+abc314_d,LOWER,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc314_e,Roulettes,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc314_f,A Certain Game,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 249561088 0 != 499122177 499122177,1
+abc315_a,tcdr,True,True,feedback_pass_final_pass,solved,solved,accepted,,,9
+abc315_b,The Middle Day,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc315_c,Flavors,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,6
+abc315_d,Magical Cookies,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc315_e,Prerequisites,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: Error during topological sort: '<' not supported between instances of 'list' and 'int' != 572 384 483 58 414 596 25 99 431 604 538 179 516 118 36 405 204 403 585 73 387 589 172 232 575 358 564 438 541 319 556 346 154 352 312 567 66 309 202 ...(truncated) ... 603 613 77 412 120 548 115 399 339 116 80 566 432 485 448 333 308 406 479 286 579 221 195 164 97 287 28 254 452 336 513 104 525 17 329 577 60 349 409,1
+abc315_f,Shortcuts,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 14142.13562373095 != 14142.13562373095048840810,2
+abc318_a,Full Moon,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc318_b,Overlapping sheets,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc318_c,Blue Spring,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 10 != 100,3
+abc318_d,General Weighted Max Matching,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 3,1
+abc318_e,Sandwiches,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 1,1
+abc319_b,Measure,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc319_c,False Hope,False,False,feedback_fail_final_fail,unknown,unknown,runtime_error,-4,Runtime Error,1
+abc319_d,Minimum Width,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 16232690184948 != 2029433359100,1
+abc319_e,Bus Stops,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc320_a,Leyland Number,True,True,feedback_pass_final_pass,solved,solved,accepted,,,6
+abc320_b,Longest Palindrome,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc320_c,Slot Strategy 2 (Easy),False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 2,1
+abc320_d,Relative Position,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=1: undecidable != 0 0,2
+abc320_e,Somen Nagashi,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 781589221 != 957021323,1
+abc321_a,321,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc321_b,Cutoff,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1 != -1,2
+abc321_c,321,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,9
+abc321_d,Set Menu,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 22688550230915132 != 25527969701142671,3
+abc321_e,Complete Binary Tree,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=2: 0 != 1,1
+abc322_a,First ABC 2,True,True,feedback_pass_final_pass,solved,solved,accepted,,,8
+abc322_b,Prefix and Suffix,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc322_c,Festival,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc322_d,Polyomino,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: No != Yes,9
+abc322_e,Product Development,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: -1 != 340994867,5
+abc323_a,Weak Beats,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc323_b,Round,True,True,feedback_pass_final_pass,solved,solved,accepted,,,10
+abc323_c,World Tour Finals,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 17 != 13,1
+abc323_d,Merge Slimes,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 268435457 != 1,1
+abc323_e,Playlist,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 796898468 != 757546781,1
+abc324_a,Same,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc324_b,3,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc324_c,Error Correction,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc324_d,Square Permutation,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 1,2
+abc324_e,Joint Two Strings,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 41 != 48,3
+abc324_f,Beautiful Path,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0.0000000000 != 0.9999000000000000,1
+abc325_a,Takahashi san,True,True,feedback_pass_final_pass,solved,solved,accepted,,,9
+abc325_b,World Meeting,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 74 != 104,2
+abc325_c,Sensors,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc325_d,Printing Machine,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1 != 4,1
+abc325_e,"Our clients, please wait a moment",False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 450155887975 != 450156378270,2
+abc325_f,Sensor Optimization Dilemma,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,2
+abc326_a,2UP3DOWN,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: No != Yes,9
+abc326_b,326,True,True,feedback_pass_final_pass,solved,solved,accepted,,,11
+abc326_c,Peak,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc326_d,ABC Puzzle,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer: mismatched output length,9
+abc326_e,"Revenge of ""The Salary of AtCoder Inc.""",False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 998244352,2
+abc327_a,ab,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc327_b,A^A,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc327_c,Number Place,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc327_d,Good Tuple Problem,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: Yes != No,1
+abc327_e,Maximize Rating,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: -96.60229882499897 != -96.602298824998911,3
+abc328_a,Not Too Hard,True,True,feedback_pass_final_pass,solved,solved,accepted,,,10
+abc328_b,11/11,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1 != 2,2
+abc328_c,Consecutive,False,False,feedback_fail_final_fail,implementation_induced,implementation_induced,time_limit_exceeded,-3,Time Limit Exceeded,2
+abc328_d,Take ABC,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: ACBBBBCBAABABABABBABBCBCBACACCBBACBBAACACCBAAACCCCACBCBBABABAACAACBBCCCCBBAACBBACCBACBCBAABACBCBABBCACCACBBABBCCCAABABBCBCCBCCBCCBACBABBBBBACABAABACAB...(truncated) ...AAAAACBBCABBCBABACCBCCBBCACCCCAACBACACBBABAACCCBBBAACCBBCAAAABBCCBBABBAACACBCBBCBBBCBCCBCBCBBBBCBBBAAAACCAACABBBAACCCBCAABBBBCAACBCCBAABACBBABAACBCBAC != ACBBBBCBAABABABABBABBCBCBACACCBBACBBAACACCBAAACCCCACBCBBABABAACAACBBCCCCBBAACBBACCBACBCBAABACBCBABBCACCACBBABBCCCAABABBCBCCBCCBCCBACBABBBBBACABAABACAB...(truncated) ...AAAAACBBCABBCBABACCBCCBBCACCCCAACBACACBBABAACCCBBBAACCBBCAAAABBCCBBABBAACACBCBBCBBBCBCCBCBCBBBBCBBBAAAACCAACABBBAACCCBCAABBBBCAACBCCBAABACBBABAACBCBAC,5
+abc328_e,Modulo MST,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 135033302319808 != 35585030949467,8
+abc329_a,Spread,True,True,feedback_pass_final_pass,solved,solved,accepted,,,6
+abc329_b,Next,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc329_c,Count xxx,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 59954051 != 15485,1
+abc329_d,Election Quick Report,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc329_e,Stamp,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: Yes != No,1
+abc329_f,Colored Ball,False,False,feedback_fail_final_fail,unknown,unknown,time_limit_exceeded,-3,Time Limit Exceeded,7
+abc330_a,Counting Passes,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc330_b,Minimize Abs 1,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc330_c,Minimize Abs 2,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: inf != 1,3
+abc330_d,Counting Ls,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc330_e,Mex and Update,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1 != 11,4
+abc331_a,Tomorrow,True,True,feedback_pass_final_pass,solved,solved,accepted,,,8
+abc331_b,Buy One Carton of Milk,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 3 != 2,1
+abc331_c,Sum of Numbers Greater Than Me,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: -1 != 0,1
+abc331_d,Tile Pattern,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc331_e,Set Meal,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 199598 != 168329,1
+abc332_a,Online Shopping,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc332_b,Glass and Mug,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc332_c,T,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 1,2
+abc332_d,Swapping Puzzle,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: -1 != 1,1
+abc333_a,Three Threes,True,True,feedback_pass_final_pass,solved,solved,accepted,,,7
+abc333_b,Pentagon,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc333_c,Repunit Trio,True,False,feedback_pass_final_fail,solved,unknown,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc333_d,Erase Leaves,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 14 != 3984,3
+abc333_e,Takahashi Quest,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1 != 0,2
+abc334_a,Christmas Present,True,True,feedback_pass_final_pass,solved,solved,accepted,,,10
+abc334_b,Christmas Trees,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc334_c,Socks 2,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 100000 != 0,1
+abc334_d,Reindeer and Sleigh,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc334_e,Christmas Color Grid 1,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc335_a,202<s>3</s>,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc335_b,Tetrahedral Number,True,True,feedback_pass_final_pass,solved,solved,accepted,,,11
+abc335_c,Loong Tracking,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,2
+abc335_d,Loong and Takahashi,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 7 8 9 != 1 2 3,1
+abc336_a,Long Loong,True,True,feedback_pass_final_pass,solved,solved,accepted,,,8
+abc336_b,CTZ,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc336_c,Even Digits,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 2222222222 != 8844,2
+abc336_d,Pyramid,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 100000 != 1,1
+abc337_a,Scoreboard,True,True,feedback_pass_final_pass,solved,solved,accepted,,,10
+abc337_b,Extended ABC,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc337_c,Lining Up 2,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 2 0 != 1 2,2
+abc337_d,Cheating Gomoku Narabe,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 1,2
+abc337_e,Bad Juice,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer: mismatched output length,1
+abc338_a,Capitalized?,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc338_b,Frequency,True,True,feedback_pass_final_pass,solved,solved,accepted,,,8
+abc338_c,Leftover Recipes,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 142857 != 166666,2
+abc338_d,Island Tour,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc338_e,Chords,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: Yes != No,3
+abc338_f,Negative Traveling Salesman,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: No != 0,1
+abc339_a,TLD,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: rjvctjxgbauhyg.xkfvu != xkfvu,1
+abc339_b,Langton's Takahashi,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc339_c,Perfect Bus,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 241687546858 != 0,2
+abc339_d,Synchronized Players,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: -1 != 36,1
+abc340_a,Arithmetic Progression,True,True,feedback_pass_final_pass,solved,solved,accepted,,,10
+abc340_b,Append,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc340_c,Divide and Divide,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 2477973963474149 != 62175523236641976,2
+abc340_d,Super Takahashi Bros.,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1073741941 != 99,2
+abc340_e,Mancala 2,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc341_a,Print 341,True,True,feedback_pass_final_pass,solved,solved,accepted,,,9
+abc341_b,Foreign Exchange,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc341_c,Takahashi Gets Lost,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,7
+abc341_d,Only one of two,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc341_e,Alternating String,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: No != Yes,1
+abc341_f,Breakdown,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc342_a,Yay!,True,True,feedback_pass_final_pass,solved,solved,accepted,,,10
+abc342_b,Which is ahead?,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc342_c,Many Replacement,False,False,feedback_fail_final_fail,implementation_induced,implementation_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: lpq != iii,3
+abc342_d,Square Pair,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,4
+abc342_e,Last Train,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc343_a,Wrong Answer,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 2,1
+abc343_b,Adjacency Matrix,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc343_c,343,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 8 != 343,5
+abc343_d,Diversity of Scores,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1 != 2,1
+abc343_e,7x7x7,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer: mismatched output length,6
+abc344_a,Spoiler,True,True,feedback_pass_final_pass,solved,solved,accepted,,,11
+abc344_b,Delimiter,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 186303556 != 0,1
+abc344_c,A+B+C,True,True,feedback_pass_final_pass,solved,solved,accepted,,,20
+abc344_d,String Bags,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+abc344_e,Insert or Erase,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc345_b,Integer Division Returns,True,True,feedback_pass_final_pass,solved,solved,accepted,,,17
+abc345_d,Tiling,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: No != Yes,7
+abc346_a,Adjacent Product,True,True,feedback_pass_final_pass,solved,solved,accepted,,,9
+abc346_b,Piano,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: No != Yes,2
+abc346_c,Σ,True,True,feedback_pass_final_pass,solved,solved,accepted,,,19
+abc346_d,Gomamayo Sequence,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 46219594502261,1
+abc346_e,Paint,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer: mismatched output length,1
+abc347_a,Divisible,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc347_b,Substring,True,True,feedback_pass_final_pass,solved,solved,accepted,,,10
+abc347_c,Ideal Holidays,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: No != Yes,1
+abc347_e,Set Add Query,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc348_a,Penalty Kick,True,True,feedback_pass_final_pass,solved,solved,accepted,,,13
+abc348_b,Farthest Point,True,True,feedback_pass_final_pass,solved,solved,accepted,,,20
+abc348_c,Colorful Beans,True,True,feedback_pass_final_pass,solved,solved,accepted,,,20
+abc348_d,Medicines on Grid,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: No != Yes,2
+abc348_e,Minimize Sum of Distances,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 39385510374104 != 50038533037277,1
+abc349_a,Zero Sum Game,True,True,feedback_pass_final_pass,solved,solved,accepted,,,7
+abc349_b,Commencement,True,True,feedback_pass_final_pass,solved,solved,accepted,,,14
+abc349_c,Airport Code,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: No != Yes,2
+abc349_d,Divide Interval,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer: mismatched output length,1
+abc349_e,Weighted Tic,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: Draw != Aoki,1
+abc350_a,Past ABCs,False,True,feedback_fail_final_pass,spec_induced,solved,accepted,,,7
+abc350_b,Dentist Aoki,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 200,1
+abc350_c,Sort,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer: mismatched output length,1
+abc350_d,New Friends,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 6 != 1160010,1
+abc350_e,Toward 0,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 17638645674.0000000000 != 17514316337.980957,1
+abc351_a,The bottom of the ninth,True,True,feedback_pass_final_pass,solved,solved,accepted,,,10
+abc351_b,Spot the Difference,True,True,feedback_pass_final_pass,solved,solved,accepted,,,8
+abc351_c,Merge the balls,False,False,feedback_fail_final_fail,unknown,unknown,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc351_d,Grid and Magnet,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc351_e,Jump Distance Sum,False,False,feedback_fail_final_fail,unknown,unknown,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc351_f,Double Sum,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 19995524931643 != 1331808335929071361,1
+abc352_a,AtCoder Line,True,True,feedback_pass_final_pass,solved,solved,accepted,,,9
+abc352_b,Typing,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc352_c,Standing On The Shoulders,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 65742948214832 != 65794477113374,1
+abc352_d,Permutation Subsequence,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 68575 != 80262,1
+abc352_e,Clique Connect,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: -1 != 133778047066920,2
+abc353_a,Buildings,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc353_b,AtCoder Amusement Park,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc353_c,Sigma Problem,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 48222931529393754670080125 != 966409666807717136,1
+abc353_d,Another Sigma Problem,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc353_e,Yet Another Sigma Problem,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc354_a,Exponential Plant,True,True,feedback_pass_final_pass,solved,solved,accepted,,,20
+abc354_b,AtCoder Janken 2,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc354_c,AtCoder Magics,False,True,feedback_fail_final_pass,spec_induced,solved,accepted,,,14
+abc354_d,AtCoder Wallpaper,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc354_e,Remove Pairs,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: Aoki != Takahashi,1
+abc355_a,Who Ate the Cake?,True,True,feedback_pass_final_pass,solved,solved,accepted,,,9
+abc355_b,Piano 2,True,True,feedback_pass_final_pass,solved,solved,accepted,,,17
+abc355_c,Bingo 2,True,True,feedback_pass_final_pass,solved,solved,accepted,,,25
+abc355_d,Intersecting Intervals,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc355_e,Guess the Sum,False,False,feedback_fail_final_fail,unknown,unknown,runtime_error,-4,Runtime Error,1
+abc356_a,Subsegment Reverse,True,True,feedback_pass_final_pass,solved,solved,accepted,,,15
+abc356_b,Nutrients,True,True,feedback_pass_final_pass,solved,solved,accepted,,,20
+abc356_c,Keys,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc356_d,Masked Popcount,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc356_e,Max/Min,False,False,feedback_fail_final_fail,unknown,unknown,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc357_a,Sanitize Hands,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 67 != 64,3
+abc357_b,Uppercase and Lowercase,True,True,feedback_pass_final_pass,solved,solved,accepted,,,10
+abc357_c,Sierpinski carpet,True,True,feedback_pass_final_pass,solved,solved,accepted,,,7
+abc357_d,88888888,True,True,feedback_pass_final_pass,solved,solved,accepted,,,20
+abc357_e,Reachability in Functional Graph,False,False,feedback_fail_final_fail,unknown,unknown,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc358_a,Welcome to AtCoder Land,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: Yes != No,1
+abc358_b,Ticket Counter,True,True,feedback_pass_final_pass,solved,solved,accepted,,,20
+abc358_c,Popcorn,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 4 != 3,1
+abc358_d,Souvenirs,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: -1 != 26028735634650,1
+abc358_e,Alphabet Tiles,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 28 != 117169852,1
+abc359_a,Count Takahashi,True,True,feedback_pass_final_pass,solved,solved,accepted,,,11
+abc359_b,Couples,True,True,feedback_pass_final_pass,solved,solved,accepted,,,10
+abc359_c,Tile Distance 2,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 4730387652004116 != 9460775304008232,1
+abc359_d,Avoid K Palindrome,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 4 != 339998618,1
+abc359_e,Water Tank,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc360_a,A Healthy Breakfast,True,True,feedback_pass_final_pass,solved,solved,accepted,,,4
+abc360_b,Vertical Reading,True,True,feedback_pass_final_pass,solved,solved,accepted,,,20
+abc360_c,Move It,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 4989378480 != 131809825,1
+abc360_d,Ghost Ants,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 89640 != 969275344,1
+abc360_e,Random Swaps of Balls,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 663478509 != 397187210,1
+abc361_a,Insert,True,True,feedback_pass_final_pass,solved,solved,accepted,,,15
+abc361_b,Intersection of Cuboids,True,True,feedback_pass_final_pass,solved,solved,accepted,,,19
+abc361_c,Make Them Narrow,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 50996 != 498116307,2
+abc361_d,Go Stone Puzzle,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 21 != 8,2
+abc361_e,Tree and Hamilton Path 2,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc361_f,x = a^b,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc362_a,Buy a Pen,True,True,feedback_pass_final_pass,solved,solved,accepted,,,13
+abc362_b,Right Triangle,True,True,feedback_pass_final_pass,solved,solved,accepted,,,20
+abc362_c,Sum = 0,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer: mismatched output length,1
+abc362_d,Shortest Path 3,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 359683956 717798796 774140907 629472707 214378784 185689817 953129643 774914882 785770237 762086289 432604910 212273080 183413272 862003241 32257980...(truncated) ...70575832 741277696 1089890135 503492406 471277990 904444416 616446314 901910244 275336440 875064471 701622497 701583047 397675201 275520251 1096517049 != 1069658179 1427773019 1484115130 1339446930 924353007 895664040 1663103866 1484889105 1495744460 1472060512 1142579133 922247303 893387495 1571977464 ...(truncated) ...451251919 1799864358 1213466629 1181252213 1614418639 1326420537 1611884467 985310663 1585038694 1411596720 1411557270 1107649424 985494474 1806491272,1
+abc362_e,Count Arithmetic Subsequences,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 != 80 3160 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0,1
+abc363_a,Piling Up,True,True,feedback_pass_final_pass,solved,solved,accepted,,,12
+abc363_b,Japanese Cursed Doll,True,True,feedback_pass_final_pass,solved,solved,accepted,,,20
+abc363_c,Avoid K Palindrome 2,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 26784 != 186,4
+abc363_d,Palindromic Number,False,False,feedback_fail_final_fail,unknown,unknown,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc363_e,Sinking Land,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,2
+abc363_f,Palindromic Expression,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: -1 != 2*3*5*12*646646*21*5*3*2,1
+abc364_a,Glutton Takahashi,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: No != Yes,3
+abc364_b,Grid Walk,True,True,feedback_pass_final_pass,solved,solved,accepted,,,18
+abc364_c,Minimum Glutton,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 52457 != 7313,2
+abc364_d,K,False,False,feedback_fail_final_fail,implementation_induced,implementation_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc364_e,Maximum Glutton,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc364_f,Range Connect MST,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,2
+abc365_a,Leap Year,True,True,feedback_pass_final_pass,solved,solved,accepted,,,10
+abc365_b,Second Best,True,True,feedback_pass_final_pass,solved,solved,accepted,,,13
+abc365_c,Transportation Expenses,True,True,feedback_pass_final_pass,solved,solved,accepted,,,20
+abc365_d,AtCoder Janken 3,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 66696 != 127125,1
+abc365_e,Xor Sigma Problem,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc366_a,Election 2,True,True,feedback_pass_final_pass,solved,solved,accepted,,,18
+abc366_b,Vertical Writing,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: rmzkfrikyigykehnxmpbkhcqhvzqqvdxlcdissjariqnzenfvkzgzucyujadjqghsczqecxlfjaufyezzhygkxvqtcsqeqcprmfu != ufmrpcqeqsctqvxkgyhzzeyfuajflxceqzcshgqjdajuycuzgzkvfneznqirajssidclxdvqqzvhqchkbpmxnhekygiykirfkzmr,1
+abc366_c,Balls and Bag Query,False,False,feedback_fail_final_fail,unknown,unknown,runtime_error,-4,Runtime Error,1
+abc366_d,Cuboid Sum Query,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc366_e,Manhattan Multifocal Ellipse,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc366_f,Maximum Composition,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 318877550 != 631377550,1
+abc366_g,XOR Neighbors,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer: mismatched output length,1
+abc367_a,Shout Everyday,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: Yes != No,1
+abc367_b,Cut .0,True,True,feedback_pass_final_pass,solved,solved,accepted,,,18
+abc367_c,Enumerate Sequences,True,True,feedback_pass_final_pass,solved,solved,accepted,,,18
+abc367_d,Pedometer,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 3874 != 7778,1
+abc367_e,Permute K times,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 44740 44739 44738 44737 44736 44735 44734 44733 44732 44731 44730 44729 44728 44727 44726 44725 44724 44723 44722 44721 44720 44719 44718 44717 44716 ...(truncated) ...155241 -155242 -155243 -155244 -155245 -155246 -155247 -155248 -155249 -155250 -155251 -155252 -155253 -155254 -155255 -155256 -155257 -155258 -155259 != 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 ...(truncated) ... 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741 44741,1
+abc367_f,Rearrange Query,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc367_g,Sum of (XOR^K or 0),False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc368_a,Cut,True,True,feedback_pass_final_pass,solved,solved,accepted,,,8
+abc368_b,Decrease 2 max elements,True,True,feedback_pass_final_pass,solved,solved,accepted,,,13
+abc368_c,Triple Attack,False,False,feedback_fail_final_fail,unknown,unknown,time_limit_exceeded,-3,Time Limit Exceeded,2
+abc368_d,Minimum Steiner Tree,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: -13359 != 131071,1
+abc368_e,Train Delay,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc368_f,Dividing Game,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: Anna != Bruno,1
+abc368_g,Add and Multiply Queries,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc369_a,369,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1 != 3,1
+abc369_b,Piano 3,True,True,feedback_pass_final_pass,solved,solved,accepted,,,17
+abc369_c,Count Arithmetic Subarrays,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc369_d,Bonus EXP,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 150120680009178 != 157031902958218,1
+abc369_e,Sightseeing Tour,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc369_g,As far as possible,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 99977971818175 != 28970722542,1
+abc370_a,Raise Both Hands,True,True,feedback_pass_final_pass,solved,solved,accepted,,,2
+abc370_b,Binary Alchemy,True,True,feedback_pass_final_pass,solved,solved,accepted,,,13
+abc370_c,Word Ladder,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer: mismatched output length,1
+abc370_d,Cross Explosion,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,2
+abc370_e,Avoid K Partition,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 861346715 != 363054282,1
+abc370_f,Cake Division,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 10000 129361 != 13121 55386,1
+abc370_g,Divisible by 3,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc371_a,Jiro,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,"Error during testing: unterminated string literal (detected at line 195) (<string>, line 195)",1
+abc371_b,Taro,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=1: No != Yes,1
+abc371_c,Make Isomorphic,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc371_d,1D Country,True,True,feedback_pass_final_pass,solved,solved,accepted,,,18
+abc371_e,I Hate Sigma Problems,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc371_f,Takahashi in Narrow Road,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc371_g,Lexicographically Smallest Permutation,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 137963 199696 189445 29230 114403 67567 113230 197900 38755 4988 38569 113824 164622 177537 113980 32221 53007 35946 111105 5665 90113 22572 172911 16...(truncated) ...84758 18234 71120 4600 63066 111589 163848 162009 5681 1122 93086 187204 65797 71717 131690 163238 197629 67358 113116 64627 150544 103281 72823 34454 != 53561 121084 113099 81815 70634 163392 191480 74875 128984 64997 109349 89739 42770 56814 118462 46096 143217 149595 70081 177411 97595 108744 55456 8...(truncated) ... 158363 131224 86946 181835 183095 165208 3228 33556 115275 74828 179657 156236 170530 138415 52335 115320 25170 65665 163377 36462 91646 185773 33733,1
+abc372_a,delete .,True,True,feedback_pass_final_pass,solved,solved,accepted,,,16
+abc372_c,Count ABC Again,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc372_d,Buildings,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 23 3 0 0 0 1 1 0 3 0 0 2 0 1 1 0 1 4 1 1 0 1 0 78 0 1 0 14 0 0 3 1 0 5 0 0 0 0 1 1 0 6 0 3 1 0 0 11 1 6 0 0 1 1 0 2 0 0 1 0 20 2 0 0 0 9 2 0 4 1 0 0...(truncated) ...4 2 0 0 1 0 49 3 1 0 0 2 0 2 0 0 1 1 1 0 12 1 1 1 0 2 0 3 1 0 1 0 2 0 3 1 0 0 9 0 1 0 1 0 2 0 0 1 6 0 0 2 0 0 0 16 0 1 1 0 0 4 0 0 0 1 0 2 0 1 0 2 0 0 != 2 6 8 7 6 5 5 5 4 6 5 4 5 4 4 4 3 3 4 4 4 3 3 2 6 5 5 4 7 6 5 6 6 5 9 8 7 6 5 5 5 4 6 5 6 6 5 4 5 5 8 7 6 6 6 5 6 5 4 4 3 7 8 7 6 5 6 7 6 8 8 7 6 6 5 ...(truncated) ... 2 3 4 3 2 2 1 6 7 7 6 5 6 5 6 5 4 4 4 4 3 5 5 5 5 4 5 4 5 5 4 4 3 4 3 4 4 3 2 6 5 5 4 4 3 4 3 2 2 5 4 3 4 3 2 1 6 5 5 5 4 3 6 5 4 3 3 2 3 2 2 1 2 1 0,1
+abc372_e,K,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=3: -1 != 132486,1
+abc372_f,Teleporting Takahashi 2,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc372_g,Ax + By < C,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc373_a,September,True,True,feedback_pass_final_pass,solved,solved,accepted,,,18
+abc373_b,1D Keyboard,True,True,feedback_pass_final_pass,solved,solved,accepted,,,18
+abc373_c,Max Ai+Bj,True,True,feedback_pass_final_pass,solved,solved,accepted,,,18
+abc373_e,How to Win the Election,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 ...(truncated) ... -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 != 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 0 0 0 0 0 2 0 0 ...(truncated) ... 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0,1
+abc373_f,Knapsack with Diminishing Values,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 77643000 != 77646000,1
+abc373_g,No Cross Matching,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: -1 != 50 19 21 47 28 68 76 27 37 80 57 1 33 91 60 38 53 87 11 92 70 40 56 82 17 48 97 95 20 65 62 49 44 23 52 24 89 88 79 18 71 81 41 31 83 26 14 2 75 69 16 4 30 63 36 101 25 39 61 55 43 12 84 67 90 9 100 99 94 45 77 51 93 74 22 98 29 59 34 35 8 72 64 32 42 58 54 13 73 78 7 46 85 10 5 6 66 3 96 86 15,1
+abc374_a,Takahashi san 2,True,True,feedback_pass_final_pass,solved,solved,accepted,,,17
+abc374_b,Unvarnished Report,True,True,feedback_pass_final_pass,solved,solved,accepted,,,22
+abc374_c,Separated Lunch,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1 != 436672704,1
+abc374_d,Laser Marking,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 27302.75738237142 != 14944.27190999915878677484,1
+abc374_e,Sensor Optimization Dilemma 2,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 370 != 1276,1
+abc374_f,Shipping,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 352664363047,1
+abc374_g,Only One Product Name,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 49 != 23,1
+abc375_a,Seats,True,True,feedback_pass_final_pass,solved,solved,accepted,,,20
+abc375_b,Traveling Takahashi Problem,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 27668169958335.523 != 27668169958335.63809169231721161667,1
+abc375_c,Spiral Rotation,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: ...#.#.##..#..#....##...........##......#.....#..#........#.#.#.#..#..#......#........#..#...#.#.#.......#..#...#....#.........#.#..##.#..........#......(truncated) .......###..#.#.##.......#.....#.......#.#.##.#......#..............#..##...........#..#..#.....#...###...............#...#...#.............#####.......# != #..#.#.#.......#.......#..........#....#..#..........#.#.###.#.....#...##....#..#........#....#......#........#...##..#..........#......#..#....##...#...(truncated) .....#...##......###.#.#.....#..#....##...#..........#......##......##.#.#.......#...##....#.###...#.#.....#...#....##.#.###.#........#.....#...#........,1
+abc375_d,ABA,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 131632870 != 8059048008118,2
+abc375_e,3 Team Division,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: -1 != 29,4
+abc375_f,Road Blocked,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc375_g,Road Blocked 2,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc376_a,Candy Button,True,True,feedback_pass_final_pass,solved,solved,accepted,,,14
+abc376_b,Hands on Ring (Easy),False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc376_c,Prepare Another Box,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 999964309 != 428678325,1
+abc376_d,Cycle,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc376_e,Max × Sum,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1000000000000 != 998002998000,1
+abc376_f,Hands on Ring (Hard),False,False,feedback_fail_final_fail,unknown,unknown,runtime_error,-4,Runtime Error,1
+abc376_g,Treasure Hunting,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 816049506 != 676723935,1
+abc377_a,Rearranging ABC,True,True,feedback_pass_final_pass,solved,solved,accepted,,,14
+abc377_b,Avoid Rook Attack,True,True,feedback_pass_final_pass,solved,solved,accepted,,,14
+abc377_c,Avoid Knight Attack,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 43 != 36,1
+abc377_d,Many Segments 2,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc377_e,Permute K times 2,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 88717 54672 23253 15172 57460 72919 28359 87843 19010 1327 90450 60344 90491 34031 46161 42638 77604 62366 22932 97091 23837 15989 73815 35619 31372 7...(truncated) ... 44127 32105 43865 93104 93399 65557 49375 58390 65886 22273 61490 44915 8582 90804 75498 24534 945 5361 60241 44167 21061 5005 86803 86230 1684 14019 != 93162 104227 6351 74607 51368 15568 100817 31529 74086 76168 27860 56904 70568 27261 76340 4445 86250 36298 20154 41793 45176 33770 32201 76188 69007 ...(truncated) ...42612 90827 74803 97817 101543 99819 63080 26405 48306 12168 39512 88216 57235 26911 63872 70665 92960 60201 97643 65104 62205 64564 65488 48882 38729,1
+abc377_f,Avoid Queen Attack,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 40213510558360356 != 40213099792444498,1
+abc377_g,Edit to Match,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 2 != 66746,1
+abc378_a,Pairing,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc378_b,Garbage Collection,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 912513796 != 912527378,1
+abc378_c,Repeating,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: -1 0 1 -1 3 2 5 6 4 8 7 10 11 9 13 12 15 16 14 18 17 20 21 19 23 22 25 26 24 28 27 30 31 29 33 32 35 36 34 38 37 40 41 39 43 42 45 46 44 48 47 50 51 4...(truncated) ... 99972 99975 99976 99974 99978 99977 99980 99981 99979 99983 99982 99985 99986 99984 99988 99987 99990 99991 99989 99993 99992 99995 99996 99994 99998 != -1 1 2 -1 4 3 6 7 5 9 8 11 12 10 14 13 16 17 15 19 18 21 22 20 24 23 26 27 25 29 28 31 32 30 34 33 36 37 35 39 38 41 42 40 44 43 46 47 45 49 48 51 52 ...(truncated) ... 99973 99976 99977 99975 99979 99978 99981 99982 99980 99984 99983 99986 99987 99985 99989 99988 99991 99992 99990 99994 99993 99996 99997 99995 99999,1
+abc378_d,Count Simple Paths,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc378_e,Mod Sigma Problem,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 14 != 18,1
+abc378_f,Add One Edge 2,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 19,1
+abc378_g,Everlasting LIDS,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 2533503 != 154804965,1
+abc379_a,Cyclic,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc379_b,Strawberries,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc379_c,Sowing Stones,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: -1 != 0,2
+abc379_d,Home Garden,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Error during testing: No module named 'sortedcontainers',1
+abc379_e,Sum of All Substrings,False,False,feedback_fail_final_fail,unknown,unknown,time_limit_exceeded,-3,Time Limit Exceeded,19
+abc379_f,Buildings 2,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 1,2
+abc379_g,Count Grid 3,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 24 != 0,2
+abc380_a,123233,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc380_b,Hurdle Parsing,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc380_c,Move Segment,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc380_d,Strange Mirroring,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc380_e,1D Bucket Tool,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=19: 3 != 2,1
+abc380_f,Exchange Game,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: Aoki != Takahashi,2
+abc380_g,Another Shuffle Window,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc381_a,11/22 String,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc381_b,1122 String,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc381_c,11/22 Substring,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc381_d,1122 Substring,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 4,1
+abc381_e,11/22 Subsequence,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=3: 5 != 17,1
+abc382_a,Daily Cookie,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc382_b,Daily Cookie 2,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc382_c,Kaiten Sushi,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=1: 2 != 1,1
+abc382_d,Keep Distance,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,9
+abc382_f,Falling Bars,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc382_g,Tile Distance 3,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 3 != 8,1
+abc383_a,Humidifier 1,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 4822,1
+abc383_b,Humidifier 2,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc383_c,Humidifier 3,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 92 != 125,1
+abc383_d,9 Divisors,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 19 != 407073,1
+abc383_e,Sum of Max Matching,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1538340774 != 1108246637,1
+abc384_a,aaaadaa,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc384_b,ARC Division,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc384_c,Perfect Standings,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc384_d,Repeated Sequence,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: No != Yes,6
+abc384_e,Takahashi is Slime 2,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 5 != 43,22
+abc384_f,Double Sum 2,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc384_g,Abs Sum,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 21 != 45,1
+abc385_a,Equally,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: No != Yes,2
+abc385_b,Santa Claus 1,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc385_c,Illuminate Buildings,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1 != 2,10
+abc385_d,Santa Claus 2,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 5 0 6 != 5 0 5,1
+abc385_e,Snowflake Tree,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 5 != 7,1
+abc385_f,Visible Buildings,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 1000000000.0 != 33.4,1
+abc386_a,Full House 2,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc386_b,Calculator,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc386_c,Operate 1,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc386_d,Diagonal Separation,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc386_e,Maximize XOR,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1005 != 936,1
+abc386_f,Operate K,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: Yes != No,6
+abc387_a,Happy New Year 2025,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc387_b,9x9 Sum,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 1999 != 2025,1
+abc387_c,Snake Numbers,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc387_f,Count Arrays,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 5 != 3125,2
+abc388_a,?UPC,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc388_b,Heavy Snake,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=1: 10094 != 9996,1
+abc388_c,Various Kagamimochi,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,11
+abc388_d,Coming of Age Celebration,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 9 33 38 40 11 51 != 4 29 36 40 13 55,1
+abc388_e,Simultaneous Kagamimochi,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 13,1
+abc388_f,Dangerous Sugoroku,False,False,feedback_fail_final_fail,spec_induced,spec_induced,verifier_error,-5,Verifier subprocess failed,40
+abc388_g,Simultaneous Kagamimochi 2,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=3: 7 != 6,4
+abc389_a,9x9,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc389_b,tcaF,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc389_d,Squares in Circle,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,2
+abc389_e,Square Price,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 388641 != 909064,1
+abc389_f,Rated Range,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc389_g,Odd Even Graph,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ...(truncated) ... 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 != 51528281 70816430 52360232 62399795 18662017 35225186 32210571 61699428 5845782 79735567 16841894 88432441 52142914 79107773 22380782 69193565 4701618...(truncated) ...301465 15936348 28585419 9127376 63706004 14003407 73463756 94285652 67994325 37412879 83497927 90966604 88844314 77558760 0 0 0 0 0 0 0 0 0 0 0 0 0 0,1
+abc390_a,12435,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc390_b,Geometric Sequence,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc390_c,Paint to make a rectangle,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: No != Yes,20
+abc390_d,Stone XOR,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 2 != 4213595,1
+abc390_e,Vitamin Balance,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 2054,3
+abc390_f,Double Sum 3,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 2500 != 1275,1
+abc390_g,Permutation Concatenation,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1814400 != 559732638,1
+abc391_a,Lucky Direction,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc391_b,Seek Grid,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc391_d,Gravity,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc391_e,Hierarchical Majority Vote,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 3299 != 1,1
+abc391_f,K,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,4
+abc391_g,Many LCS,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 837283344 998244305 998244303 998244303 998244303 998244303 998244303 998244303 998244303 998244303 998244303 != 982924732 813568972 462150280 225425899 791397061 343883352 255144267 555192171 409585058 249293686 739939631,1
+abc392_a,Shuffled Equation,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc392_b,Who is Missing?,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc392_c,Bib,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 1 2 != 2 1,1
+abc392_d,Doubles,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc392_f,Insert,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1 3 2 5 4 6 != 0 3 0 5 2 1,15
+abc392_g,Fine Triplets,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc393_a,Poisonous Oyster,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc393_b,A..B..C,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc393_d,Swap to Gather,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 15 != 6,1
+abc393_e,GCD of Subset,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,4
+abc393_f,Prefix LIS Query,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 5 != 4,1
+abc394_a,22222,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc394_b,cat,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc394_c,Debug,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc394_d,Colorful Bracket Sequence,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc394_e,Palindromic Shortest Path,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc394_f,Alkane,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 9 != 5,3
+abc394_g,Dense Buildings,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,8
+abc395_a,Strictly Increasing?,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc395_b,Make Target,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc395_c,Shortest Duplicate Subarray,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 60 != 61,1
+abc395_e,Flip Edge,False,True,feedback_fail_final_pass,spec_induced,solved,accepted,,,40
+abc395_f,Smooth Occlusion,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 12 != 4,1
+abc396_a,Triple Four,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc396_b,Card Pile,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc396_c,Buy Balls,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: -373386 != 43172922,1
+abc396_d,Minimum XOR Path,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc396_e,Min of Restricted Sum,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 0 23 22 != 22 23 0 0,2
+abc396_f,Rotated Inversions,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,2
+abc396_g,Flip Row or Col,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 171 != 118,1
+abc397_a,Thermometer,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc397_b,Ticket Gate Log,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: -1 != 1,1
+abc397_c,Variety Split Easy,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc397_d,Cubes,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: -1 != 342756 66212,28
+abc397_e,Path Decomposition of a Tree,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+abc397_f,Variety Split Hard,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 146 != 156,2
+abc397_g,Maximize Distance,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc398_a,Doors in the Center,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: -- != ==,1
+abc398_b,Full House 3,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: No != Yes,1
+abc398_c,Uniqueness,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc398_d,Bonfire,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 1,4
+abc398_f,ABCBA,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: ZGBZMOLYGOLZUCBBPIAQVSSGHCYUYQWQNQJDENSNCDNCDNYEXAZONVNAPKXICLCDLWALLFAHLCTEGAGVVXDZ != ZGBZMOLYGOLZUCBBPIAQVSSGHCYUYQWQNQJDENSNCDNCDNYEXAZONVNAPKXICLCDLWALLFAHLCTEGAGVVXDXVVGAGETCLHAFLLAWLDCLCIXKPANVNOZAXEYNDCNDCNSNEDJQNQWQYUYCHGSSVQAIPBBCUZLOGYLOMZBGZ,1
+abc398_g,Not Only Tree Game,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: Aoki != Takahashi,2
+abc399_a,Hamming Distance,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc399_b,Ranking with Ties,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc399_c,Make it Forest,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1 != 32504,2
+abc399_d,Switch Seats,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc399_e,Replace,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: -1 != 1,4
+abc399_f,Range Power Sum,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc400_a,ABC400 Party,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 286 != -1,1
+abc400_b,Sum of Geometric Series,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+abc400_c,2^a b^2,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 694 != 248,1
+abc400_d,Takahashi the Wall Breaker,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,"Error during testing: unterminated string literal (detected at line 37) (<string>, line 37)",1
+abc400_e,Ringo's Favorite Numbers 3,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+abc400_g,Patisserie ABC 3,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 659 != 707,1
+arc181_a,Sort Left and Right,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 199999 != 2,1
+arc181_b,Annoying String Problem,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: No != Yes,2
+arc181_c,Row and Column Order,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000...(truncated) ...000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 != 001100101000000000000100001000000000011010000100000000000100001000101000010000001000100010000010001000011000000000000000010000001000000001010000010000...(truncated) ...110000000000100000000100000001100000000100101100000000000110001000001110000111000100001000000001001000100000100100110100001011000000010000101000001000,1
+arc181_d,Prefix Bubble Sort,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+arc182_a,Chmax Rush!,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 460334006 != 0,1
+arc182_c,Sum of Number of Divisors of Product,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 92378 != 797173552,1
+arc182_d,Increment Decrement Again,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 22909042506 != 3183189416598,3
+arc182_e,Sum of Min of Mod of Linear,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: inf != 57,1
+arc183_a,Median of Good Sequences,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+arc183_b,Near Assignment,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: No != Yes,3
+arc183_c,Not Argmax,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 2 != 0,1
+arc183_d,Keep Perfectly Matched,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+arc184_c,Mountain and Valley Folds,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+arc184_d,Erase Balls 2D,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 16 != 5,1
+arc184_e,Accumulating Many Times,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 11 != 18,39
+arc185_b,+1 and,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=2: No != Yes,1
+arc185_c,Sum of Three Integers,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1 4 96 != 1 8 169,10
+arc185_d,Random Walk on Tree,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+arc185_e,Adjacent GCD,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=1: 174 != 1,1
+arc186_a,Underclued,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=1: Yes != No,1
+arc186_b,Typical Permutation Descriptor,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 528659932 != 248259947,1
+arc186_c,Ball and Box,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=4: 24 != 58,1
+arc186_d,Polish Mania,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1 != 3846,1
+arc186_e,Missing Subsequence,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 998244221 != 0,1
+arc187_b,Sum of CC,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1314 != 41,1
+arc188_a,ABC Symmetry,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 1,3
+arc188_b,Symmetric Painting,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: Yes != No,1
+arc188_c,Honest or Liar or Confused,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: -1 != 0110,2
+arc188_d,Mirror and Order,False,False,feedback_fail_final_fail,spec_induced,spec_induced,verifier_error,-5,Verifier subprocess failed,40
+arc189_a,Reversi 2,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 16 != 0,1
+arc189_b,Minimize Sum,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 3297930151176441 != 1639488621487761,1
+arc189_c,Balls and Boxes,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 5 != -1,23
+arc189_d,Takahashi is Slime,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 329091090 875300735583 230198842 875300735583 873515331760 185322586 875300735583 875300735583 875300735583 870503731203 626673105 875300735583 308010...(truncated) ...0735583 875300735583 875300735583 6879358075 129199948 875300735583 469664286 875300735583 875300735583 875300735583 2020115136 507692645 875300735583 != 329091090 875300735583 230198842 875300735583 875300735583 185322586 875300735583 875300735583 875300735583 875300735583 626673105 875300735583 308010...(truncated) ...583 875300735583 875300735583 875300735583 129199948 875300735583 469664286 875300735583 875300735583 875300735583 875300735583 507692645 875300735583,1
+arc190_a,Inside or Outside,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer: mismatched output length,1
+arc190_c,Basic Grid Problem with Updates,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 883283193 != 740460351,1
+arc190_d,Matrix Pow Sum,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 18 != 10,2
+arc191_a,Replace Digits,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 997653722244 != 997753722244,1
+arc191_c,A^n,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 11 68 != 100 9801,1
+arc191_d,Moving Pieces on Graph,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 2 != 3,1
+arc192_a,ARC Arc,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: No != Yes,1
+arc192_b,Fennec VS. Snuke 2,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: Snuke != Fennec,1
+arc192_d,Fraction Line,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+arc192_e,Snuke's Kyoto Trip,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 0 != 4954669,1
+arc193_a,Complement Interval Graph,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+arc193_b,Broken Wheel,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 8 != 1758,1
+arc193_d,Magnets,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=1: 0 != -1,1
+arc194_a,Operations on a Stack,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 41 != 18,1
+arc194_b,Minimum Cost Sort,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 1 != 165,1
+arc194_c,Cost to Flip,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 235 != 514,1
+arc194_d,Reverse Brackets,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 128 != 3,1
+arc194_e,Swap 0^X and 1^Y,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+arc195_a,Twice Subsequence,True,True,feedback_pass_final_pass,solved,solved,accepted,,,40
+arc195_b,Uniform Sum,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: Yes != No,3
+arc195_c,Hamiltonian Pieces,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer: mismatched output length,1
+arc195_d,Swap and Erase,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=5: 2 != 1,1
+arc195_e,Random Tree Distance,False,False,feedback_fail_final_fail,spec_induced,spec_induced,runtime_error,-4,Runtime Error,1
+arc196_a,Adjacent Delete,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: 1505785 != 1502497,2
+arc196_b,Torus Loop,False,False,feedback_fail_final_fail,spec_induced,spec_induced,time_limit_exceeded,-3,Time Limit Exceeded,1
+arc196_c,Strongly Connected,False,False,feedback_fail_final_fail,spec_induced,spec_induced,wrong_answer,-2,Wrong answer at output_line_idx=0: 1 != 0,1
+arc196_d,Roadway,False,False,feedback_fail_final_fail,unknown,unknown,wrong_answer,-2,Wrong answer at output_line_idx=0: Yes != No,1

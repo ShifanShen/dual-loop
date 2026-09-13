@@ -1,0 +1,9 @@
+config_id,sweep,threshold,weight_profile,weight_coverage,weight_faithfulness,weight_precision,num_problems,public_passes,public_pass_rate,sal_activated_questions,sal_activation_rate,accepted_refine_steps,artifact_changing_refines,mean_initial_sas,mean_final_sas,mean_delta_sas,mean_llm_calls,mean_judge_arithmetic_error,run_dir
+threshold_r80_paper,threshold,80,paper,0.4,0.4,0.2,50,20,0.4,50,1.0,1,1,79.8,81.36,1.56,5.18,0.974025974025974,output/sal_hparam_sensitivity/r50_deterministic_20260722/runs/threshold_r80_paper
+threshold_r85_paper,threshold,85,paper,0.4,0.4,0.2,50,20,0.4,50,1.0,14,14,79.8,81.96,2.16,6.9,1.0404040404040404,output/sal_hparam_sensitivity/r50_deterministic_20260722/runs/threshold_r85_paper
+threshold_r90_paper,threshold,90,paper,0.4,0.4,0.2,50,20,0.4,50,1.0,15,15,79.8,81.96,2.16,7.24,1.0631067961165048,output/sal_hparam_sensitivity/r50_deterministic_20260722/runs/threshold_r90_paper
+threshold_r95_paper,threshold,95,paper,0.4,0.4,0.2,50,20,0.4,50,1.0,15,15,79.8,81.96,2.16,7.24,1.0631067961165048,output/sal_hparam_sensitivity/r50_deterministic_20260722/runs/threshold_r95_paper
+weights_r90_uniform,weights,90,uniform,0.333333,0.333333,0.333334,50,21,0.42,50,1.0,13,13,79.3,81.64,2.34,7.18,0.526829268292683,output/sal_hparam_sensitivity/r50_deterministic_20260722/runs/weights_r90_uniform
+weights_r90_coverage,weights,90,coverage,0.6,0.2,0.2,50,20,0.4,50,1.0,10,10,80.76,82.74,1.98,7.26,2.394088669950739,output/sal_hparam_sensitivity/r50_deterministic_20260722/runs/weights_r90_coverage
+weights_r90_faithfulness,weights,90,faithfulness,0.2,0.6,0.2,50,20,0.4,50,1.0,7,7,79.16,81.04,1.88,7.14,1.0858585858585859,output/sal_hparam_sensitivity/r50_deterministic_20260722/runs/weights_r90_faithfulness
+weights_r90_precision,weights,90,precision,0.2,0.2,0.6,50,20,0.4,50,1.0,6,6,77.38,78.96,1.58,6.94,1.4196891191709844,output/sal_hparam_sensitivity/r50_deterministic_20260722/runs/weights_r90_precision
