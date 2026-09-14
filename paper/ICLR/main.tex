@@ -263,7 +263,7 @@ Full Dual-Loop & Freeze $s^\star$, select $C^{(0)}$, and perform contract-condit
 
 \subsection{Intermediate-representation probe}
 
-On an exploratory 50-problem slice, direct generation scores 0.70. Among explicit intermediate representations, spec-to-code scores 0.60, above plan-to-code at 0.56 and pseudocode-to-code at 0.46. Because each representation adds a generation stage and budgets are not matched, this probe does not show that specifications outperform direct prompting. It instead identifies the strongest tested explicit intermediate for the later refinement and property-compilation operations.
+Because each representation adds a generation stage and budgets are not matched, this probe does not show that specifications outperform direct prompting. It instead identifies the strongest tested explicit intermediate for the later refinement and property-compilation operations.
 
 \begin{table}[h]
 \centering
@@ -284,7 +284,7 @@ Spec-to-Code & 0.600 \\
 
 \subsection{Component ablation}
 
-The controlled 50-problem component slice uses three candidates per problem and is distinct from the two-candidate cross-backbone slice. SAL-only and IRL-only both reach 0.64, while Full reaches 0.72. The eight-point composition gain supports complementarity on this slice, but SAL-only being slightly below Decomposition Only prevents a claim of an isolated SAL performance gain.
+This slice uses three candidates per problem, which distinguishes it from the two-candidate cross-backbone slice. RQ3 reads the result.
 
 \begin{table}[h]
 \centering
@@ -308,7 +308,7 @@ Full Dual-Loop & yes & yes & \textbf{0.72} \\
 
 The sweep uses a fixed 50-problem sample with seed 2027, disables IRL, and generates one deterministic code candidate at temperature zero from the specification current when SAL terminates. It varies $r\in\{80,85,90,95\}$ under the paper weights and compares the paper, uniform, coverage-heavy, faithfulness-heavy, and precision-heavy profiles at $r=90$. Only public feedback is available, so the sweep isolates SAL-side sensitivity from implementation repair and multi-candidate selection.
 
-Table~\ref{tab:sensitivity} reports the fixed 50-problem public-feedback slice. Under $\mathbf w=(0.4,0.4,0.2)$, thresholds from 80 through 95 pass the same 20 problems. The final contracts at $r=90$ and $r=95$ are identical on all 50 problems, and $r=85$ differs from $r=90$ on one. Accepted revisions rise from 14 at $r=85$ to 15 at $r=90$ and do not increase at $r=95$, making 90 the first observed point on the local plateau.
+Table~\ref{tab:sensitivity} reports the slice. Every threshold from 80 to 95 passes the same 20 problems. Beyond the table, the final contracts at $r=90$ and $r=95$ are identical on all 50 problems and $r=85$ differs on one; accepted revisions plateau at 15 from $r=90$, which is why we use 90.
 
 \begin{table}[h]
 \centering
@@ -337,7 +337,7 @@ The one-problem difference between the paper and uniform weights is descriptive:
 
 \subsection{Property-clause coverage}
 
-Table~\ref{tab:properties} reports clauses compiled from accepted contracts and violation events observed over verifier failures; one clause may be evaluated repeatedly. Numeric-output clauses are compiled most often, while numeric and ordering obligations produce the largest observed violation counts. Zero violations mean only that no evaluated output triggered the recorded check.
+Zero violations in Table~\ref{tab:properties} mean only that no evaluated output triggered the recorded check.
 
 \begin{table}[h]
 \centering
@@ -361,7 +361,7 @@ Clause type & Compiled \up & Violations \\
 
 \subsection{Requirement-heavy subsets}
 
-Table~\ref{tab:subsets} connects the mechanism analysis to requirement-heavy tasks. Full exceeds direct generation by 7.13--9.77 points on constraint-heavy, format-sensitive, edge-case-heavy, and semantic-heavy subsets and exceeds Reflexion-style repair in every category. The largest gains occur on format- and edge-case-sensitive problems, where explicit protocol and boundary obligations are especially useful. The slices are derived from benchmark metadata and overlap, so one problem can appear in several of them.
+The slices are derived from benchmark metadata and overlap, so one problem can appear in several of them.
 
 \begin{table}[h]
 \centering
