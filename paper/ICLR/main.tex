@@ -175,13 +175,17 @@ The system makes task obligations reusable across generation, repair, and audit.
 
 This paper presents a dual-loop NL-to-code framework that makes task semantics explicit before implementation and keeps the accepted contract fixed during verifier-guided repair. On 1,055 LiveCodeBench release\_v6 problems, Full Dual-Loop reaches 0.3801 Final Pass Rate, 9.19 percentage points above Direct NL-to-Code and 3.98 points above the strongest shared-protocol external baseline. Cross-setting, mechanism, sensitivity, and case analyses further show how semantic and implementation transitions remain separately inspectable. Future work will study independent specification review, confidence-aware attribution, broader settings, and budget-normalized activation.
 
-\subsection*{AI Use Statement}
+\section*{Ethics Statement}
 
-Generative AI tools were used to assist with literature discovery, language and formatting checks, and limited manuscript polishing and code editing. All cited sources, implementations, experimental results, and final claims were independently reviewed and verified by the authors, who take full responsibility for the paper.
+This work evaluates program synthesis on public competitive-programming benchmarks and involves no human subjects, personal data, or deployment to end users. The only human annotation is the authors' own audit of 36 traces. All generated programs are executed in a sandboxed harness with fixed time limits. The system reports inspectable evidence, not verified correctness: a frozen contract and a satisfied property clause constrain an implementation without proving it correct, and presenting either as a guarantee would be a misuse of the method.
 
-\subsection*{Reproducibility statement}
+\section*{Reproducibility Statement}
 
 The Experiments section describes the benchmark partitions, feedback restrictions, model, candidate budgets, stopping conditions, and evaluation metric. The appendices provide the complete acceptance predicates, controlled-method definitions, hyperparameter sensitivity results, and additional ablations. Anonymous supplementary code contains the core SAL and IRL procedures, evaluation scripts, configuration fields, and commands needed to reproduce the reported protocol. Private tests are queried only after final program selection.
+
+\section*{AI Use Statement}
+
+Generative AI tools were used to assist with literature discovery, language and formatting checks, and limited manuscript polishing and code editing. All cited sources, implementations, experimental results, and final claims were independently reviewed and verified by the authors, who take full responsibility for the paper.
 
 \bibliography{references}
 \bibliographystyle{iclr2027_conference}
