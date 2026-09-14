@@ -78,7 +78,7 @@ SAL and IRL are capped at three iterations. SAL uses threshold 90, minimum impro
 
 We additionally adapt two recent external systems to the same model, release, feedback restriction, and final evaluator. SpecFix-BM retains behavior clustering with four probe programs, at most four probe inputs, and one requirement-repair step \citep{ref_specfix}. LPW-adapted retains plan generation, verification on at most three public examples, fixed-plan code generation, and at most three repair rounds \citep{ref_planning_driven_programming}. Both cap primary program candidates at 11. They are shared-protocol adaptations rather than exact reproductions; auxiliary planning, probing, and analysis calls remain method-specific, so the matched quantity is the primary program-candidate budget rather than total tokens or LLM calls.
 
-The separate hyperparameter sensitivity run uses a fixed 50-problem sample with seed 2027, disables IRL, and generates one deterministic code candidate at temperature zero from the specification current when SAL terminates. It varies $r\in\{80,85,90,95\}$ under the paper weights and compares the paper, uniform, coverage-heavy, faithfulness-heavy, and precision-heavy profiles at $r=90$. Only public feedback is available, isolating SAL-side sensitivity from implementation repair and multi-candidate selection. Appendix~\ref{app:sensitivity} reports the completed results.
+A separate run sweeps the SAL threshold and weight profile on a fixed 50-problem sample with IRL disabled, isolating SAL-side sensitivity from implementation repair; Appendix~\ref{app:sensitivity} gives its protocol and results.
 
 \medskip
 \noindent\textbf{RQ1: Does the full semantic-contract pipeline improve end-to-end code generation?}
@@ -166,14 +166,16 @@ The accepted contract also enters IRL through property clauses. Appendix Table~\
 
 On requirement-heavy subsets (Appendix Table~\ref{tab:subsets}), Full exceeds direct generation by 7.13--9.77 points and Reflexion-style repair in every category, with the largest gains on format- and edge-case-sensitive problems.
 
+Appendix Table~\ref{tab:component} isolates the loops on a 50-problem slice: SAL-only and IRL-only both reach 0.64 while Full reaches 0.72, so the eight-point gain needs the composition rather than either loop alone. SAL-only also falls below Decomposition Only at 0.66, so the slice does not support an isolated SAL gain.
+
 \noindent\textit{Answer to RQ3.}
-The system makes task obligations reusable across generation, repair, and audit. SAL records semantic-state changes, property clauses compile part of the contract into feedback, and IRL records verifier-level progress. The two loops therefore expose different intermediate outcomes within semantic-contract-guided repair.
+No single component accounts for the gain. On the controlled slice, composing the loops is worth eight points over either loop in isolation, while neither loop alone improves on specification-conditioned generation. The full-release counts show why the two contribute differently: SAL records semantic-state changes, property clauses compile part of the contract into executable feedback, and IRL records verifier-level progress. The accepted contract is what makes those obligations reusable across generation, repair, and audit.
 
 \input{results_summary.tex}
 
 \section{Conclusion}
 
-This paper presents a dual-loop NL-to-code framework that makes task semantics explicit before implementation and keeps the accepted contract fixed during verifier-guided repair. On 1,055 LiveCodeBench release\_v6 problems, Full Dual-Loop reaches 0.3801 Final Pass Rate, 9.19 percentage points above Direct NL-to-Code and 3.98 points above the strongest shared-protocol external baseline. Cross-setting, mechanism, sensitivity, and case analyses further show how semantic and implementation transitions remain separately inspectable. Future work will study independent specification review, confidence-aware attribution, broader settings, and budget-normalized activation.
+This paper presents a dual-loop NL-to-code framework that makes task semantics explicit before implementation and keeps the accepted contract fixed during verifier-guided repair. On 1,055 LiveCodeBench release\_v6 problems it reaches 0.3801 Final Pass Rate, 3.98 points above the strongest shared-protocol external baseline, while keeping semantic and implementation transitions separately inspectable. The main limits are that the contract is LLM-induced rather than verified, that SAS is a directional signal produced by the same backbone, that trace labels agree with human review only 58.3\% of the time, and that the reported rates are single-run point estimates. Future work will study independent specification review, confidence-aware attribution, broader settings, and budget-normalized activation.
 
 \section*{Ethics Statement}
 
@@ -302,6 +304,8 @@ Full Dual-Loop & yes & yes & \textbf{0.72} \\
 
 \subsection{SAL hyperparameter sensitivity}
 \label{app:sensitivity}
+
+The sweep uses a fixed 50-problem sample with seed 2027, disables IRL, and generates one deterministic code candidate at temperature zero from the specification current when SAL terminates. It varies $r\in\{80,85,90,95\}$ under the paper weights and compares the paper, uniform, coverage-heavy, faithfulness-heavy, and precision-heavy profiles at $r=90$. Only public feedback is available, so the sweep isolates SAL-side sensitivity from implementation repair and multi-candidate selection.
 
 Table~\ref{tab:sensitivity} reports the fixed 50-problem public-feedback slice. Under $\mathbf w=(0.4,0.4,0.2)$, thresholds from 80 through 95 pass the same 20 problems. The final contracts at $r=90$ and $r=95$ are identical on all 50 problems, and $r=85$ differs from $r=90$ on one. Accepted revisions rise from 14 at $r=85$ to 15 at $r=90$ and do not increase at $r=95$, making 90 the first observed point on the local plateau.
 
