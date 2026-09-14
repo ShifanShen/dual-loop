@@ -23,7 +23,7 @@ This boundary does not treat $s^\star$ as a proof of task intent. The contract i
 \caption{Semantic-contract-based dual-loop generation}
 \label{alg:dual_loop}
 \begin{algorithmic}[1]
-\REQUIRE problem $x$; SAL budget $T_s$; IRL budget $T_r$
+\REQUIRE problem $x$; SAL budget $T_s$; IRL budget $T_r$; candidate budgets $N_0$, $N_r$
 \ENSURE final program $C$ and trace $\tau$
 \STATE \textbf{Stage 1: semantic alignment}
 \STATE $s^{(0)}\gets\algcall{InduceSpec}{x}$
@@ -33,9 +33,10 @@ This boundary does not treat $s^\star$ as a proof of task intent. The contract i
     \STATE \textbf{break}
   \ENDIF
   \STATE $\Delta^{(t)}\gets\algcall{ProposePatch}{x,s^{(t)},q^{(t)}}$
-  \STATE $\hat{s}^{(t+1)}\gets\algcall{Merge}{s^{(t)},\Delta^{(t)}}$; judge candidate
+  \STATE $\hat{s}^{(t+1)}\gets\algcall{Merge}{s^{(t)},\Delta^{(t)}}$
+  \STATE $(\hat q^{(t+1)},\widehat{\mathrm{SAS}}^{(t+1)})\gets\algcall{Judge_{\mathbf w}}{x,\hat{s}^{(t+1)}}$
   \IF{$\mathrm{Safe}^{(t+1)}\land\mathrm{Improve}^{(t+1)}$}
-    \STATE $s^{(t+1)}\gets\hat{s}^{(t+1)}$
+    \STATE $s^{(t+1)}\gets\hat{s}^{(t+1)}$; $(q^{(t+1)},\mathrm{SAS}^{(t+1)})\gets(\hat q^{(t+1)},\widehat{\mathrm{SAS}}^{(t+1)})$
   \ELSE
     \STATE $s^{(t+1)}\gets s^{(t)}$; \textbf{break}
   \ENDIF
@@ -78,9 +79,9 @@ The semantic judge uses the same backbone at temperature zero with a dedicated r
 \end{aligned}
 \label{eq:sas}
 \end{equation}
-Coverage measures whether important obligations and edge cases are retained; faithfulness penalizes unsupported assumptions; and precision measures whether obligations are operational enough to guide generation and repair. Outputs are integers in $[0,100]$. The pipeline validates and records the aggregate returned under the rubric rather than recomputing a post-hoc dot product, and it does not treat SAS as an independent ground-truth label. Coverage and faithfulness receive equal primary weight because either omission or invention can redirect generation; precision receives lower weight because operational detail cannot compensate for missing or distorted semantics. Section~\ref{app:sensitivity} reports the sensitivity experiment supporting this fixed setting.
+Coverage measures whether important obligations and edge cases are retained; faithfulness penalizes unsupported assumptions; and precision measures whether obligations are operational enough to guide generation and repair. Outputs are integers in $[0,100]$. The pipeline validates and records the aggregate returned under the rubric rather than recomputing a post-hoc dot product, and it does not treat SAS as an independent ground-truth label. Coverage and faithfulness receive equal primary weight because either omission or invention can redirect generation; precision receives lower weight because operational detail cannot compensate for missing or distorted semantics. Appendix~\ref{app:sensitivity} reports the sensitivity experiment supporting this fixed setting.
 
-The judge additionally returns grounded issue evidence, issue types, at most three target fields, protected fields, and a field-level edit plan. A patch may change only target fields, may not change protected fields, and must produce a material semantic difference. Let $\mathcal F$ denote the field set and $\mathcal T^{(t)}$, $\mathcal G^{(t)}$, and $\Pi^{(t)}$ denote the target set, protected set, and edit plan. A candidate outside these constraints is rejected before re-evaluation.
+The judge additionally returns grounded issue evidence, issue types, at most three target fields, protected fields, and a field-level edit plan. A patch may change only target fields, may not change protected fields, and must produce a material semantic difference. A candidate outside these constraints is rejected before re-evaluation.
 
 The acceptance gate separates non-regression from grounded progress:
 \begin{equation}
@@ -116,7 +117,7 @@ $F_v^{(k)}$ reports concrete execution behavior, whereas $F_p^{(k)}$ records vio
 The repair module then generates a round-specific candidate set from the unique current program:
 \begin{equation}
 \begin{aligned}
-C_i'^{(k+1)}&=\mathrm{Repair}_i(x,s^\star,C^{(k)},F_v^{(k)},F_p^{(k)}),quad 1\leq i\leq N_r,\\
+C_i'^{(k+1)}&=\mathrm{Repair}_i(x,s^\star,C^{(k)},F_v^{(k)},F_p^{(k)}),\quad 1\leq i\leq N_r,\\
 \mathcal C^{(k+1)}&=\{C_i'^{(k+1)}\mid 1\leq i\leq N_r\},\\
 C^{(k+1)}&=\mathrm{SelectByFeedback}(\mathcal C^{(k+1)},x,s^\star,P^\star).
 \end{aligned}
