@@ -6,6 +6,7 @@
 \usepackage{array}
 \usepackage{booktabs}
 \usepackage{graphicx}
+\usepackage{float}
 \usepackage{algorithm}
 \usepackage{algorithmic}
 \usepackage{hyperref}
@@ -60,7 +61,7 @@ Self-Refine and Reflexion use model feedback or verbalized experience to guide i
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{pics/framework_cn.png}
-\caption{Overview of the dual-loop framework.}
+\caption{Overview of the semantic-contract-based dual-loop framework. SAL scores a structured specification on coverage, faithfulness, and precision and admits field-level revisions only through the acceptance gate; the specification current at termination is frozen as contract $s^\star$ and compiled into property set $P^\star$. IRL then changes only program state, repairing under that fixed contract using public-test feedback $F_v^{(k)}$ and property-clause feedback $F_p^{(k)}$.}
 \label{fig:framework}
 \end{figure}
 
@@ -100,7 +101,7 @@ LPW-adapted \citep{ref_planning_driven_programming} & 0.3308 & +0.0427 \\
 Full Dual-Loop & \textbf{0.3801} & \textbf{+0.0919} \\
 \bottomrule
 \end{tabular}
-\caption{Main comparison on LiveCodeBench release\_v6; external methods are shared-protocol adaptations.}
+\caption{Main comparison on all 1,055 LiveCodeBench release\_v6 problems. Final Pass is the fraction of final programs passing the complete public-and-private suite; \up{} marks higher-is-better. Differences are computed from unrounded rates. External methods are shared-protocol adaptations, not reproductions.}
 \label{tab:main}
 \end{table}
 
@@ -127,7 +128,7 @@ LCB--DeepSeek (50) & 0.30 & 0.42 & \textbf{0.50} & Self-Refine-style \\
 HumanEval+--Qwen (162) & 0.8457 & 0.8889 & \textbf{0.9136} & Self-Refine-style \\
 \bottomrule
 \end{tabular}
-\caption{Condensed cross-backbone and external validation.}
+\caption{Condensed cross-backbone and external validation. Final Pass rates; \up{} marks higher-is-better. The strongest controlled iterative baseline differs by setting, so the last column names the method behind each Best Iter.\ entry.}
 \label{tab:robustness}
 \end{table}
 
@@ -153,7 +154,7 @@ Final trace (1,055) & 401 solved / 579 spec / 4 impl. / 71 unknown \\
 Solved paths (401) & 288 unchanged / 65 SAL / 38 IRL / 10 both \\
 \bottomrule
 \end{tabular}
-\caption{Full-release mechanism and final-aligned trace evidence. Trace categories are audit cues, not causal diagnoses.}
+\caption{Full-release mechanism and final-aligned trace evidence on 1,055 problems. Solved uses the complete-suite criterion, so the trace partition is aligned to Final Pass rather than to public feedback. Trace categories are audit cues, not causal diagnoses.}
 \label{tab:mechanism}
 \end{table}
 
@@ -176,13 +177,17 @@ No single component accounts for the gain. On the controlled slice, composing th
 
 This paper presents a dual-loop NL-to-code framework that makes task semantics explicit before implementation and keeps the accepted contract fixed during verifier-guided repair. On 1,055 LiveCodeBench release\_v6 problems it reaches 0.3801 Final Pass Rate, 3.98 points above the strongest shared-protocol external baseline, while keeping semantic and implementation transitions separately inspectable. The main limits are that the contract is LLM-induced rather than verified, that SAS is a directional signal the same backbone produces, that trace labels agree with human review only 58.3\% of the time, and that the reported rates are single-run point estimates. Future work will study independent specification review, confidence-aware attribution, broader settings, and budget-normalized activation.
 
-\subsection*{AI Use Statement}
+\section*{Ethics Statement}
 
-Generative AI tools were used to assist with literature discovery, language and formatting checks, and limited manuscript polishing and code editing. All cited sources, implementations, experimental results, and final claims were independently reviewed and verified by the authors, who take full responsibility for the paper.
+This work evaluates program synthesis on public competitive-programming benchmarks and involves no human subjects, personal data, or deployment to end users. The only human annotation is the authors' own audit of 36 traces. All generated programs are executed in a sandboxed harness with fixed time limits. The system reports inspectable evidence, not verified correctness: a frozen contract and a satisfied property clause constrain an implementation without proving it correct, and presenting such artifacts as guarantees would be a misuse of the method.
 
-\subsection*{Reproducibility statement}
+\section*{Reproducibility Statement}
 
 The Experiments section describes the benchmark partitions, feedback restrictions, model, candidate budgets, stopping conditions, and evaluation metric. The appendices provide the complete acceptance predicates, controlled-method definitions, hyperparameter sensitivity results, and additional ablations. Anonymous supplementary code contains the core SAL and IRL procedures, evaluation scripts, configuration fields, and commands needed to reproduce the reported protocol. Private tests are queried only after final program selection.
+
+\section*{AI Use Statement}
+
+Generative AI tools were used to assist with literature discovery, language and formatting checks, and limited manuscript polishing and code editing. All cited sources, implementations, experimental results, and final claims were independently reviewed and verified by the authors, who take full responsibility for the paper.
 
 \bibliography{references}
 \bibliographystyle{iclr2027_conference}
@@ -350,7 +355,7 @@ Clause type & Compiled \up & Violations \\
 \texttt{same\_multiset} & 6 & 7 \\
 \bottomrule
 \end{tabular}
-\caption{Property-clause coverage on LiveCodeBench release\_v6.}
+\caption{Property-clause coverage on LiveCodeBench release\_v6. Compiled counts are per problem; violation counts are per evaluation, so a repeatedly evaluated clause can exceed its compiled count.}
 \label{tab:properties}
 \end{table}
 
