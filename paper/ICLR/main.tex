@@ -96,7 +96,7 @@ Decomposition Only & 0.3175 & +0.0294 \\
 Self-Refine-style & 0.3223 & +0.0341 \\
 Reflexion-style & 0.3365 & +0.0483 \\
 SpecFix-BM \citep{ref_specfix} & 0.3403 & +0.0521 \\
-LPW-adapted \citep{ref_planning_driven_programming} & 0.3308 & +0.0426 \\
+LPW-adapted \citep{ref_planning_driven_programming} & 0.3308 & +0.0427 \\
 Full Dual-Loop & \textbf{0.3801} & \textbf{+0.0919} \\
 \bottomrule
 \end{tabular}
@@ -117,14 +117,14 @@ Second, the HumanEval+ converter retains a task only when at least one executabl
 \begin{table}[t]
 \centering
 \small
-\begin{tabular}{@{}lrrr@{}}
+\begin{tabular}{@{}lrrrl@{}}
 \toprule
-Setting ($n$) & Direct & Best Iter. & Full \up \\
+Setting ($n$) & Direct & Best Iter. & Full \up & Best-iterative method \\
 \midrule
-LCB--Qwen (50) & 0.56 & 0.70 & 0.70 \\
-LCB--Llama (50) & 0.26 & 0.28 & 0.28 \\
-LCB--DeepSeek (50) & 0.30 & 0.42 & \textbf{0.50} \\
-HumanEval+--Qwen (162) & 0.8457 & 0.8889 & \textbf{0.9136} \\
+LCB--Qwen (50) & 0.56 & 0.70 & 0.70 & Reflexion-style \\
+LCB--Llama (50) & 0.26 & 0.28 & 0.28 & Self-Refine-style \\
+LCB--DeepSeek (50) & 0.30 & 0.42 & \textbf{0.50} & Self-Refine-style \\
+HumanEval+--Qwen (162) & 0.8457 & 0.8889 & \textbf{0.9136} & Self-Refine-style \\
 \bottomrule
 \end{tabular}
 \caption{Condensed cross-backbone and external validation.}
@@ -137,7 +137,7 @@ The effect is not tied to one backbone or benchmark, but its magnitude is model-
 \medskip
 \noindent\textbf{RQ3: Which components account for the gain?}
 
-Table~\ref{tab:mechanism} separates semantic-state from implementation movement. Average SAS rises from 80.15 to 82.29; 205 final contracts score above their initial specifications, 845 are unchanged, and 5 score lower. SAL records 165 artifact-changing patches and 837 attempts with no submitted change, whereas IRL records 49 passes, 36 additional verifier improvements, and 978 attempts without improvement. These are state-transition counts, not causal diagnoses or evidence that SAS independently predicts correctness.
+Table~\ref{tab:mechanism} separates semantic-state from implementation movement. Average SAS rises from 80.15 to 82.29; 205 final contracts score above their initial specifications, 845 are unchanged, and 5 score lower. Across 1,219 SAL steps, 165 patches are accepted, 837 are rejected by the gate, and 217 are skipped before a patch is proposed. Across 2,061 IRL attempts, 49 reach a public-feedback pass and 36 improve the verifier signal, while 1,976 do not: 978 leave the program unchanged and 998 change it without improving it. Such a large non-improving majority is expected under a conservative gate and a fixed budget, but it bounds how much movement either loop contributes. These are state-transition counts, not causal diagnoses or evidence that SAS independently predicts correctness.
 
 \begin{table}[t]
 \centering
@@ -146,11 +146,11 @@ Table~\ref{tab:mechanism} separates semantic-state from implementation movement.
 \toprule
 Signal & Observation \\
 \midrule
-SAS trajectory & $80.15\rightarrow82.29$ \\
-SAL decisions & 165 changed; 837 no submitted change \\
-IRL attempts & 49 passes; 36 improved; 978 no improvement \\
-Final trace & 401 solved / 579 spec / 4 impl. / 71 unknown \\
-Solved paths & 288 unchanged / 65 SAL / 38 IRL / 10 both \\
+SAS trajectory & $80.15\rightarrow82.29$ (205 up / 845 equal / 5 down) \\
+SAL steps (1,219) & 165 accepted; 837 rejected; 217 skipped \\
+IRL attempts (2,061) & 49 passes; 36 improved; 1,976 not improved \\
+Final trace (1,055) & 401 solved / 579 spec / 4 impl. / 71 unknown \\
+Solved paths (401) & 288 unchanged / 65 SAL / 38 IRL / 10 both \\
 \bottomrule
 \end{tabular}
 \caption{Full-release mechanism and final-aligned trace evidence. Trace categories are audit cues, not causal diagnoses.}
@@ -163,7 +163,7 @@ The auxiliary probe in Appendix Table~\ref{tab:validation} compares explicit int
 
 The accepted contract also enters IRL through property clauses. Appendix Table~\ref{tab:properties} shows that numeric-output clauses are compiled most often and that numeric and ordering obligations produce the largest violation counts. This layer is a lightweight semantic bridge, not a general formal verifier.
 
-On requirement-heavy subsets (Appendix Table~\ref{tab:subsets}), Full exceeds direct generation by 7.13--9.77 points and Reflexion-style repair in every category, with the largest gains on format- and edge-case-sensitive problems.
+On requirement-heavy subsets (Appendix Table~\ref{tab:subsets}), Full exceeds direct generation by 7.13--9.77 points and beats Reflexion-style repair in every category, with the largest gains on format- and edge-case-sensitive problems. Those rates come from a separate RQ-suite run, so they compare against each other rather than against Table~\ref{tab:main}.
 
 \noindent\textit{Answer to RQ3.}
 The system makes task obligations reusable across generation, repair, and audit. SAL records semantic-state changes, property clauses compile part of the contract into feedback, and IRL records verifier-level progress. The two loops therefore expose different intermediate outcomes within semantic-contract-guided repair.
@@ -338,10 +338,11 @@ Clause type & Compiled \up & Violations \\
 \midrule
 \texttt{numeric\_output} & 1101 & 53 \\
 \texttt{modulo\_output} & 159 & 0 \\
-\texttt{non\_negative} & 152 & 4 \\
+\texttt{non\_negative\_output} & 152 & 4 \\
 \texttt{sorted\_order} & 69 & 22 \\
 \texttt{boolean\_output} & 30 & 0 \\
 \texttt{same\_length} & 12 & 0 \\
+\texttt{yes\_no\_output} & 12 & 0 \\
 \texttt{same\_multiset} & 6 & 7 \\
 \bottomrule
 \end{tabular}
