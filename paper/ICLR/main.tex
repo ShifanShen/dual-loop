@@ -65,7 +65,7 @@ Self-Refine and Reflexion use model feedback or verbalized experience to guide i
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{pics/framework_cn.png}
-\caption{Overview of the dual-loop framework.}
+\caption{Overview of the semantic-contract-based dual-loop framework. SAL scores a structured specification on coverage, faithfulness, and precision and admits field-level revisions only through the acceptance gate; the specification current at termination is frozen as contract $s^\star$ and compiled into property set $P^\star$. IRL then changes only program state, repairing under that fixed contract from public-test feedback $F_v^{(k)}$ and property-clause feedback $F_p^{(k)}$.}
 \label{fig:framework}
 \end{figure}
 
@@ -104,7 +104,7 @@ LPW-adapted \citep{ref_planning_driven_programming} & 0.3308 & +0.0426 \\
 Full Dual-Loop & \textbf{0.3801} & \textbf{+0.0919} \\
 \bottomrule
 \end{tabular}
-\caption{Main comparison on LiveCodeBench release\_v6; external methods are shared-protocol adaptations. Each $\Delta$ is computed from the unrounded pass rates, so it can differ by $0.0001$ from the difference of the rounded values shown.}
+\caption{Main comparison on all 1,055 LiveCodeBench release\_v6 problems. Final Pass is the fraction of final programs that pass the complete public-and-private suite, and \up{} marks higher-is-better. Each $\Delta$ is computed from the unrounded pass rates, so it can differ by $0.0001$ from the difference of the rounded values shown. External methods are shared-protocol adaptations, not reproductions.}
 \label{tab:main}
 \end{table}
 
@@ -130,7 +130,7 @@ LCB--DeepSeek (50) & 0.30 & 0.42 & \textbf{0.50} \\
 HumanEval+--Qwen (162) & 0.8457 & 0.8889 & \textbf{0.9136} \\
 \bottomrule
 \end{tabular}
-\caption{Condensed cross-backbone and external validation.}
+\caption{Condensed cross-backbone and external validation, reporting Final Pass rates; \up{} marks higher-is-better. Best Iter.\ is the strongest controlled iterative baseline in each setting.}
 \label{tab:robustness}
 \end{table}
 
@@ -155,7 +155,7 @@ Final trace & 401 solved / 579 spec / 4 impl. / 71 unknown \\
 Solved paths & 288 unchanged / 65 SAL / 38 IRL / 10 both \\
 \bottomrule
 \end{tabular}
-\caption{Full-release mechanism and final-aligned trace evidence. Trace categories are audit cues, not causal diagnoses.}
+\caption{Full-release mechanism and final-aligned trace evidence over all 1,055 problems. Solved uses the complete-suite criterion, so the trace partition aligns with Final Pass rather than with public feedback. Trace categories are audit cues, not causal diagnoses.}
 \label{tab:mechanism}
 \end{table}
 
@@ -355,7 +355,7 @@ Clause type & Compiled \up & Violations \\
 \texttt{same\_multiset} & 6 & 7 \\
 \bottomrule
 \end{tabular}
-\caption{Property-clause coverage on LiveCodeBench release\_v6.}
+\caption{Property-clause coverage on LiveCodeBench release\_v6. Compiled counts clauses extracted from accepted contracts and Violations counts events observed over verifier failures; a clause may be evaluated more than once, so a violation count can exceed its compiled count.}
 \label{tab:properties}
 \end{table}
 
