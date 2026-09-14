@@ -7,6 +7,7 @@
 \usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage{float}
+\usepackage{subcaption}
 \usepackage{algorithm}
 \usepackage{algorithmic}
 \usepackage{hyperref}
@@ -261,13 +262,14 @@ Full Dual-Loop & Freeze $s^\star$, select $C^{(0)}$, and perform contract-condit
 \label{tab:controlled-methods}
 \end{table}
 
-\subsection{Intermediate-representation probe}
+\subsection{Fifty-problem probes}
 
-Because each representation adds a generation stage and budgets are not matched, this probe does not show that specifications outperform direct prompting. It instead identifies the strongest tested explicit intermediate for the later refinement and property-compilation operations.
+Two small Qwen slices support the design choices rather than the headline result. Because each representation adds a generation stage and budgets are not matched, this probe does not show that specifications outperform direct prompting. It instead identifies the strongest tested explicit intermediate for the later refinement and property-compilation operations. The ablation slice uses three candidates per problem, which distinguishes it from the two-candidate cross-backbone slice; RQ3 reads its result.
 
 \begin{table}[h]
 \centering
 \small
+\begin{minipage}[t]{0.42\linewidth}\centering
 \begin{tabular}{@{}lr@{}}
 \toprule
 Method & Final Pass \up \\
@@ -278,17 +280,10 @@ Pseudocode-to-Code & 0.460 \\
 Spec-to-Code & 0.600 \\
 \bottomrule
 \end{tabular}
-\caption{Intermediate-representation probe on a 50-problem slice.}
+\subcaption{Intermediate-representation probe.}
 \label{tab:validation}
-\end{table}
-
-\subsection{Component ablation}
-
-This slice uses three candidates per problem, which distinguishes it from the two-candidate cross-backbone slice. RQ3 reads the result.
-
-\begin{table}[h]
-\centering
-\small
+\end{minipage}\hfill
+\begin{minipage}[t]{0.55\linewidth}\centering
 \begin{tabular}{@{}lccc@{}}
 \toprule
 Method & SAL & IRL & Final Pass \up \\
@@ -299,9 +294,13 @@ IRL-only & no & yes & 0.64 \\
 Full Dual-Loop & yes & yes & \textbf{0.72} \\
 \bottomrule
 \end{tabular}
-\caption{Controlled component ablation on 50 Qwen problems.}
+\subcaption{Controlled component ablation.}
 \label{tab:component}
+\end{minipage}
+\caption{Two independent 50-problem Qwen slices. The probe in (a) uses one program per representation; the ablation in (b) uses three candidates per problem.}
+\label{tab:fifty}
 \end{table}
+
 
 \subsection{SAL hyperparameter sensitivity}
 \label{app:sensitivity}
@@ -335,13 +334,14 @@ Weights & $(0.4,0.4,0.2)$ & 0.400 & 15 & 7.24 \\
 
 The one-problem difference between the paper and uniform weights is descriptive: their 95\% Wilson intervals, $[0.276,0.538]$ and $[0.294,0.558]$, overlap substantially. Changing $\mathbf w$ also changes the SAS scale, so aggregate SAS values are not compared across profiles. The sweep supports local stability rather than a uniquely optimal configuration.
 
-\subsection{Property-clause coverage}
+\subsection{Property clauses and requirement-heavy subsets}
 
 Zero violations in Table~\ref{tab:properties} mean only that no evaluated output triggered the recorded check.
 
 \begin{table}[h]
 \centering
 \small
+\begin{minipage}[t]{0.46\linewidth}\centering
 \begin{tabular}{@{}lrr@{}}
 \toprule
 Clause type & Compiled \up & Violations \\
@@ -355,17 +355,10 @@ Clause type & Compiled \up & Violations \\
 \texttt{same\_multiset} & 6 & 7 \\
 \bottomrule
 \end{tabular}
-\caption{Property-clause coverage on LiveCodeBench release\_v6. Compiled counts clauses extracted from accepted contracts and Violations counts events observed over verifier failures; a clause may be evaluated more than once, so a violation count can exceed its compiled count.}
+\subcaption{Property-clause coverage. Compiled counts clauses extracted from accepted contracts; Violations counts events over verifier failures, and a clause may be evaluated more than once.}
 \label{tab:properties}
-\end{table}
-
-\subsection{Requirement-heavy subsets}
-
-The slices are derived from benchmark metadata and overlap, so one problem can appear in several of them.
-
-\begin{table}[h]
-\centering
-\small
+\end{minipage}\hfill
+\begin{minipage}[t]{0.50\linewidth}\centering
 \begin{tabular}{@{}lrrr@{}}
 \toprule
 Subset & Direct & Reflexion & Full \up \\
@@ -376,9 +369,15 @@ Edge-case-heavy & 0.3239 & 0.3702 & \textbf{0.4216} \\
 Semantic-heavy & 0.2281 & 0.2643 & \textbf{0.3213} \\
 \bottomrule
 \end{tabular}
-\caption{Performance on requirement-heavy LiveCodeBench subsets.}
+\subcaption{Requirement-heavy subsets.}
 \label{tab:subsets}
+\end{minipage}
+\caption{Contract-derived property clauses and requirement-heavy subsets on LiveCodeBench release\_v6.}
+\label{tab:clauses-subsets}
 \end{table}
+
+The subsets in Table~\ref{tab:subsets} are derived from benchmark metadata and overlap, so one problem can appear in several of them.
+
 
 \section{Trace Audit and Case Study}
 \label{app:trace-audit}
