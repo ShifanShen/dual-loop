@@ -138,7 +138,7 @@ The effect is not tied to one backbone or benchmark, but its magnitude is model-
 \medskip
 \noindent\textbf{RQ3: Which components account for the gain?}
 
-Table~\ref{tab:mechanism} separates semantic-state from implementation movement. Average SAS rises from 80.15 to 82.29; 205 final contracts score above their initial specifications, 845 are unchanged, and 5 score lower. SAL records 165 artifact-changing patches and 837 attempts with no submitted change, whereas IRL records 49 passes, 36 additional verifier improvements, and 978 attempts without improvement. These are state-transition counts, not causal diagnoses or evidence that SAS independently predicts correctness.
+Table~\ref{tab:mechanism} separates semantic-state from implementation movement. Average SAS rises from 80.15 to 82.29; 205 final contracts score above their initial specifications, 845 are unchanged, and 5 score lower. SAL records 165 artifact-changing patches and 837 attempts with no submitted change, whereas IRL records 49 passes, 36 additional verifier improvements, and 978 attempts without improvement. These are state-transition counts; in particular, they are not evidence that SAS independently predicts correctness.
 
 \begin{table}[t]
 \centering
@@ -360,7 +360,7 @@ Clause type & Compiled \up & Violations \\
 
 \subsection{Requirement-heavy subsets}
 
-Table~\ref{tab:subsets} connects the mechanism analysis to requirement-heavy tasks. Full exceeds direct generation by 7.13--9.77 points on constraint-heavy, format-sensitive, edge-case-heavy, and semantic-heavy subsets and exceeds Reflexion-style repair in every category. The largest gains occur on format- and edge-case-sensitive problems, where explicit protocol and boundary obligations are especially useful. These benchmark-derived slices are not mutually exclusive causal categories.
+Table~\ref{tab:subsets} connects the mechanism analysis to requirement-heavy tasks. Full exceeds direct generation by 7.13--9.77 points on constraint-heavy, format-sensitive, edge-case-heavy, and semantic-heavy subsets and exceeds Reflexion-style repair in every category. The largest gains occur on format- and edge-case-sensitive problems, where explicit protocol and boundary obligations are especially useful. The slices are derived from benchmark metadata and overlap, so one problem can appear in several of them.
 
 \begin{table}[h]
 \centering
