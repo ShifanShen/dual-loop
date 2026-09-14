@@ -49,13 +49,13 @@ The main contributions are:
 
 \section{Related Work}
 
-\paragraph{Intermediate representations.}
+\subsection{Intermediate representations}
 Planning and pseudocode methods separate solution organization from implementation \citep{ref_self_planning,ref_pseudocode_prompting}. LPW generates a solution plan, verifies it on visible tests, and reuses the verified plan during code refinement \citep{ref_planning_driven_programming}. CodeT and AceCoder use generated tests or auxiliary artifacts to rank and refine candidates \citep{ref_codet,ref_acecoder}, while NL in the Middle studies natural-language intermediates for code translation \citep{ref_nl_middle}. These representations primarily describe how to solve or translate a task. Our specification instead records what every implementation must satisfy and remains available across candidate programs.
 
-\paragraph{Requirement alignment and multi-stage generation.}
+\subsection{Requirement alignment and multi-stage generation}
 MuFix treats specification misunderstanding as a distinct pre-generation failure and repairs it using generated tests \citep{ref_mufix}. SpecFix detects ambiguous problem descriptions from behavioral clusters of generated programs and repairs the description through contrastive specification inference \citep{ref_specfix}. REA-Coder builds requirement-oriented questions and reference answers, then masks and recovers requirement fragments after generation; detected mismatches can return the system to requirement alignment \citep{ref_reacoder}. AlphaCodium and MapCoder organize problem analysis, planning, implementation, and debugging into multi-stage or multi-agent workflows \citep{ref_alphacodium,ref_mapcoder}. Our distinction is the lifecycle of the accepted requirement representation: SAL finishes before IRL, and execution feedback thereafter changes programs without reopening the semantic contract.
 
-\paragraph{Execution-guided repair and semantic failure analysis.}
+\subsection{Execution-guided repair and semantic failure analysis}
 Self-Refine and Reflexion use model feedback or verbalized experience to guide iterative revision \citep{ref_self_refine,ref_reflexion}; OpenCodeInterpreter, COMPCODER, and StepCoder incorporate execution, compiler, or unit-test signals \citep{ref_opencodeinterpreter,ref_compiler_feedback,ref_stepcoder}. Complementary analyses show that generated code frequently omits constraints, invents assumptions, or mishandles edge cases, and that models struggle to verify code against natural-language specifications \citep{ref_bug_study,ref_codegen_error_taxonomy,ref_nl_spec_verification_failure}. These observations motivate an explicit semantic state that remains separate from executable implementation feedback.
 
 \begin{figure}[t]
@@ -80,8 +80,7 @@ We additionally adapt two recent external systems to the same model, release, fe
 
 A separate run sweeps the SAL threshold and weight profile on a fixed 50-problem sample with IRL disabled, isolating SAL-side sensitivity from implementation repair; Appendix~\ref{app:sensitivity} gives its protocol and results.
 
-\medskip
-\noindent\textbf{RQ1: Does the full semantic-contract pipeline improve end-to-end code generation?}
+\subsection{RQ1: Does the full semantic-contract pipeline improve end-to-end code generation?}
 
 Table~\ref{tab:main} reports the full-release comparison. Full Dual-Loop reaches 0.3801, corresponding to 401 complete-suite passes. Direct generation reaches 0.2882, while the three controlled internal variants range from 0.3175 to 0.3365. Under the shared protocol, SpecFix-BM reaches 0.3403 (359 passes) and LPW-adapted reaches 0.3308 (349 passes). Full therefore gains 9.19 percentage points over direct generation and 3.98 points over the strongest non-Full row, SpecFix-BM. Because private tests are held out until final program selection, these gains cannot be selected on the final evaluation partition. The external rows preserve the cited methods' central workflows but not their original models, data partitions, or total call budgets; they are protocol adaptations, not exact reproductions or a numerical state-of-the-art claim.
 
@@ -108,8 +107,7 @@ Full Dual-Loop & \textbf{0.3801} & \textbf{+0.0919} \\
 \noindent\textit{Answer to RQ1.}
 The frozen full configuration improves over the direct, controlled, and adapted external baselines at full-release scale, supporting the complete semantic-contract and repair pipeline. RQ3 separately examines where visible movement occurs.
 
-\medskip
-\noindent\textbf{RQ2: Does the result generalize beyond the main backbone and benchmark?}
+\subsection{RQ2: Does the result generalize beyond the main backbone and benchmark?}
 
 Table~\ref{tab:robustness} condenses two cross-setting checks. First, 50-problem LiveCodeBench slices use Qwen, Llama3.1-8B-Instruct \citep{ref_llama3}, and DeepSeek-Coder-6.7B-Instruct \citep{ref_deepseek_coder}. Full matches the best controlled iterative baseline for Qwen and Llama and improves from 0.42 to 0.50 for DeepSeek-Coder. The gain varies by backbone, so these small slices provide consistency evidence rather than a broad model-generalization claim.
 
@@ -135,8 +133,7 @@ HumanEval+--Qwen (162) & 0.8457 & 0.8889 & \textbf{0.9136} \\
 \noindent\textit{Answer to RQ2.}
 The effect is not tied to one backbone or benchmark, but its magnitude is model-dependent. The backbone slices support preliminary robustness, HumanEval+ provides an external check, and full-release LiveCodeBench remains the primary evidence.
 
-\medskip
-\noindent\textbf{RQ3: Which components account for the gain?}
+\subsection{RQ3: Which components account for the gain?}
 
 Table~\ref{tab:mechanism} separates semantic-state from implementation movement. Average SAS rises from 80.15 to 82.29; 205 final contracts score above their initial specifications, 845 are unchanged, and 5 score lower. SAL records 165 artifact-changing patches and 837 attempts with no submitted change, whereas IRL records 49 passes, 36 additional verifier improvements, and 978 attempts without improvement. These are state-transition counts; in particular, they are not evidence that SAS independently predicts correctness.
 
