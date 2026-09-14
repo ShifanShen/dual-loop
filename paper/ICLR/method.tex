@@ -78,7 +78,7 @@ The semantic judge uses the same backbone at temperature zero with a dedicated r
 \end{aligned}
 \label{eq:sas}
 \end{equation}
-Coverage measures whether important obligations and edge cases are retained; faithfulness penalizes unsupported assumptions; and precision measures whether obligations are operational enough to guide generation and repair. Outputs are integers in $[0,100]$. The pipeline validates and records the aggregate returned under the rubric rather than recomputing a post-hoc dot product, and it does not treat SAS as an independent ground-truth label. Coverage and faithfulness receive equal primary weight because either omission or invention can redirect generation; precision receives lower weight because operational detail cannot compensate for missing or distorted semantics. Section~\ref{app:sensitivity} reports the sensitivity experiment supporting this fixed setting.
+Coverage measures whether important obligations and edge cases are retained; faithfulness penalizes unsupported assumptions; and precision measures whether obligations are operational enough to guide generation and repair. Outputs are integers in $[0,100]$. The pipeline validates and records the aggregate returned under the rubric rather than recomputing a post-hoc dot product, and it does not treat SAS as an independent ground-truth label. Coverage and faithfulness receive equal primary weight because either omission or invention can redirect generation; precision receives lower weight because operational detail cannot compensate for missing or distorted semantics. Appendix~\ref{app:sensitivity} reports the sensitivity experiment supporting this fixed setting.
 
 The judge additionally returns grounded issue evidence, issue types, at most three target fields, protected fields, and a field-level edit plan. A patch may change only target fields, may not change protected fields, and must produce a material semantic difference. Let $\mathcal F$ denote the field set and $\mathcal T^{(t)}$, $\mathcal G^{(t)}$, and $\Pi^{(t)}$ denote the target set, protected set, and edit plan. A candidate outside these constraints is rejected before re-evaluation.
 
@@ -88,7 +88,7 @@ The acceptance gate separates non-regression from grounded progress:
 \mathrm{Safe}^{(t+1)}\land\mathrm{Improve}^{(t+1)}.
 \label{eq:accept}
 \end{equation}
-$\mathrm{Safe}$ requires a valid material patch, non-decreasing SAS and faithfulness, no increase in unsupported issues, and bounded degradation in missing-issue and confidence signals. $\mathrm{Improve}$ requires at least one grounded gain, such as an SAS increase of at least $\delta$, reduced issue pressure, improved precision without coverage loss, or fewer missing or blocking obligations. Appendix~\ref{app:gate} gives the complete predicates. If Eq.~\eqref{eq:accept} holds, $s^{(t+1)}=\hat{s}^{(t+1)}$; otherwise $s^{(t+1)}=s^{(t)}$ and SAL stops. The main configuration uses $\delta=1$. Refinement is attempted only when $\mathrm{SAS}^{(t)}<r$, the judge reports a grounded material issue, and a field-specific plan exists. We use $r=90$, at most three attempts, and stop after one rejected or skipped revision.
+$\mathrm{Safe}$ requires a valid material patch, non-decreasing SAS and faithfulness, no increase in unsupported issues, and bounded degradation in missing-issue and confidence signals. $\mathrm{Improve}$ requires at least one grounded gain, such as an SAS increase of at least $\delta$, reduced issue pressure, improved precision without coverage loss, or fewer missing or blocking obligations. Appendix~\ref{app:gate} gives the complete predicates. If Eq.~\eqref{eq:accept} holds, $s^{(t+1)}=\hat{s}^{(t+1)}$; otherwise $s^{(t+1)}=s^{(t)}$ and SAL stops. The main configuration uses $\delta=1$. Refinement is attempted only when $\mathrm{SAS}^{(t)}<r$, the judge reports a grounded material issue, and a field-specific plan exists. A step is additionally skipped when the judge reports ambiguity alone, without a missing or unsupported obligation, and precision already meets floor $\pi$; this avoids spending a revision on wording that is already operational. We use $r=90$, $\pi=85$, at most three attempts, and stop after one rejected or skipped revision.
 
 No additional specification candidates are generated or ranked after this trajectory. The current specification at SAL termination is directly frozen as $s^\star$. A conservative compiler then extracts the executable subset
 \begin{equation}
@@ -116,7 +116,7 @@ $F_v^{(k)}$ reports concrete execution behavior, whereas $F_p^{(k)}$ records vio
 The repair module then generates a round-specific candidate set from the unique current program:
 \begin{equation}
 \begin{aligned}
-C_i'^{(k+1)}&=\mathrm{Repair}_i(x,s^\star,C^{(k)},F_v^{(k)},F_p^{(k)}),quad 1\leq i\leq N_r,\\
+C_i'^{(k+1)}&=\mathrm{Repair}_i(x,s^\star,C^{(k)},F_v^{(k)},F_p^{(k)}),\quad 1\leq i\leq N_r,\\
 \mathcal C^{(k+1)}&=\{C_i'^{(k+1)}\mid 1\leq i\leq N_r\},\\
 C^{(k+1)}&=\mathrm{SelectByFeedback}(\mathcal C^{(k+1)},x,s^\star,P^\star).
 \end{aligned}
