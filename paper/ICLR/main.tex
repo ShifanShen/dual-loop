@@ -7,6 +7,7 @@
 \usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage{float}
+\usepackage{subcaption}
 \usepackage{algorithm}
 \usepackage{algorithmic}
 \usepackage{hyperref}
@@ -237,37 +238,16 @@ Safety prevents a local revision from damaging already expressed obligations; im
 
 \subsection{Compared configurations}
 
-Table~\ref{tab:controlled-methods} records the operational definitions used in the shared evaluation pipeline. Style-matched baselines preserve the feedback form of the cited methods, while the two external adaptations preserve their central workflows under the common model, benchmark loader, verifier, and final evaluator.
+The shared evaluation pipeline compares nine configurations. Direct NL-to-Code generates one program from $x$ without iterative feedback, and Decomposition Only induces $s^{(0)}$ and generates code with neither loop. Self-Refine-style executes public tests and iteratively revises code from that feedback \citep{ref_self_refine}, while Reflexion-style accumulates the same feedback as verbal reflection and repairs from that memory \citep{ref_reflexion}. SAL-only induces and gates revisions and then freezes the current specification without running IRL; IRL-only generates and repairs under an unrefined $s^{(0)}$. Of the external adaptations, SpecFix-BM clusters behavior from four probe programs and performs at most one requirement repair \citep{ref_specfix}, and LPW-adapted verifies and revises a plan on public examples and then holds it fixed during generation and repair \citep{ref_planning_driven_programming}; both stay within an 11-program cap. Full Dual-Loop freezes $s^\star$, selects $C^{(0)}$, and performs contract-conditioned IRL. Style-matched baselines preserve the feedback form of the cited methods, while the two external adaptations preserve their central workflows under the common model, benchmark loader, verifier, and final evaluator.
 
-\begin{table}[h]
+\subsection{Fifty-problem probes}
+
+Two small Qwen slices support the design choices rather than the headline result. Because each representation adds a generation stage and budgets are not matched, this probe does not show that specifications outperform direct prompting. It instead identifies the strongest tested explicit intermediate for the later refinement and property-compilation operations. The ablation slice uses three candidates per problem, which distinguishes it from the two-candidate cross-backbone slice; RQ3 reads its result.
+
+\begin{table}[H]
 \centering
 \small
-\begin{tabular}{@{}lp{0.68\linewidth}@{}}
-\toprule
-Configuration & Operational definition \\
-\midrule
-Direct NL-to-Code & Generate one program directly from $x$ without iterative feedback. \\
-Decomposition Only & Induce $s^{(0)}$ and generate code without SAL or IRL. \\
-Self-Refine-style & Execute public tests and iteratively revise code from feedback \citep{ref_self_refine}. \\
-Reflexion-style & Accumulate public feedback as verbal reflection and repair from that memory \citep{ref_reflexion}. \\
-SAL-only & Induce and gate revisions, then freeze the current specification; no IRL. \\
-IRL-only & Generate and repair under unrefined $s^{(0)}$; no SAL revision. \\
-SpecFix-BM & Cluster behavior from four probe programs and perform at most one requirement repair within an 11-program cap \citep{ref_specfix}. \\
-LPW-adapted & Verify and revise a plan on public examples, then hold it fixed during generation and repair within an 11-program cap \citep{ref_planning_driven_programming}. \\
-Full Dual-Loop & Freeze $s^\star$, select $C^{(0)}$, and perform contract-conditioned IRL. \\
-\bottomrule
-\end{tabular}
-\caption{Operational definitions of the compared configurations.}
-\label{tab:controlled-methods}
-\end{table}
-
-\subsection{Intermediate-representation probe}
-
-On an exploratory 50-problem slice, direct generation scores 0.70. Among explicit intermediate representations, spec-to-code scores 0.60, above plan-to-code at 0.56 and pseudocode-to-code at 0.46. Because each representation adds a generation stage and budgets are not matched, this probe does not show that specifications outperform direct prompting. It instead identifies the strongest tested explicit intermediate for the later refinement and property-compilation operations.
-
-\begin{table}[h]
-\centering
-\small
+\begin{minipage}[t]{0.42\linewidth}\centering
 \begin{tabular}{@{}lr@{}}
 \toprule
 Method & Final Pass \up \\
@@ -278,17 +258,10 @@ Pseudocode-to-Code & 0.460 \\
 Spec-to-Code & 0.600 \\
 \bottomrule
 \end{tabular}
-\caption{Intermediate-representation probe on a 50-problem slice.}
+\subcaption{Intermediate-representation probe.}
 \label{tab:validation}
-\end{table}
-
-\subsection{Component ablation}
-
-The controlled 50-problem component slice uses three candidates per problem and is distinct from the two-candidate cross-backbone slice. SAL-only and IRL-only both reach 0.64, while Full reaches 0.72. The eight-point composition gain supports complementarity on this slice, but SAL-only being slightly below Decomposition Only prevents a claim of an isolated SAL performance gain.
-
-\begin{table}[h]
-\centering
-\small
+\end{minipage}\hfill
+\begin{minipage}[t]{0.55\linewidth}\centering
 \begin{tabular}{@{}lccc@{}}
 \toprule
 Method & SAL & IRL & Final Pass \up \\
@@ -299,18 +272,22 @@ IRL-only & no & yes & 0.64 \\
 Full Dual-Loop & yes & yes & \textbf{0.72} \\
 \bottomrule
 \end{tabular}
-\caption{Controlled component ablation on 50 Qwen problems.}
+\subcaption{Controlled component ablation.}
 \label{tab:component}
+\end{minipage}
+\caption{Two independent 50-problem Qwen slices. The probe in (a) uses one program per representation; the ablation in (b) uses three candidates per problem.}
+\label{tab:fifty}
 \end{table}
+
 
 \subsection{SAL hyperparameter sensitivity}
 \label{app:sensitivity}
 
 The sweep uses a fixed 50-problem sample with seed 2027, disables IRL, and generates one deterministic code candidate at temperature zero from the specification current when SAL terminates. It varies $r\in\{80,85,90,95\}$ under the paper weights and compares the paper, uniform, coverage-heavy, faithfulness-heavy, and precision-heavy profiles at $r=90$. Only public feedback is available, so the sweep isolates SAL-side sensitivity from implementation repair and multi-candidate selection.
 
-Table~\ref{tab:sensitivity} reports the fixed 50-problem public-feedback slice. Under $\mathbf w=(0.4,0.4,0.2)$, thresholds from 80 through 95 pass the same 20 problems. The final contracts at $r=90$ and $r=95$ are identical on all 50 problems, and $r=85$ differs from $r=90$ on one. Accepted revisions rise from 14 at $r=85$ to 15 at $r=90$ and do not increase at $r=95$, making 90 the first observed point on the local plateau.
+Table~\ref{tab:sensitivity} reports the slice. Every threshold from 80 to 95 passes the same 20 problems. Beyond the table, the final contracts at $r=90$ and $r=95$ are identical on all 50 problems and $r=85$ differs on one; accepted revisions plateau at 15 from $r=90$, which is why we use 90.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \small
 \begin{tabular}{@{}llrrr@{}}
@@ -333,15 +310,16 @@ Weights & $(0.4,0.4,0.2)$ & 0.400 & 15 & 7.24 \\
 \label{tab:sensitivity}
 \end{table}
 
-The one-problem difference between the paper and uniform weights is descriptive: their 95\% Wilson intervals, $[0.276,0.538]$ and $[0.294,0.558]$, overlap substantially. Changing $\mathbf w$ also changes the SAS scale, so aggregate SAS values are not compared across profiles. The sweep supports local stability rather than a uniquely optimal configuration.
+The one-problem difference between the paper and uniform weights is descriptive: their 95\% Wilson intervals, $[0.276,0.538]$ and $[0.294,0.558]$, overlap substantially. Changing $\mathbf w$ also changes the SAS scale, so aggregate SAS values are not compared across profiles; the sweep supports local stability rather than a uniquely optimal configuration.
 
-\subsection{Property-clause coverage}
+\subsection{Property clauses and requirement-heavy subsets}
 
-Table~\ref{tab:properties} reports clauses compiled from accepted contracts and violation events observed over verifier failures; one clause may be evaluated repeatedly. Numeric-output clauses are compiled most often, while numeric and ordering obligations produce the largest observed violation counts. Zero violations mean only that no evaluated output triggered the recorded check.
+Zero violations in Table~\ref{tab:properties} mean only that no evaluated output triggered the recorded check.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \small
+\begin{minipage}[t]{0.46\linewidth}\centering
 \begin{tabular}{@{}lrr@{}}
 \toprule
 Clause type & Compiled \up & Violations \\
@@ -355,17 +333,10 @@ Clause type & Compiled \up & Violations \\
 \texttt{same\_multiset} & 6 & 7 \\
 \bottomrule
 \end{tabular}
-\caption{Property-clause coverage on LiveCodeBench release\_v6. Compiled counts clauses extracted from accepted contracts and Violations counts events observed over verifier failures; a clause may be evaluated more than once, so a violation count can exceed its compiled count.}
+\subcaption{Property-clause coverage. Compiled counts clauses extracted from accepted contracts; Violations counts events over verifier failures, and a clause may be evaluated more than once.}
 \label{tab:properties}
-\end{table}
-
-\subsection{Requirement-heavy subsets}
-
-Table~\ref{tab:subsets} connects the mechanism analysis to requirement-heavy tasks. Full exceeds direct generation by 7.13--9.77 points on constraint-heavy, format-sensitive, edge-case-heavy, and semantic-heavy subsets and exceeds Reflexion-style repair in every category. The largest gains occur on format- and edge-case-sensitive problems, where explicit protocol and boundary obligations are especially useful. The slices are derived from benchmark metadata and overlap, so one problem can appear in several of them.
-
-\begin{table}[h]
-\centering
-\small
+\end{minipage}\hfill
+\begin{minipage}[t]{0.50\linewidth}\centering
 \begin{tabular}{@{}lrrr@{}}
 \toprule
 Subset & Direct & Reflexion & Full \up \\
@@ -376,9 +347,15 @@ Edge-case-heavy & 0.3239 & 0.3702 & \textbf{0.4216} \\
 Semantic-heavy & 0.2281 & 0.2643 & \textbf{0.3213} \\
 \bottomrule
 \end{tabular}
-\caption{Performance on requirement-heavy LiveCodeBench subsets.}
+\subcaption{Requirement-heavy subsets.}
 \label{tab:subsets}
+\end{minipage}
+\caption{Contract-derived property clauses and requirement-heavy subsets on LiveCodeBench release\_v6.}
+\label{tab:clauses-subsets}
 \end{table}
+
+The subsets in Table~\ref{tab:subsets} are derived from benchmark metadata and overlap, so one problem can appear in several of them.
+
 
 \section{Trace Audit and Case Study}
 \label{app:trace-audit}
