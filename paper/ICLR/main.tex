@@ -238,29 +238,7 @@ Safety prevents a local revision from damaging already expressed obligations; im
 
 \subsection{Compared configurations}
 
-Table~\ref{tab:controlled-methods} records the operational definitions used in the shared evaluation pipeline. Style-matched baselines preserve the feedback form of the cited methods, while the two external adaptations preserve their central workflows under the common model, benchmark loader, verifier, and final evaluator.
-
-\begin{table}[h]
-\centering
-\small
-\begin{tabular}{@{}lp{0.68\linewidth}@{}}
-\toprule
-Configuration & Operational definition \\
-\midrule
-Direct NL-to-Code & Generate one program directly from $x$ without iterative feedback. \\
-Decomposition Only & Induce $s^{(0)}$ and generate code without SAL or IRL. \\
-Self-Refine-style & Execute public tests and iteratively revise code from feedback \citep{ref_self_refine}. \\
-Reflexion-style & Accumulate public feedback as verbal reflection and repair from that memory \citep{ref_reflexion}. \\
-SAL-only & Induce and gate revisions, then freeze the current specification; no IRL. \\
-IRL-only & Generate and repair under unrefined $s^{(0)}$; no SAL revision. \\
-SpecFix-BM & Cluster behavior from four probe programs and perform at most one requirement repair within an 11-program cap \citep{ref_specfix}. \\
-LPW-adapted & Verify and revise a plan on public examples, then hold it fixed during generation and repair within an 11-program cap \citep{ref_planning_driven_programming}. \\
-Full Dual-Loop & Freeze $s^\star$, select $C^{(0)}$, and perform contract-conditioned IRL. \\
-\bottomrule
-\end{tabular}
-\caption{Operational definitions of the compared configurations.}
-\label{tab:controlled-methods}
-\end{table}
+The shared evaluation pipeline compares nine configurations. Direct NL-to-Code generates one program from $x$ without iterative feedback, and Decomposition Only induces $s^{(0)}$ and generates code with neither loop. Self-Refine-style executes public tests and iteratively revises code from that feedback \citep{ref_self_refine}, while Reflexion-style accumulates the same feedback as verbal reflection and repairs from that memory \citep{ref_reflexion}. SAL-only induces and gates revisions and then freezes the current specification without running IRL; IRL-only generates and repairs under an unrefined $s^{(0)}$. Of the external adaptations, SpecFix-BM clusters behavior from four probe programs and performs at most one requirement repair \citep{ref_specfix}, and LPW-adapted verifies and revises a plan on public examples and then holds it fixed during generation and repair \citep{ref_planning_driven_programming}; both stay within an 11-program cap. Full Dual-Loop freezes $s^\star$, selects $C^{(0)}$, and performs contract-conditioned IRL. Style-matched baselines preserve the feedback form of the cited methods, while the two external adaptations preserve their central workflows under the common model, benchmark loader, verifier, and final evaluator.
 
 \subsection{Fifty-problem probes}
 
