@@ -244,7 +244,7 @@ The shared evaluation pipeline compares nine configurations. Direct NL-to-Code g
 
 Two small Qwen slices support the design choices rather than the headline result. Because each representation adds a generation stage and budgets are not matched, this probe does not show that specifications outperform direct prompting. It instead identifies the strongest tested explicit intermediate for the later refinement and property-compilation operations. The ablation slice uses three candidates per problem, which distinguishes it from the two-candidate cross-backbone slice; RQ3 reads its result.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \small
 \begin{minipage}[t]{0.42\linewidth}\centering
@@ -287,7 +287,7 @@ The sweep uses a fixed 50-problem sample with seed 2027, disables IRL, and gener
 
 Table~\ref{tab:sensitivity} reports the slice. Every threshold from 80 to 95 passes the same 20 problems. Beyond the table, the final contracts at $r=90$ and $r=95$ are identical on all 50 problems and $r=85$ differs on one; accepted revisions plateau at 15 from $r=90$, which is why we use 90.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \small
 \begin{tabular}{@{}llrrr@{}}
@@ -316,7 +316,7 @@ The one-problem difference between the paper and uniform weights is descriptive:
 
 Zero violations in Table~\ref{tab:properties} mean only that no evaluated output triggered the recorded check.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \small
 \begin{minipage}[t]{0.46\linewidth}\centering
