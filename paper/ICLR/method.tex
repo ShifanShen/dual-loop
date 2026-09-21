@@ -4,7 +4,7 @@ The method is motivated by a state-observability problem. An incorrect program m
 
 Figure~\ref{fig:framework} divides generation into two connected stages. SAL induces an initial specification $s^{(0)}$. At semantic iteration $t$, it proposes a field-level patch $\Delta^{(t)}$, merges the patch with the current specification to obtain $\hat{s}^{(t+1)}$, and accepts the candidate only if it satisfies both safety and improvement conditions. An accepted candidate directly replaces the current state; a rejected candidate leaves $s^{(t)}$ unchanged and stops SAL. The current specification at termination is frozen as semantic contract $s^\star$, from which executable property set $P^\star$ is compiled.
 
-IRL then generates an initial candidate set $\mathcal C^{(0)}$ from $(x,s^\star)$ and uses public feedback to select the unique initial state $C^{(0)}$. At round $k$, only current program $C^{(k)}$ is verified and repaired. The resulting repair candidates form the round-specific set $\mathcal C^{(k+1)}$, from which the system selects $C^{(k+1)}$. Unselected candidates from earlier rounds do not carry over. The complete process records semantic states, implementation states, and their evidence in trace $\tau$:
+IRL then generates an initial candidate set $\mathcal C^{(0)}$ from $(x,s^\star)$ and uses public feedback to select the unique initial state $C^{(0)}$. At round $k$, repairs are generated only from the current program $C^{(k)}$; the resulting candidates are evaluated on public tests to select the next state. The resulting repair candidates form the round-specific set $\mathcal C^{(k+1)}$, from which the system selects $C^{(k+1)}$. Unselected candidates from earlier rounds do not carry over. The complete process records semantic states, implementation states, and their evidence in trace $\tau$:
 \begin{equation}
 \begin{aligned}
 x &\rightarrow s^{(0)}\rightarrow(q^{(0)},\mathrm{SAS}^{(0)})\rightarrow\cdots
@@ -25,39 +25,44 @@ This boundary does not treat $s^\star$ as a proof of task intent. The contract i
 \begin{algorithmic}[1]
 \REQUIRE problem $x$; SAL budget $T_s$; IRL budget $T_r$; candidate budgets $N_0$, $N_r$
 \ENSURE final program $C$ and trace $\tau$
-\STATE \textbf{Stage 1: semantic alignment}
+\STATE \textbf{Stage 1: semantic alignment}; initialize trace $\tau$
 \STATE $s^{(0)}\gets\algcall{InduceSpec}{x}$
 \STATE $(q^{(0)},\mathrm{SAS}^{(0)})\gets\algcall{Judge_{\mathbf w}}{x,s^{(0)}}$
+\STATE append initial specification and judge record to $\tau$
 \FOR{$t=0,\ldots,T_s-1$}
   \IF{$\neg\algcall{ShouldRefine}{s^{(t)},q^{(t)},\mathrm{SAS}^{(t)},r}$}
-    \STATE \textbf{break}
+    \STATE append SAL stopping reason to $\tau$; \textbf{break}
   \ENDIF
   \STATE $\Delta^{(t)}\gets\algcall{ProposePatch}{x,s^{(t)},q^{(t)}}$
   \STATE $\hat{s}^{(t+1)}\gets\algcall{Merge}{s^{(t)},\Delta^{(t)}}$
   \STATE $(\hat q^{(t+1)},\widehat{\mathrm{SAS}}^{(t+1)})\gets\algcall{Judge_{\mathbf w}}{x,\hat{s}^{(t+1)}}$
+  \STATE append patch, candidate, judge record, and gate decision to $\tau$
   \IF{$\mathrm{Safe}^{(t+1)}\land\mathrm{Improve}^{(t+1)}$}
     \STATE $s^{(t+1)}\gets\hat{s}^{(t+1)}$; $(q^{(t+1)},\mathrm{SAS}^{(t+1)})\gets(\hat q^{(t+1)},\widehat{\mathrm{SAS}}^{(t+1)})$
   \ELSE
-    \STATE $s^{(t+1)}\gets s^{(t)}$; \textbf{break}
+    \STATE $s^{(t+1)}\gets s^{(t)}$; append rejection stop to $\tau$; \textbf{break}
   \ENDIF
 \ENDFOR
 \STATE $s^\star\gets$ current specification at SAL termination; freeze $s^\star$
-\STATE $P^\star\gets\algcall{CompileClauses}{s^\star}$; initialize trace $\tau$
+\STATE $P^\star\gets\algcall{CompileClauses}{s^\star}$; append $(s^\star,P^\star)$ and SAL stop to $\tau$
 \STATE \textbf{Stage 2: implementation and repair}
 \STATE $\mathcal C^{(0)}\gets\algcall{GenerateCandidates}{x,s^\star,N_0}$
 \STATE $C^{(0)}\gets\algcall{SelectByFeedback}{\mathcal C^{(0)},x,s^\star,P^\star}$
+\STATE append initial candidates, selection evidence, and $C^{(0)}$ to $\tau$
 \FOR{$k=0,\ldots,T_r$}
   \STATE $F_v^{(k)}\gets\algcall{Verify_{fb}}{x,C^{(k)}}$
+  \STATE append $(C^{(k)},F_v^{(k)})$ to $\tau$
   \IF{$\algcall{Pass}{F_v^{(k)}}\lor k=T_r$}
-    \STATE \textbf{return} $(C^{(k)},\tau)$
+    \STATE append IRL stopping reason to $\tau$; \textbf{return} $(C^{(k)},\tau)$
   \ENDIF
-  \STATE $F_p^{(k)}\gets\algcall{EvaluateClauses}{P^\star,x,C^{(k)},F_v^{(k)}}$
+  \STATE $F_p^{(k)}\gets\algcall{EvaluateClauses}{P^\star,x,C^{(k)},F_v^{(k)}}$; append $F_p^{(k)}$ to $\tau$
   \FOR{$i=1,\ldots,N_r$}
     \STATE $C_i'^{(k+1)}\gets\algcall{Repair_i}{x,s^\star,C^{(k)},F_v^{(k)},F_p^{(k)}}$
   \ENDFOR
   \STATE $\mathcal C^{(k+1)}\gets\{C_i'^{(k+1)}\mid 1\leq i\leq N_r\}$
   \STATE $C^{(k+1)}\gets\algcall{SelectByFeedback}{\mathcal C^{(k+1)},x,s^\star,P^\star}$
-  \STATE retain $C^{(k)}$ if the selected result is invalid or unchanged; update $\tau$
+  \STATE retain $C^{(k)}$ if the selected result is invalid or unchanged
+  \STATE append repair candidates, selection evidence, and resulting state to $\tau$
 \ENDFOR
 \end{algorithmic}
 \end{algorithm}
